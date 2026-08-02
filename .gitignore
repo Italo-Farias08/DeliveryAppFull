@@ -1,0 +1,33 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (segredos)
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+.expo/
+.expo-shared/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Banco de dados local (se usar SQLite em algum momento)
+*.sqlite
+
+# Docker
+db-data/
