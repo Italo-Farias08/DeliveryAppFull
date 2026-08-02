@@ -1,5 +1,5 @@
 const authService = require('./auth.service');
-const { registerSchema, loginSchema } = require('./auth.schema');
+const { registerSchema, loginSchema, verifyCodeSchema } = require('./auth.schema');
 const asyncHandler = require('../../utils/asyncHandler');
 
 const register = asyncHandler(async (req, res) => {
@@ -15,8 +15,14 @@ const register = asyncHandler(async (req, res) => {
 
 const login = asyncHandler(async (req, res) => {
   const data = loginSchema.parse(req.body);
-  const result = await authService.login(data);
+  const result = await authService.requestLoginCode(data);
   res.json(result);
 });
 
-module.exports = { register, login };
+const verifyCode = asyncHandler(async (req, res) => {
+  const data = verifyCodeSchema.parse(req.body);
+  const result = await authService.verifyLoginCode(data);
+  res.json(result);
+});
+
+module.exports = { register, login, verifyCode };

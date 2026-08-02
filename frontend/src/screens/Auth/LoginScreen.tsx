@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { login } from '../../services/authService';
+import { requestLoginCode, verifyLoginCode } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { UserRole } from '../../types';
@@ -58,7 +58,7 @@ function PressScale({
   );
 }
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }: any) {
   const { signIn } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
   const [email, setEmail] = useState('');
@@ -66,6 +66,10 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [roleRowWidth, setRoleRowWidth] = useState(0);
+  const [step, setStep] = useState<'credentials' | 'code'>('credentials');
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Entrada da logo e do título
   const logoScale = useRef(new Animated.Value(0.6)).current;
@@ -174,13 +178,44 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const user = await login(email.trim(), password, role);
+      await requestLoginCode(email.trim(), password);
+      setStep('code');
+      Alert.alert('Verifique seu e-mail', `Enviamos um código de 6 dígitos para ${email.trim()}.`);
+    } catch (err) {
+      triggerShake();
+      Alert.alert('Erro ao entrar', 'E-mail ou senha inválidos. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleVerifyCode() {
+    if (code.trim().length !== 6) {
+      triggerShake();
+      Alert.alert('Ops', 'Digite o código de 6 dígitos enviado para seu e-mail.');
+      return;
+    }
+    setVerifying(true);
+    try {
+      const user = await verifyLoginCode(email.trim(), code.trim(), role);
       await signIn(user);
     } catch (err) {
       triggerShake();
-      Alert.alert('Erro ao entrar', 'Não foi possível fazer login. Tente novamente.');
+      Alert.alert('Código inválido', 'O código digitado está incorreto ou expirou. Tente reenviar.');
     } finally {
-      setLoading(false);
+      setVerifying(false);
+    }
+  }
+
+  async function handleResendCode() {
+    setResending(true);
+    try {
+      await requestLoginCode(email.trim(), password);
+      Alert.alert('Código reenviado', `Enviamos um novo código para ${email.trim()}.`);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível reenviar o código. Tente novamente.');
+    } finally {
+      setResending(false);
     }
   }
 
@@ -205,124 +240,147 @@ export default function LoginScreen() {
             <Text style={styles.title}>Entrar</Text>
           </Animated.View>
 
-          <Animated.View
-            style={{
-              opacity: roleFade,
-              transform: [{ translateY: roleSlide }, { translateX: shakeTranslate }],
-            }}
-          >
-            <View style={styles.roleRow} onLayout={(e) => setRoleRowWidth(e.nativeEvent.layout.width)}>
-              {roleRowWidth > 0 && (
-                <Animated.View
-                  style={[
-                    styles.roleIndicatorWrap,
-                    { width: segmentWidth, transform: [{ translateX: roleIndicatorX }] },
-                  ]}
-                >
-                  <Animated.View style={[styles.roleIndicator, { backgroundColor: buttonColor }]} />
-                </Animated.View>
-              )}
-              {ROLES.map((r) => {
-                const active = role === r.key;
-                return (
-                  <TouchableOpacity key={r.key} onPress={() => setRole(r.key)} activeOpacity={0.85} style={styles.roleCard}>
-                    <Ionicons name={r.icon} size={17} color={active ? colors.white : colors.primary} />
-                    <Text style={[styles.roleLabel, active && styles.roleLabelActive]}>{r.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </Animated.View>
-
-          <Animated.View style={{ opacity: emailFade, transform: [{ translateY: emailSlide }] }}>
-            <View style={styles.inputWrap}>
-              <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
-              <TextInput
-                style={styles.input}
-                placeholder="seu@email.com"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
-          </Animated.View>
-
-          <Animated.View style={{ opacity: passFade, transform: [{ translateY: passSlide }] }}>
-            <View style={styles.inputWrap}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
-              <TextInput
-                style={styles.input}
-                placeholder="Senha"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
-                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-
-          <Animated.View style={{ opacity: emailFade }}>
-            <TouchableOpacity onPress={() => Alert.alert('Em breve', 'Recuperação de senha chega com o backend.')}>
-              <Text style={styles.forgot}>Esqueci minha senha</Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <Animated.View style={{ opacity: buttonFade, transform: [{ translateY: buttonSlide }], width: '100%' }}>
-            <Animated.View style={[styles.loginButton, { backgroundColor: buttonColor }]}>
-              <Animated.View style={[styles.loginButtonInner, { transform: [{ scale: buttonPressScale }] }]}>
-                <Pressable
-                  onPress={handleLogin}
-                  disabled={loading}
-                  onPressIn={() =>
-                    Animated.spring(buttonPressScale, { toValue: 0.97, friction: 6, useNativeDriver: true }).start()
-                  }
-                  onPressOut={() =>
-                    Animated.spring(buttonPressScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start()
-                  }
-                  style={styles.loginButtonPressable}
-                >
-                  {loading ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <Text style={styles.loginButtonText}>Entrar</Text>
+          {step === 'credentials' && (
+            <>
+              <Animated.View
+                style={{
+                  opacity: roleFade,
+                  transform: [{ translateY: roleSlide }, { translateX: shakeTranslate }],
+                }}
+              >
+                <View style={styles.roleRow} onLayout={(e) => setRoleRowWidth(e.nativeEvent.layout.width)}>
+                  {roleRowWidth > 0 && (
+                    <Animated.View
+                      style={[
+                        styles.roleIndicatorWrap,
+                        { width: segmentWidth, transform: [{ translateX: roleIndicatorX }] },
+                      ]}
+                    >
+                      <Animated.View style={[styles.roleIndicator, { backgroundColor: buttonColor }]} />
+                    </Animated.View>
                   )}
-                </Pressable>
+                  {ROLES.map((r) => {
+                    const active = role === r.key;
+                    return (
+                      <TouchableOpacity key={r.key} onPress={() => setRole(r.key)} activeOpacity={0.85} style={styles.roleCard}>
+                        <Ionicons name={r.icon} size={17} color={active ? colors.white : colors.primary} />
+                        <Text style={[styles.roleLabel, active && styles.roleLabelActive]}>{r.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </Animated.View>
-            </Animated.View>
-          </Animated.View>
 
-          <Animated.View style={[styles.dividerRow, { opacity: socialFade }]}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
-          </Animated.View>
+              <Animated.View style={{ opacity: emailFade, transform: [{ translateY: emailSlide }] }}>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="seu@email.com"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
+              </Animated.View>
 
-          <Animated.View style={{ opacity: socialFade }}>
-            <PressScale
-              style={styles.socialButton}
-              onPress={() => Alert.alert('Em breve', 'Login com Google chega com o backend.')}
-            >
-              <Ionicons name="logo-google" size={19} color="#EA4335" />
-              <Text style={styles.socialText}>Entrar com Google</Text>
-            </PressScale>
+              <Animated.View style={{ opacity: passFade, transform: [{ translateY: passSlide }] }}>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="lock-closed-outline" size={20} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Senha"
+                    placeholderTextColor={colors.textMuted}
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
+                    <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
 
-            <PressScale
-              style={styles.socialButton}
-              onPress={() => Alert.alert('Em breve', 'Login com Apple chega com o backend.')}
-            >
-              <Ionicons name="logo-apple" size={20} color={colors.text} />
-              <Text style={styles.socialText}>Entrar com Apple</Text>
-            </PressScale>
-          </Animated.View>
+              <Animated.View style={{ opacity: buttonFade, transform: [{ translateY: buttonSlide }], width: '100%' }}>
+                <Animated.View style={[styles.loginButton, { backgroundColor: buttonColor }]}>
+                  <Animated.View style={[styles.loginButtonInner, { transform: [{ scale: buttonPressScale }] }]}>
+                    <Pressable
+                      onPress={handleLogin}
+                      disabled={loading}
+                      onPressIn={() =>
+                        Animated.spring(buttonPressScale, { toValue: 0.97, friction: 6, useNativeDriver: true }).start()
+                      }
+                      onPressOut={() =>
+                        Animated.spring(buttonPressScale, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start()
+                      }
+                      style={styles.loginButtonPressable}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color={colors.white} />
+                      ) : (
+                        <Text style={styles.loginButtonText}>Entrar</Text>
+                      )}
+                    </Pressable>
+                  </Animated.View>
+                </Animated.View>
+              </Animated.View>
+            </>
+          )}
+
+          {step === 'code' && (
+            <>
+              <Animated.View style={{ opacity: 1, transform: [{ translateX: shakeTranslate }], width: '100%' }}>
+                <Text style={{ ...typography.display, color: colors.text, fontSize: 15, marginBottom: 4, fontWeight: '600' }}>
+                  Digite o código
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 13.5, marginBottom: 18 }}>
+                  Enviamos um código de 6 dígitos para {email.trim()}
+                </Text>
+                <View style={styles.inputWrap}>
+                  <Ionicons name="key-outline" size={20} color={colors.textMuted} />
+                  <TextInput
+                    style={[styles.input, { letterSpacing: 4, fontSize: 18 }]}
+                    placeholder="000000"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={code}
+                    onChangeText={setCode}
+                  />
+                </View>
+              </Animated.View>
+
+              <View style={{ width: '100%' }}>
+                <Animated.View style={[styles.loginButton, { backgroundColor: buttonColor }]}>
+                  <Pressable
+                    onPress={handleVerifyCode}
+                    disabled={verifying}
+                    style={styles.loginButtonPressable}
+                  >
+                    {verifying ? (
+                      <ActivityIndicator color={colors.white} />
+                    ) : (
+                      <Text style={styles.loginButtonText}>Verificar código</Text>
+                    )}
+                  </Pressable>
+                </Animated.View>
+              </View>
+
+              <TouchableOpacity onPress={handleResendCode} disabled={resending} style={{ marginTop: 16 }}>
+                <Text style={styles.forgot}>{resending ? 'Reenviando...' : 'Reenviar código'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => { setStep('credentials'); setCode(''); }} style={{ marginTop: 8 }}>
+                <Text style={[styles.footerText, { textAlign: 'center', width: '100%' }]}>Voltar</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <Animated.View style={[styles.footerRow, { opacity: footerFade }]}>
             <Text style={styles.footerText}>Não tem conta? </Text>
-            <TouchableOpacity onPress={() => Alert.alert('Em breve', 'Cadastro completo chega com o backend.')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
               <Text style={styles.footerLink}>Cadastre-se</Text>
             </TouchableOpacity>
           </Animated.View>

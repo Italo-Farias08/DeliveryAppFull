@@ -1,19 +1,24 @@
 const { pool } = require('../../config/db');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { signToken } = require('../../utils/jwt');
+const { sendLoginCodeEmail } = require('../../utils/email');
 const AppError = require('../../utils/AppError');
 
-async function registerClientOrDeliverer({ name, email, password, role, phone }) {
+function generateCode() {
+  return String(Math.floor(100000 + Math.random() * 900000)); // 6 dígitos
+}
+
+async function registerClientOrDeliverer({ name, email, password, role, phone, cpf }) {
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (existing.rowCount > 0) {
     throw new AppError('E-mail já cadastrado', 409);
   }
   const passwordHash = await hashPassword(password);
   const result = await pool.query(
-    `INSERT INTO users (name, email, password_hash, role, phone)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (name, email, password_hash, role, phone, cpf)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING id, name, email, role, tenant_id`,
-    [name, email, passwordHash, role, phone || null]
+    [name, email, passwordHash, role, phone || null, cpf]
   );
   const user = result.rows[0];
   if (role === 'deliverer') {
@@ -22,7 +27,7 @@ async function registerClientOrDeliverer({ name, email, password, role, phone })
   return buildAuthResponse(user);
 }
 
-async function registerRestaurantAccount({ name, email, password, phone, businessName, document }) {
+async function registerRestaurantAccount({ name, email, password, phone, cpf, businessName, document }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -39,10 +44,10 @@ async function registerRestaurantAccount({ name, email, password, phone, busines
     const tenant = tenantResult.rows[0];
     const passwordHash = await hashPassword(password);
     const userResult = await client.query(
-      `INSERT INTO users (tenant_id, name, email, password_hash, role, phone)
-       VALUES ($1, $2, $3, 'restaurant', $4)
+      `INSERT INTO users (tenant_id, name, email, password_hash, role, phone, cpf)
+       VALUES ($1, $2, $3, $4, 'restaurant', $5, $6)
        RETURNING id, name, email, role, tenant_id`,
-      [tenant.id, name, email, phone || null]
+      [tenant.id, name, email, passwordHash, phone || null, cpf]
     );
     await client.query('COMMIT');
     return buildAuthResponse(userResult.rows[0]);
@@ -54,7 +59,7 @@ async function registerRestaurantAccount({ name, email, password, phone, busines
   }
 }
 
-async function login({ email, password }) {
+async function requestLoginCode({ email, password }) {
   const result = await pool.query(
     'SELECT id, name, email, password_hash, role, tenant_id FROM users WHERE email = $1',
     [email]
@@ -67,7 +72,44 @@ async function login({ email, password }) {
   if (!valid) {
     throw new AppError('Credenciais inválidas', 401);
   }
-  return buildAuthResponse(user);
+
+  const code = generateCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+
+  await pool.query(
+    'INSERT INTO login_verification_codes (email, code, expires_at) VALUES ($1, $2, $3)',
+    [email, code, expiresAt]
+  );
+
+  await sendLoginCodeEmail(email, code);
+
+  return { pending: true, email };
+}
+
+async function verifyLoginCode({ email, code }) {
+  const result = await pool.query(
+    `SELECT id FROM login_verification_codes
+     WHERE email = $1 AND code = $2 AND used = false AND expires_at > now()
+     ORDER BY created_at DESC LIMIT 1`,
+    [email, code]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError('Código inválido ou expirado', 401);
+  }
+
+  await pool.query('UPDATE login_verification_codes SET used = true WHERE id = $1', [
+    result.rows[0].id,
+  ]);
+
+  const userResult = await pool.query(
+    'SELECT id, name, email, role, tenant_id FROM users WHERE email = $1',
+    [email]
+  );
+  if (userResult.rowCount === 0) {
+    throw new AppError('Usuário não encontrado', 404);
+  }
+
+  return buildAuthResponse(userResult.rows[0]);
 }
 
 function buildAuthResponse(user) {
@@ -88,4 +130,9 @@ function buildAuthResponse(user) {
   };
 }
 
-module.exports = { registerClientOrDeliverer, registerRestaurantAccount, login };
+module.exports = {
+  registerClientOrDeliverer,
+  registerRestaurantAccount,
+  requestLoginCode,
+  verifyLoginCode,
+};

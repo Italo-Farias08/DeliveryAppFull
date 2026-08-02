@@ -18,6 +18,7 @@ CREATE TABLE users (
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('client', 'restaurant', 'deliverer')),
   phone TEXT,
+  cpf TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT tenant_required_for_restaurant CHECK (
     (role = 'restaurant' AND tenant_id IS NOT NULL) OR (role <> 'restaurant')
@@ -162,3 +163,15 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_orders_updated_at
 BEFORE UPDATE ON orders
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Códigos de verificação de login por e-mail
+CREATE TABLE IF NOT EXISTS login_verification_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_login_codes_email ON login_verification_codes (email);
