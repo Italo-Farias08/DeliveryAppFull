@@ -1,4 +1,10 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Por padrão, o driver pg devolve colunas NUMERIC/DECIMAL como string
+// (para não perder precisão), o que quebra .toFixed() no frontend em
+// campos como rating, delivery_fee, price e total. Convertemos para
+// float aqui, num lugar só, em vez de fazer Number(...) em cada query.
+types.setTypeParser(1700, (val) => (val === null ? null : parseFloat(val)));
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
