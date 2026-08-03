@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { register } from '../../services/authService';
+import { register, RegisterPayload } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { UserRole } from '../../types';
@@ -26,44 +26,140 @@ const ROLES: { key: UserRole; label: string; icon: keyof typeof Ionicons.glyphMa
   { key: 'deliverer', label: 'Entregador', icon: 'bicycle' },
 ];
 
+type VehicleType = 'moto' | 'bike' | 'carro';
+const VEHICLE_TYPES: { key: VehicleType; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'moto', label: 'Moto', icon: 'bicycle' },
+  { key: 'bike', label: 'Bike', icon: 'bicycle-outline' },
+  { key: 'carro', label: 'Carro', icon: 'car-outline' },
+];
+
+function formatCpf(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
+function formatCnpj(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 14);
+  return digits
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
+function formatPlate(value: string) {
+  return value
+    .replace(/[^A-Za-z0-9]/g, '')
+    .toUpperCase()
+    .slice(0, 7);
+}
+
 export default function RegisterScreen({ navigation }: any) {
   const { signIn } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
+
+  // Campos comuns
   const [name, setName] = useState('');
-  const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Cliente / Entregador
+  const [cpf, setCpf] = useState('');
+
+  // Restaurante
+  const [businessName, setBusinessName] = useState('');
+  const [cnpj, setCnpj] = useState('');
+
+  // Entregador
+  const [vehicleType, setVehicleType] = useState<VehicleType>('moto');
+  const [vehiclePlate, setVehiclePlate] = useState('');
+
   const [loading, setLoading] = useState(false);
 
-  function formatCpf(value: string) {
-    const digits = value.replace(/\D/g, '').slice(0, 11);
-    return digits
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  function validate(): string | null {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      return 'Preencha nome, e-mail e senha para continuar.';
+    }
+    if (password.length < 6) {
+      return 'A senha precisa ter pelo menos 6 caracteres.';
+    }
+
+    if (role === 'client' || role === 'deliverer') {
+      const cpfDigits = cpf.replace(/\D/g, '');
+      if (cpfDigits.length !== 11) {
+        return 'Digite um CPF válido com 11 dígitos.';
+      }
+    }
+
+    if (role === 'restaurant') {
+      if (!businessName.trim()) {
+        return 'Informe o nome do restaurante.';
+      }
+      const cnpjDigits = cnpj.replace(/\D/g, '');
+      if (cnpjDigits.length !== 14) {
+        return 'Digite um CNPJ válido com 14 dígitos.';
+      }
+    }
+
+    if (role === 'deliverer' && vehicleType !== 'bike') {
+      const plateDigits = vehiclePlate.replace(/[^A-Za-z0-9]/g, '');
+      if (plateDigits.length !== 7) {
+        return 'Digite uma placa válida (ex: ABC1234).';
+      }
+    }
+
+    return null;
   }
 
   async function handleRegister() {
-    if (!name.trim() || !email.trim() || !password.trim() || !cpf.trim()) {
-      Alert.alert('Ops', 'Preencha nome completo, CPF, e-mail e senha para continuar.');
+    const validationError = validate();
+    if (validationError) {
+      Alert.alert('Ops', validationError);
       return;
     }
-    const cpfDigits = cpf.replace(/\D/g, '');
-    if (cpfDigits.length !== 11) {
-      Alert.alert('Ops', 'Digite um CPF válido com 11 dígitos.');
-      return;
+
+    let payload: RegisterPayload;
+    if (role === 'client') {
+      payload = {
+        role: 'client',
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        cpf: cpf.replace(/\D/g, ''),
+      };
+    } else if (role === 'restaurant') {
+      payload = {
+        role: 'restaurant',
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        businessName: businessName.trim(),
+        cnpj: cnpj.replace(/\D/g, ''),
+      };
+    } else {
+      payload = {
+        role: 'deliverer',
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        cpf: cpf.replace(/\D/g, ''),
+        vehicleType,
+        vehiclePlate: vehicleType === 'bike' ? undefined : vehiclePlate.replace(/[^A-Za-z0-9]/g, ''),
+      };
     }
-    if (password.length < 6) {
-      Alert.alert('Ops', 'A senha precisa ter pelo menos 6 caracteres.');
-      return;
-    }
+
     setLoading(true);
     try {
-      const user = await register(name.trim(), email.trim(), password, role, cpfDigits);
+      const user = await register(payload);
       await signIn(user);
     } catch (err: any) {
-      const message = err?.response?.data?.error || 'Não foi possível criar sua conta. Tente novamente.';
+      const message =
+        err?.response?.data?.error ||
+        `${err?.message || 'Erro desconhecido'} (code: ${err?.code || 'sem código'})`;
       Alert.alert('Erro ao cadastrar', message);
     } finally {
       setLoading(false);
@@ -98,29 +194,99 @@ export default function RegisterScreen({ navigation }: any) {
             })}
           </View>
 
+          {/* Nome — label muda pra "responsável" no caso de restaurante */}
           <View style={styles.inputWrap}>
             <Ionicons name="person-outline" size={20} color={colors.textMuted} />
             <TextInput
               style={styles.input}
-              placeholder="Nome completo"
+              placeholder={role === 'restaurant' ? 'Nome do responsável' : 'Nome completo'}
               placeholderTextColor={colors.textMuted}
               value={name}
               onChangeText={setName}
             />
           </View>
 
-          <View style={styles.inputWrap}>
-            <Ionicons name="card-outline" size={20} color={colors.textMuted} />
-            <TextInput
-              style={styles.input}
-              placeholder="CPF"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="number-pad"
-              maxLength={14}
-              value={cpf}
-              onChangeText={(v) => setCpf(formatCpf(v))}
-            />
-          </View>
+          {/* Campos exclusivos do Restaurante */}
+          {role === 'restaurant' && (
+            <>
+              <View style={styles.inputWrap}>
+                <Ionicons name="storefront-outline" size={20} color={colors.textMuted} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome do restaurante"
+                  placeholderTextColor={colors.textMuted}
+                  value={businessName}
+                  onChangeText={setBusinessName}
+                />
+              </View>
+              <View style={styles.inputWrap}>
+                <Ionicons name="business-outline" size={20} color={colors.textMuted} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="CNPJ"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="number-pad"
+                  maxLength={18}
+                  value={cnpj}
+                  onChangeText={(v) => setCnpj(formatCnpj(v))}
+                />
+              </View>
+            </>
+          )}
+
+          {/* CPF — Cliente e Entregador */}
+          {(role === 'client' || role === 'deliverer') && (
+            <View style={styles.inputWrap}>
+              <Ionicons name="card-outline" size={20} color={colors.textMuted} />
+              <TextInput
+                style={styles.input}
+                placeholder="CPF"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="number-pad"
+                maxLength={14}
+                value={cpf}
+                onChangeText={(v) => setCpf(formatCpf(v))}
+              />
+            </View>
+          )}
+
+          {/* Campos exclusivos do Entregador */}
+          {role === 'deliverer' && (
+            <>
+              <Text style={styles.fieldLabel}>Veículo</Text>
+              <View style={styles.vehicleRow}>
+                {VEHICLE_TYPES.map((v) => {
+                  const active = vehicleType === v.key;
+                  return (
+                    <TouchableOpacity
+                      key={v.key}
+                      onPress={() => setVehicleType(v.key)}
+                      activeOpacity={0.85}
+                      style={[styles.vehicleCard, active && styles.vehicleCardActive]}
+                    >
+                      <Ionicons name={v.icon} size={16} color={active ? colors.white : colors.primary} />
+                      <Text style={[styles.vehicleLabel, active && styles.vehicleLabelActive]}>{v.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {vehicleType !== 'bike' && (
+                <View style={styles.inputWrap}>
+                  <Ionicons name="pricetag-outline" size={20} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Placa (ex: ABC1234)"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="characters"
+                    maxLength={7}
+                    value={vehiclePlate}
+                    onChangeText={(v) => setVehiclePlate(formatPlate(v))}
+                  />
+                </View>
+              )}
+            </>
+          )}
 
           <View style={styles.inputWrap}>
             <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
@@ -191,6 +357,21 @@ const styles = StyleSheet.create({
   roleCardActive: { backgroundColor: colors.primary },
   roleLabel: { fontSize: 11.5, fontWeight: '700', color: colors.primaryDark },
   roleLabelActive: { color: colors.white },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  vehicleRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  vehicleCard: {
+    flex: 1,
+    height: 46,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryLight,
+    borderRadius: 12,
+  },
+  vehicleCardActive: { backgroundColor: colors.primary },
+  vehicleLabel: { fontSize: 12.5, fontWeight: '700', color: colors.primaryDark },
+  vehicleLabelActive: { color: colors.white },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',

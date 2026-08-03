@@ -3,6 +3,7 @@ const { registerSchema, loginSchema, verifyCodeSchema } = require('./auth.schema
 const asyncHandler = require('../../utils/asyncHandler');
 
 const register = asyncHandler(async (req, res) => {
+  console.log('DEBUG RAW BODY >>>', JSON.stringify(req.body));
   const data = registerSchema.parse(req.body);
   let result;
   if (data.role === 'restaurant') {
