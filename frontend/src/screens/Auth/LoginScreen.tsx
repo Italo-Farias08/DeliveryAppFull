@@ -181,9 +181,18 @@ export default function LoginScreen({ navigation }: any) {
       await requestLoginCode(email.trim(), password);
       setStep('code');
       Alert.alert('Verifique seu e-mail', `Enviamos um código de 6 dígitos para ${email.trim()}.`);
-    } catch (err) {
+    } catch (err: any) {
       triggerShake();
-      Alert.alert('Erro ao entrar', 'E-mail ou senha inválidos. Tente novamente.');
+      console.log('ERRO LOGIN >>>', JSON.stringify({
+        message: err?.message,
+        code: err?.code,
+        status: err?.response?.status,
+        data: err?.response?.data,
+      }));
+      const message =
+        err?.response?.data?.error ||
+        `${err?.message || 'Erro desconhecido'} (code: ${err?.code || 'sem código'})`;
+      Alert.alert('Erro ao entrar', message);
     } finally {
       setLoading(false);
     }
