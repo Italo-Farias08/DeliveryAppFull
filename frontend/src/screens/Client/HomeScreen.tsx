@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import * as Location from 'expo-location';
 import {
   Animated,
   Dimensions,
@@ -35,6 +36,10 @@ const FOOD_FALLBACKS = [
   'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80', // massa
   'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=600&q=80', // salada
 ];
+function getShortName(fullName?: string) {
+  if (!fullName) return undefined;
+  return fullName.trim().split(/\s+/).slice(0, 2).join(' ');
+}
 
 function getFallbackImage(id: string) {
   // hash simples pra sempre cair na mesma imagem pro mesmo restaurante
@@ -233,6 +238,9 @@ const ListHeader = React.memo(function ListHeader({
   onSelectCategory,
   onNavigateSearch,
   onMeasureCategories,
+  locationText,
+  locationLoading,
+  onPressLocation,
 }: {
   userName?: string;
   categories: Category[];
@@ -240,6 +248,9 @@ const ListHeader = React.memo(function ListHeader({
   onSelectCategory: (id: string | null) => void;
   onNavigateSearch: () => void;
   onMeasureCategories: (y: number) => void;
+  locationText: string;
+  locationLoading: boolean;
+  onPressLocation: () => void;
 }) {
   return (
     <View>
@@ -265,9 +276,11 @@ const ListHeader = React.memo(function ListHeader({
       </View>
 
       {/* Address selector */}
-      <TouchableOpacity style={styles.locationRow} activeOpacity={0.7}>
+      <TouchableOpacity style={styles.locationRow} activeOpacity={0.7} onPress={onPressLocation}>
         <Ionicons name="location" size={15} color={colors.primary} />
-        <Text style={styles.locationText}>Rua das Flores, 123</Text>
+        <Text style={styles.locationText} numberOfLines={1}>
+          {locationLoading ? 'Buscando localização...' : locationText}
+        </Text>
         <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
       </TouchableOpacity>
 
@@ -327,6 +340,44 @@ export default function HomeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
 
+  const [locationText, setLocationText] = useState('Toque para definir localização');
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  const fetchLocation = useCallback(async () => {
+    try {
+      setLocationLoading(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationText('Permissão de localização negada');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      if (place) {
+        const street = place.street || place.name;
+        const number = place.streetNumber;
+        const neighborhood = place.district || place.subregion;
+        const parts = [street && number ? `${street}, ${number}` : street, neighborhood].filter(Boolean);
+        setLocationText(parts.length ? parts.join(' - ') : 'Localização encontrada');
+      } else {
+        setLocationText('Não foi possível identificar o endereço');
+      }
+    } catch (err) {
+      setLocationText('Não foi possível obter sua localização');
+    } finally {
+      setLocationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLocation();
+  }, [fetchLocation]);
+
   useEffect(() => {
     getCategories().then(setCategories);
   }, []);
@@ -378,12 +429,15 @@ export default function HomeScreen() {
         scrollEventThrottle={16}
         ListHeaderComponent={
           <ListHeader
-            userName={user?.name}
+            userName={getShortName(user?.name)}
             categories={categories}
             activeCategory={activeCategory}
             onSelectCategory={setActiveCategory}
             onNavigateSearch={goToSearch}
             onMeasureCategories={handleMeasureCategories}
+            locationText={locationText}
+            locationLoading={locationLoading}
+            onPressLocation={fetchLocation}
           />
         }
         renderItem={({ item, index }) => (

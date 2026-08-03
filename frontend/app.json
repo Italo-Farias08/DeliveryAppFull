@@ -20,13 +20,19 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-font",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#FFFBF7"
-        }
-      ]
-    ]
+  "expo-font",
+  [
+    "expo-splash-screen",
+    {
+      "backgroundColor": "#FFFBF7"
+    }
+  ],
+  [
+    "expo-location",
+    {
+      "locationWhenInUsePermission": "Usamos sua localização para mostrar seu endereço de entrega."
+    }
+  ]
+]
   }
 }

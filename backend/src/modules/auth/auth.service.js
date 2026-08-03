@@ -9,6 +9,7 @@ function generateCode() {
 }
 
 async function registerClientOrDeliverer({ name, email, password, role, phone, cpf }) {
+  console.log('DEBUG REGISTER >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (existing.rowCount > 0) {
     throw new AppError('E-mail já cadastrado', 409);
@@ -60,16 +61,19 @@ async function registerRestaurantAccount({ name, email, password, phone, cpf, bu
 }
 
 async function requestLoginCode({ email, password }) {
+  console.log('DEBUG LOGIN >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const result = await pool.query(
     'SELECT id, name, email, password_hash, role, tenant_id FROM users WHERE email = $1',
     [email]
   );
   if (result.rowCount === 0) {
+    console.log('DEBUG LOGIN >>> e-mail não encontrado no banco');
     throw new AppError('Credenciais inválidas', 401);
   }
   const user = result.rows[0];
   const valid = await comparePassword(password, user.password_hash);
   if (!valid) {
+    console.log('DEBUG LOGIN >>> e-mail encontrado, mas senha não bateu com o hash salvo');
     throw new AppError('Credenciais inválidas', 401);
   }
 
