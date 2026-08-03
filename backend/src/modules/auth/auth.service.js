@@ -28,7 +28,8 @@ async function registerClientOrDeliverer({ name, email, password, role, phone, c
   return buildAuthResponse(user);
 }
 
-async function registerRestaurantAccount({ name, email, password, phone, cpf, businessName, document }) {
+async function registerRestaurantAccount({ name, email, password, phone, cpf, businessName, cnpj }) {
+  const document = cnpj;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -85,7 +86,17 @@ async function requestLoginCode({ email, password }) {
     [email, code, expiresAt]
   );
 
-  await sendLoginCodeEmail(email, code);
+  try {
+    await sendLoginCodeEmail(email, code);
+  } catch (emailErr) {
+    // Não deixa uma falha no envio de e-mail (ex: Resend bloqueando destinatário
+    // não verificado em modo teste) derrubar o login inteiro com erro 500.
+    // O código já foi salvo no banco; logamos o problema e seguimos o fluxo,
+    // já que em dev o código também é exibido no console pelo próprio email.js
+    // quando RESEND_API_KEY não está configurado.
+    console.error('DEBUG LOGIN >>> falha ao enviar e-mail do código, seguindo mesmo assim:', emailErr.message);
+    console.warn(`[email] Código de verificação para ${email}: ${code}`);
+  }
 
   return { pending: true, email };
 }
