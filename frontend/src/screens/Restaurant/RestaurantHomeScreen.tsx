@@ -64,7 +64,6 @@ export default function RestaurantHomeScreen() {
 
   const [savingStatus, setSavingStatus] = useState(false);
 
-  // form para criar o restaurante (onboarding)
   const [onboardingSaving, setOnboardingSaving] = useState(false);
   const [obName, setObName] = useState('');
   const [obCategoryId, setObCategoryId] = useState<string | null>(null);
