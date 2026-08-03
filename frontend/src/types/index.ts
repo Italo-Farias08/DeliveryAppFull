@@ -20,6 +20,7 @@ export interface MenuItem {
   description: string;
   price: number;
   image: string;
+  isAvailable?: boolean;
 }
 
 export interface Restaurant {
@@ -40,13 +41,15 @@ export interface CartItem {
   qty: number;
 }
 
-export type OrderStatus = 'preparando' | 'a caminho' | 'entregue';
+export type OrderStatus = 'preparando' | 'a caminho' | 'entregue' | 'cancelado';
 
 export interface Order {
   id: string;
   restaurantName: string;
-  items: CartItem[];
+  subtotal: number;
+  deliveryFee: number;
   total: number;
   status: OrderStatus;
   createdAt: string;
+  items: { id: string; name: string; price: number; qty: number }[];
 }

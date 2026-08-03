@@ -1,45 +1,63 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
-import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { useCart } from '../../context/CartContext';
-import { useOrders } from '../../context/OrderContext';
+import { getRestaurantById } from '../../services/restaurantService';
+import { createOrder } from '../../services/orderService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 export default function CartScreen() {
   const navigation = useNavigation<any>();
-  const { items, addItem, decreaseItem, subtotal, clear } = useCart();
-  const { addOrder } = useOrders();
+  const { items, addItem, decreaseItem, subtotal, clear, restaurantId } = useCart();
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [loadingFee, setLoadingFee] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const deliveryFee = items.length > 0 ? 6.9 : 0;
+  useEffect(() => {
+    let active = true;
+    if (!restaurantId) {
+      setDeliveryFee(0);
+      return;
+    }
+    setLoadingFee(true);
+    getRestaurantById(restaurantId)
+      .then((restaurant) => {
+        if (active) setDeliveryFee(restaurant?.deliveryFee ?? 0);
+      })
+      .catch(() => {
+        if (active) setDeliveryFee(0);
+      })
+      .finally(() => {
+        if (active) setLoadingFee(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [restaurantId]);
+
   const total = subtotal + deliveryFee;
 
-  function handleCheckout() {
-    Alert.alert(
-      'Modo demonstração',
-      'Esse app ainda não tem backend conectado, então o pedido não será enviado de verdade — mas vamos simular a confirmação para você ver o fluxo completo.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Simular pedido',
-          onPress: () => {
-            addOrder({
-              id: 'o-' + Date.now(),
-              restaurantName: items[0]?.item.restaurantId ?? 'Restaurante',
-              items,
-              total,
-              status: 'preparando',
-              createdAt: new Date().toISOString(),
-            });
-            clear();
-            navigation.navigate('Orders');
-          },
-        },
-      ]
-    );
+  async function handleCheckout() {
+    if (!restaurantId) return;
+    setSubmitting(true);
+    try {
+      await createOrder({
+        restaurantId,
+        items: items.map((ci) => ({ menuItemId: ci.item.id, qty: ci.qty })),
+      });
+      clear();
+      Alert.alert('Pedido enviado!', 'Seu pedido foi enviado ao restaurante.');
+      navigation.navigate('Orders');
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Não foi possível enviar o pedido. Tente novamente.';
+      Alert.alert('Erro ao finalizar pedido', message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (items.length === 0) {
@@ -88,13 +106,23 @@ export default function CartScreen() {
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Taxa de entrega</Text>
-          <Text style={styles.summaryValue}>R$ {deliveryFee.toFixed(2)}</Text>
+          {loadingFee ? (
+            <ActivityIndicator size="small" color={colors.textMuted} />
+          ) : (
+            <Text style={styles.summaryValue}>R$ {deliveryFee.toFixed(2)}</Text>
+          )}
         </View>
         <View style={[styles.summaryRow, { marginTop: 4 }]}>
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>R$ {total.toFixed(2)}</Text>
         </View>
-        <Button label="Finalizar pedido" onPress={handleCheckout} style={{ marginTop: 16 }} />
+        <Button
+          label="Finalizar pedido"
+          onPress={handleCheckout}
+          loading={submitting}
+          disabled={loadingFee}
+          style={{ marginTop: 16 }}
+        />
       </View>
     </SafeAreaView>
   );
