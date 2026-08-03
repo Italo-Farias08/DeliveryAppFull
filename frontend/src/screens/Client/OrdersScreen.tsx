@@ -67,7 +67,7 @@ export default function OrdersScreen() {
                 </View>
               </View>
               <Text style={styles.itemsText}>
-                {item.items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
+                {(item.items ?? []).map((it) => `${it.qty}x ${it.name}`).join(', ')}
               </Text>
               <View style={styles.footerRow}>
                 <Text style={styles.feeText}>Entrega: R$ {item.deliveryFee.toFixed(2)}</Text>

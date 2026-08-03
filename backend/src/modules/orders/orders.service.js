@@ -74,7 +74,13 @@ async function createOrder(clientId, data) {
 async function listOrdersByClient(clientId) {
   const result = await pool.query(
     `SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total, o.created_at AS "createdAt",
-            r.name AS "restaurantName"
+            r.name AS "restaurantName",
+            COALESCE(
+              (SELECT json_agg(json_build_object('id', oi.id, 'name', oi.name_snapshot, 'price', oi.price_snapshot, 'qty', oi.qty))
+               FROM order_items oi
+               WHERE oi.order_id = o.id),
+              '[]'
+            ) AS items
      FROM orders o
      JOIN restaurants r ON r.id = o.restaurant_id
      WHERE o.client_id = $1

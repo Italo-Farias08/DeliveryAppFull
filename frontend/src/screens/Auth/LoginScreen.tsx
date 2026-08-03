@@ -242,7 +242,7 @@ export default function LoginScreen({ navigation }: any) {
           </Animated.View>
 
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-            <Text style={styles.brand}>MyFood</Text>
+            <Text style={styles.brand}>Vitória Delivery</Text>
           </Animated.View>
 
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
