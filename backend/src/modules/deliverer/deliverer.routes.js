@@ -1,73 +1,66 @@
 const { Router } = require('express');
 const { z } = require('zod');
-const { pool } = require('../../config/db');
 const asyncHandler = require('../../utils/asyncHandler');
 const { authenticate, authorize } = require('../../middlewares/auth');
-const AppError = require('../../utils/AppError');
+const service = require('./deliverer.service');
 
 const router = Router();
 
 router.use(authenticate, authorize('deliverer'));
 
+const availabilitySchema = z.object({ isAvailable: z.boolean() });
+
+router.patch(
+  '/availability',
+  asyncHandler(async (req, res) => {
+    const { isAvailable } = availabilitySchema.parse(req.body);
+    const result = await service.setAvailability(req.user.sub, isAvailable);
+    res.json(result);
+  })
+);
+
+// Radar: corridas disponíveis agora (também chega via socket "order:available")
 router.get(
   '/orders/available',
   asyncHandler(async (req, res) => {
-    const result = await pool.query(
-      `SELECT o.id, o.status, o.total, o.created_at AS "createdAt", r.name AS "restaurantName"
-       FROM orders o
-       JOIN restaurants r ON r.id = o.restaurant_id
-       WHERE o.status = 'preparando' AND o.deliverer_id IS NULL
-       ORDER BY o.created_at ASC`
-    );
-    res.json(result.rows);
+    const orders = await service.listAvailable();
+    res.json(orders);
   })
 );
 
 router.get(
   '/orders/mine',
   asyncHandler(async (req, res) => {
-    const result = await pool.query(
-      `SELECT o.id, o.status, o.total, o.created_at AS "createdAt", r.name AS "restaurantName"
-       FROM orders o
-       JOIN restaurants r ON r.id = o.restaurant_id
-       WHERE o.deliverer_id = $1
-       ORDER BY o.created_at DESC`,
-      [req.user.sub]
-    );
-    res.json(result.rows);
+    const orders = await service.listMine(req.user.sub);
+    res.json(orders);
   })
 );
 
 router.patch(
   '/orders/:id/accept',
   asyncHandler(async (req, res) => {
-    const result = await pool.query(
-      `UPDATE orders SET deliverer_id = $1, status = 'a caminho'
-       WHERE id = $2 AND deliverer_id IS NULL
-       RETURNING id, status`,
-      [req.user.sub, req.params.id]
-    );
-    if (result.rowCount === 0) throw new AppError('Pedido indisponível para aceite', 409);
-    res.json(result.rows[0]);
+    const result = await service.acceptOrder(req.user.sub, req.params.id);
+    res.json(result);
   })
 );
 
-const statusSchema = z.object({
-  status: z.enum(['a caminho', 'entregue']),
-});
+const codeSchema = z.object({ code: z.string().min(4).max(4) });
 
 router.patch(
-  '/orders/:id/status',
+  '/orders/:id/confirm-pickup',
   asyncHandler(async (req, res) => {
-    const { status } = statusSchema.parse(req.body);
-    const result = await pool.query(
-      `UPDATE orders SET status = $1
-       WHERE id = $2 AND deliverer_id = $3
-       RETURNING id, status`,
-      [status, req.params.id, req.user.sub]
-    );
-    if (result.rowCount === 0) throw new AppError('Pedido não encontrado para este entregador', 404);
-    res.json(result.rows[0]);
+    const { code } = codeSchema.parse(req.body);
+    const result = await service.confirmPickup(req.user.sub, req.params.id, code);
+    res.json(result);
+  })
+);
+
+router.patch(
+  '/orders/:id/confirm-delivery',
+  asyncHandler(async (req, res) => {
+    const { code } = codeSchema.parse(req.body);
+    const result = await service.confirmDelivery(req.user.sub, req.params.id, code);
+    res.json(result);
   })
 );
 

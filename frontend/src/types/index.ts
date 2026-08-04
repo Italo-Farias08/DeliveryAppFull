@@ -41,7 +41,13 @@ export interface CartItem {
   qty: number;
 }
 
-export type OrderStatus = 'preparando' | 'a caminho' | 'entregue' | 'cancelado';
+export type OrderStatus =
+  | 'pendente'
+  | 'preparando'
+  | 'procurando_entregador'
+  | 'a_caminho'
+  | 'entregue'
+  | 'cancelado';
 
 export interface Order {
   id: string;
@@ -51,5 +57,15 @@ export interface Order {
   total: number;
   status: OrderStatus;
   createdAt: string;
+  acceptedAt?: string | null;
+  readyAt?: string | null;
+  pickedUpAt?: string | null;
+  deliveredAt?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  // código que o CLIENTE mostra para o entregador confirmar a entrega
+  deliveryCode?: string;
+  delivererName?: string | null;
+  delivererPhone?: string | null;
   items: { id: string; name: string; price: number; qty: number }[];
 }

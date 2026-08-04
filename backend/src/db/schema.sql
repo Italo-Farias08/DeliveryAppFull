@@ -99,10 +99,20 @@ CREATE TABLE orders (
   client_id UUID NOT NULL REFERENCES users(id),
   deliverer_id UUID REFERENCES users(id),
   address_id UUID REFERENCES addresses(id),
-  status TEXT NOT NULL DEFAULT 'preparando' CHECK (status IN ('preparando', 'a caminho', 'entregue', 'cancelado')),
+  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN (
+    'pendente', 'preparando', 'procurando_entregador', 'a_caminho', 'entregue', 'cancelado'
+  )),
+  pickup_code CHAR(4) NOT NULL,
+  delivery_code CHAR(4) NOT NULL,
+  cancel_reason TEXT,
   subtotal NUMERIC(10,2) NOT NULL,
   delivery_fee NUMERIC(10,2) NOT NULL,
   total NUMERIC(10,2) NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  ready_at TIMESTAMPTZ,
+  picked_up_at TIMESTAMPTZ,
+  delivered_at TIMESTAMPTZ,
+  cancelled_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -111,6 +121,7 @@ CREATE INDEX idx_orders_tenant_id ON orders(tenant_id);
 CREATE INDEX idx_orders_client_id ON orders(client_id);
 CREATE INDEX idx_orders_deliverer_id ON orders(deliverer_id);
 CREATE INDEX idx_orders_restaurant_id ON orders(restaurant_id);
+CREATE INDEX idx_orders_status_radar ON orders(status) WHERE deliverer_id IS NULL;
 
 CREATE TABLE order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

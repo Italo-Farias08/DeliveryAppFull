@@ -1,6 +1,6 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const service = require('./tenant.service');
-const { restaurantSchema, menuItemSchema, orderStatusSchema } = require('./tenant.schema');
+const { restaurantSchema, menuItemSchema, rejectOrderSchema } = require('./tenant.schema');
 
 const listRestaurants = asyncHandler(async (req, res) => {
   const restaurants = await service.listRestaurants(req.db);
@@ -48,9 +48,19 @@ const listOrders = asyncHandler(async (req, res) => {
   res.json(orders);
 });
 
-const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status } = orderStatusSchema.parse(req.body);
-  const order = await service.updateOrderStatus(req.db, req.tenantId, req.params.orderId, status);
+const acceptOrder = asyncHandler(async (req, res) => {
+  const order = await service.acceptOrder(req.db, req.tenantId, req.params.orderId);
+  res.json(order);
+});
+
+const rejectOrder = asyncHandler(async (req, res) => {
+  const { reason } = rejectOrderSchema.parse(req.body || {});
+  const order = await service.rejectOrder(req.db, req.tenantId, req.params.orderId, reason);
+  res.json(order);
+});
+
+const markOrderReady = asyncHandler(async (req, res) => {
+  const order = await service.markOrderReady(req.db, req.tenantId, req.params.orderId);
   res.json(order);
 });
 
@@ -63,5 +73,7 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   listOrders,
-  updateOrderStatus,
+  acceptOrder,
+  rejectOrder,
+  markOrderReady,
 };

@@ -59,9 +59,6 @@ async function sendLoginCodeEmail(to, code) {
   const text = `Seu código de verificação é: ${code}\n\nEle expira em 10 minutos.`;
   const html = `<p>Seu código de verificação é:</p><h1 style="letter-spacing:4px">${code}</h1><p>Ele expira em 10 minutos.</p>`;
 
-  // Prioridade: Brevo (HTTP API, sem exigir domínio, funciona no Railway) >
-  // Gmail (SMTP, pode ser bloqueado pelo host) > Resend (HTTP API, mas exige
-  // domínio verificado pra mandar pra qualquer destinatário) > log no console.
   if (hasBrevoConfig()) {
     return sendViaBrevo(to, subject, text, html);
   }
@@ -98,7 +95,6 @@ async function sendLoginCodeEmail(to, code) {
     return { delivered: true, id: data?.id };
   }
 
-  // Sem nenhum provedor configurado: loga no console para não travar o dev local.
   console.warn(`[email] Nenhum provedor de e-mail configurado. Código para ${to}: ${code}`);
   return { delivered: false };
 }

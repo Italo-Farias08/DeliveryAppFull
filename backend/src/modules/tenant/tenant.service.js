@@ -1,4 +1,19 @@
 const AppError = require('../../utils/AppError');
+const { pool } = require('../../config/db');
+const { toClient, toDeliverers } = require('../../realtime/socket');
+
+const TENANT_ORDER_SELECT = `
+  SELECT o.id, o.restaurant_id AS "restaurantId", o.client_id AS "clientId",
+         o.deliverer_id AS "delivererId", o.status, o.subtotal, o.delivery_fee AS "deliveryFee",
+         o.total, o.pickup_code AS "pickupCode",
+         o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
+         o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
+         c.name AS "clientName",
+         d.name AS "delivererName", d.phone AS "delivererPhone"
+  FROM orders o
+  JOIN users c ON c.id = o.client_id
+  LEFT JOIN users d ON d.id = o.deliverer_id
+`;
 
 async function listRestaurants(db) {
   const result = await db.query(
@@ -80,25 +95,81 @@ async function deleteMenuItem(db, menuItemId) {
 
 async function listOrders(db, tenantId) {
   const ordersResult = await db.query(
-    `SELECT id, restaurant_id AS "restaurantId", client_id AS "clientId", deliverer_id AS "delivererId",
-            status, subtotal, delivery_fee AS "deliveryFee", total, created_at AS "createdAt"
-     FROM orders
-     WHERE tenant_id = $1
-     ORDER BY created_at DESC`,
+    `${TENANT_ORDER_SELECT}
+     WHERE o.tenant_id = $1
+     ORDER BY o.created_at DESC`,
     [tenantId]
   );
-  return ordersResult.rows;
+  const orders = ordersResult.rows;
+  if (orders.length === 0) return orders;
+  const itemsResult = await db.query(
+    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty
+     FROM order_items
+     WHERE order_id = ANY($1::uuid[])`,
+    [orders.map((o) => o.id)]
+  );
+  const itemsByOrder = {};
+  for (const item of itemsResult.rows) {
+    (itemsByOrder[item.orderId] ||= []).push(item);
+  }
+  return orders.map((o) => ({ ...o, items: itemsByOrder[o.id] || [] }));
 }
 
-async function updateOrderStatus(db, tenantId, orderId, status) {
+// Restaurante aceita o pedido: pendente -> preparando
+async function acceptOrder(db, tenantId, orderId) {
   const result = await db.query(
-    `UPDATE orders SET status = $1
-     WHERE id = $2 AND tenant_id = $3
-     RETURNING id, status`,
-    [status, orderId, tenantId]
+    `UPDATE orders SET status = 'preparando', accepted_at = now()
+     WHERE id = $1 AND tenant_id = $2 AND status = 'pendente'
+     RETURNING id, status, client_id AS "clientId"`,
+    [orderId, tenantId]
   );
-  if (result.rowCount === 0) throw new AppError('Pedido não encontrado nesta conta', 404);
-  return result.rows[0];
+  if (result.rowCount === 0) {
+    throw new AppError('Pedido não encontrado ou não está mais pendente', 409);
+  }
+  const order = result.rows[0];
+  toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
+  return order;
+}
+
+// Restaurante recusa o pedido: pendente -> cancelado
+async function rejectOrder(db, tenantId, orderId, reason) {
+  const result = await db.query(
+    `UPDATE orders SET status = 'cancelado', cancelled_at = now(), cancel_reason = $1
+     WHERE id = $2 AND tenant_id = $3 AND status = 'pendente'
+     RETURNING id, status, client_id AS "clientId"`,
+    [reason || 'Recusado pelo restaurante', orderId, tenantId]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError('Pedido não encontrado ou não está mais pendente', 409);
+  }
+  const order = result.rows[0];
+  toClient(order.clientId, 'order:status', { id: order.id, status: order.status, cancelReason: reason });
+  return order;
+}
+
+// Restaurante marca como pronto: preparando -> procurando_entregador
+// Nesse momento o pedido entra no radar dos entregadores.
+async function markOrderReady(db, tenantId, orderId) {
+  const result = await db.query(
+    `UPDATE orders SET status = 'procurando_entregador', ready_at = now()
+     WHERE id = $1 AND tenant_id = $2 AND status = 'preparando'
+     RETURNING id, status, client_id AS "clientId", restaurant_id AS "restaurantId", total,
+               pickup_code AS "pickupCode", created_at AS "createdAt"`,
+    [orderId, tenantId]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError('Pedido não encontrado ou ainda não está em preparo', 409);
+  }
+  const order = result.rows[0];
+  const restaurantResult = await db.query('SELECT name FROM restaurants WHERE id = $1', [order.restaurantId]);
+  toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
+  toDeliverers('order:available', {
+    id: order.id,
+    total: order.total,
+    createdAt: order.createdAt,
+    restaurantName: restaurantResult.rows[0]?.name || '',
+  });
+  return { id: order.id, status: order.status };
 }
 
 module.exports = {
@@ -111,5 +182,7 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   listOrders,
-  updateOrderStatus,
+  acceptOrder,
+  rejectOrder,
+  markOrderReady,
 };

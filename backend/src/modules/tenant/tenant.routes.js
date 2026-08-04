@@ -17,6 +17,8 @@ router.put('/menu-items/:menuItemId', controller.updateMenuItem);
 router.delete('/menu-items/:menuItemId', controller.deleteMenuItem);
 
 router.get('/orders', controller.listOrders);
-router.patch('/orders/:orderId/status', controller.updateOrderStatus);
+router.patch('/orders/:orderId/accept', controller.acceptOrder);
+router.patch('/orders/:orderId/reject', controller.rejectOrder);
+router.patch('/orders/:orderId/ready', controller.markOrderReady);
 
 module.exports = router;

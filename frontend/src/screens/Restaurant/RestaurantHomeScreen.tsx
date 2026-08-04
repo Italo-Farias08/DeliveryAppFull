@@ -19,6 +19,7 @@ import {
   MenuItemInput,
   RestaurantInput,
   TenantOrder,
+  acceptOrder,
   createMenuItem,
   createRestaurant,
   deleteMenuItem,
@@ -26,26 +27,32 @@ import {
   listMenuItems,
   listMyRestaurants,
   listTenantOrders,
+  markOrderReady,
+  rejectOrder,
   updateMenuItem,
-  updateOrderStatus,
   updateRestaurant,
 } from '../../services/tenantService';
+import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Category, MenuItem, OrderStatus, Restaurant } from '../../types';
 
-const statusFlow: Record<OrderStatus, OrderStatus | null> = {
-  preparando: 'a caminho',
-  'a caminho': 'entregue',
-  entregue: null,
-  cancelado: null,
-};
-
 const statusLabel: Record<OrderStatus, string> = {
+  pendente: 'Novo pedido',
   preparando: 'Preparando',
-  'a caminho': 'A caminho',
+  procurando_entregador: 'Buscando entregador',
+  a_caminho: 'A caminho',
   entregue: 'Entregue',
   cancelado: 'Cancelado',
+};
+
+const statusColor: Record<OrderStatus, string> = {
+  pendente: colors.primary,
+  preparando: colors.star,
+  procurando_entregador: colors.secondary,
+  a_caminho: colors.secondary,
+  entregue: colors.textMuted,
+  cancelado: colors.danger,
 };
 
 function todayKey(iso: string) {
@@ -63,6 +70,7 @@ export default function RestaurantHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [savingStatus, setSavingStatus] = useState(false);
+  const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
 
   const [onboardingSaving, setOnboardingSaving] = useState(false);
   const [obName, setObName] = useState('');
@@ -105,6 +113,24 @@ export default function RestaurantHomeScreen() {
   useEffect(() => {
     loadEverything();
   }, [loadEverything]);
+
+  // Novos pedidos chegam em tempo real: o cliente finaliza a compra e o
+  // restaurante já vê aqui na hora, sem precisar dar refresh.
+  useEffect(() => {
+    connectSocket().then((s) => {
+      if (!s) return;
+      s.on('order:new', (order: TenantOrder) => {
+        setOrders((prev) => (prev.some((o) => o.id === order.id) ? prev : [order, ...prev]));
+      });
+      s.on('order:courierAssigned', ({ id }: { id: string }) => {
+        loadEverything(true);
+      });
+    });
+    return () => {
+      disconnectSocket();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleCreateRestaurant() {
     if (!obName.trim() || !obCategoryId) {
@@ -236,14 +262,48 @@ export default function RestaurantHomeScreen() {
     ]);
   }
 
-  async function handleAdvanceOrder(order: TenantOrder) {
-    const next = statusFlow[order.status];
-    if (!next) return;
+  async function handleAcceptOrder(order: TenantOrder) {
+    setSavingOrderId(order.id);
     try {
-      await updateOrderStatus(order.id, next);
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
+      await acceptOrder(order.id);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'preparando' } : o)));
     } catch {
-      Alert.alert('Erro', 'Não foi possível atualizar o status do pedido.');
+      Alert.alert('Erro', 'Não foi possível aceitar o pedido.');
+    } finally {
+      setSavingOrderId(null);
+    }
+  }
+
+  function handleRejectOrder(order: TenantOrder) {
+    Alert.alert('Recusar pedido', 'Tem certeza que deseja recusar este pedido?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Recusar',
+        style: 'destructive',
+        onPress: async () => {
+          setSavingOrderId(order.id);
+          try {
+            await rejectOrder(order.id);
+            setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'cancelado' } : o)));
+          } catch {
+            Alert.alert('Erro', 'Não foi possível recusar o pedido.');
+          } finally {
+            setSavingOrderId(null);
+          }
+        },
+      },
+    ]);
+  }
+
+  async function handleMarkReady(order: TenantOrder) {
+    setSavingOrderId(order.id);
+    try {
+      await markOrderReady(order.id);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'procurando_entregador' } : o)));
+    } catch {
+      Alert.alert('Erro', 'Não foi possível marcar o pedido como pronto.');
+    } finally {
+      setSavingOrderId(null);
     }
   }
 
@@ -384,19 +444,90 @@ export default function RestaurantHomeScreen() {
               <Text style={styles.emptySub}>Os pedidos dos clientes vão aparecer aqui</Text>
             </View>
           ) : (
-            orders.slice(0, 10).map((order) => (
-              <View key={order.id} style={styles.orderRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
-                  <Text style={styles.orderTotal}>R$ {Number(order.total).toFixed(2)} · {statusLabel[order.status]}</Text>
+            orders.slice(0, 15).map((order) => {
+              const saving = savingOrderId === order.id;
+              return (
+                <View key={order.id} style={styles.orderCard}>
+                  <View style={styles.orderCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
+                      <Text style={styles.orderTotal}>R$ {Number(order.total).toFixed(2)}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor[order.status] }]}>
+                      <Text style={styles.statusBadgeText}>{statusLabel[order.status]}</Text>
+                    </View>
+                  </View>
+
+                  {(order.items ?? []).length > 0 && (
+                    <Text style={styles.orderItemsText}>
+                      {order.items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
+                    </Text>
+                  )}
+
+                  {order.status === 'pendente' && (
+                    <View style={styles.orderActionsRow}>
+                      <TouchableOpacity
+                        style={[styles.outlineSmallBtn, saving && { opacity: 0.6 }]}
+                        onPress={() => handleRejectOrder(order)}
+                        disabled={saving}
+                      >
+                        <Text style={styles.outlineSmallBtnText}>Recusar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.advanceBtn, { flex: 1 }, saving && { opacity: 0.6 }]}
+                        onPress={() => handleAcceptOrder(order)}
+                        disabled={saving}
+                      >
+                        {saving ? (
+                          <ActivityIndicator color={colors.primary} />
+                        ) : (
+                          <Text style={styles.advanceBtnText}>Aceitar pedido</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {order.status === 'preparando' && (
+                    <TouchableOpacity
+                      style={[styles.advanceBtn, styles.advanceBtnFull, saving && { opacity: 0.6 }]}
+                      onPress={() => handleMarkReady(order)}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color={colors.primary} />
+                      ) : (
+                        <Text style={styles.advanceBtnText}>Pedido pronto — chamar entregador</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  {order.status === 'procurando_entregador' && (
+                    <View style={styles.codeBanner}>
+                      <Ionicons name="bicycle-outline" size={18} color={colors.secondary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.codeBannerLabel}>Buscando entregador</Text>
+                        <Text style={styles.codeBannerSub}>
+                          Quando ele chegar, confira este código antes de entregar o pedido
+                        </Text>
+                      </View>
+                      <Text style={styles.pickupCode}>{order.pickupCode}</Text>
+                    </View>
+                  )}
+
+                  {order.status === 'a_caminho' && (
+                    <View style={styles.codeBanner}>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={colors.secondary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.codeBannerLabel}>A caminho do cliente</Text>
+                        <Text style={styles.codeBannerSub}>
+                          {order.delivererName ? `Entregador: ${order.delivererName}` : 'Entregador a caminho'}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
-                {statusFlow[order.status] && (
-                  <TouchableOpacity style={styles.advanceBtn} onPress={() => handleAdvanceOrder(order)}>
-                    <Text style={styles.advanceBtnText}>Marcar {statusLabel[statusFlow[order.status]!]}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -511,8 +642,30 @@ const styles = StyleSheet.create({
   },
   orderId: { ...typography.bodyBold, color: colors.text },
   orderTotal: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
-  advanceBtn: { backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
-  advanceBtnText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+  advanceBtn: { backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  advanceBtnFull: { marginTop: 10 },
+  advanceBtnText: { color: colors.primary, fontSize: 12.5, fontWeight: '700' },
+  orderCard: {
+    backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  orderCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  statusBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  statusBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  orderItemsText: { color: colors.textMuted, fontSize: 12.5, marginTop: 8 },
+  orderActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  outlineSmallBtn: {
+    borderWidth: 1.5, borderColor: colors.danger, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10, alignItems: 'center', justifyContent: 'center',
+  },
+  outlineSmallBtnText: { color: colors.danger, fontWeight: '700', fontSize: 12.5 },
+  codeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12,
+    backgroundColor: colors.secondaryLight, borderRadius: 12, padding: 12,
+  },
+  codeBannerLabel: { ...typography.bodyBold, color: colors.text, fontSize: 13 },
+  codeBannerSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
+  pickupCode: { ...typography.h2, color: colors.secondary, letterSpacing: 3 },
   menuItemRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,

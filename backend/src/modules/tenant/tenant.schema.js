@@ -18,8 +18,8 @@ const menuItemSchema = z.object({
   isAvailable: z.boolean().optional(),
 });
 
-const orderStatusSchema = z.object({
-  status: z.enum(['preparando', 'a caminho', 'entregue', 'cancelado']),
+const rejectOrderSchema = z.object({
+  reason: z.string().max(300).optional(),
 });
 
-module.exports = { restaurantSchema, menuItemSchema, orderStatusSchema };
+module.exports = { restaurantSchema, menuItemSchema, rejectOrderSchema };

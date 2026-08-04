@@ -11,6 +11,16 @@ export interface TenantOrder {
   deliveryFee: number;
   total: number;
   createdAt: string;
+  acceptedAt?: string | null;
+  readyAt?: string | null;
+  pickedUpAt?: string | null;
+  deliveredAt?: string | null;
+  clientName?: string;
+  // código que o entregador precisa informar ao retirar o pedido no balcão
+  pickupCode?: string;
+  delivererName?: string | null;
+  delivererPhone?: string | null;
+  items: { id: string; name: string; price: number; qty: number }[];
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -75,7 +85,17 @@ export async function listTenantOrders(): Promise<TenantOrder[]> {
   return data;
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus): Promise<{ id: string; status: OrderStatus }> {
-  const { data } = await api.patch(`/tenant/orders/${orderId}/status`, { status });
+export async function acceptOrder(orderId: string): Promise<{ id: string; status: OrderStatus }> {
+  const { data } = await api.patch(`/tenant/orders/${orderId}/accept`);
+  return data;
+}
+
+export async function rejectOrder(orderId: string, reason?: string): Promise<{ id: string; status: OrderStatus }> {
+  const { data } = await api.patch(`/tenant/orders/${orderId}/reject`, { reason });
+  return data;
+}
+
+export async function markOrderReady(orderId: string): Promise<{ id: string; status: OrderStatus }> {
+  const { data } = await api.patch(`/tenant/orders/${orderId}/ready`);
   return data;
 }

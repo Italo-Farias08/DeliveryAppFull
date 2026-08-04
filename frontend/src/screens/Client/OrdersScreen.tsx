@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { listMyOrders } from '../../services/orderService';
+import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Order, OrderStatus } from '../../types';
 
 const statusMap: Record<OrderStatus, { label: string; color: string }> = {
+  pendente: { label: 'Aguardando restaurante', color: colors.primary },
   preparando: { label: 'Preparando', color: colors.star },
-  'a caminho': { label: 'A caminho', color: colors.secondary },
+  procurando_entregador: { label: 'Buscando entregador', color: colors.secondary },
+  a_caminho: { label: 'A caminho', color: colors.secondary },
   entregue: { label: 'Entregue', color: colors.textMuted },
   cancelado: { label: 'Cancelado', color: colors.danger },
 };
@@ -37,6 +40,19 @@ export default function OrdersScreen() {
       load();
     }, [load])
   );
+
+  // Atualiza o status do pedido em tempo real (aceito, pronto, a caminho, entregue...)
+  useEffect(() => {
+    connectSocket().then((s) => {
+      if (!s) return;
+      s.on('order:status', ({ id, status }: { id: string; status: OrderStatus }) => {
+        setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+      });
+    });
+    return () => {
+      disconnectSocket();
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -69,6 +85,24 @@ export default function OrdersScreen() {
               <Text style={styles.itemsText}>
                 {(item.items ?? []).map((it) => `${it.qty}x ${it.name}`).join(', ')}
               </Text>
+
+              {item.status === 'a_caminho' && item.deliveryCode && (
+                <View style={styles.codeBanner}>
+                  <Ionicons name="key-outline" size={18} color={colors.secondary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.codeBannerLabel}>Código de entrega</Text>
+                    <Text style={styles.codeBannerSub}>
+                      Informe esse código ao entregador quando ele chegar
+                    </Text>
+                  </View>
+                  <Text style={styles.deliveryCode}>{item.deliveryCode}</Text>
+                </View>
+              )}
+
+              {item.status === 'cancelado' && item.cancelReason && (
+                <Text style={styles.cancelReason}>Motivo: {item.cancelReason}</Text>
+              )}
+
               <View style={styles.footerRow}>
                 <Text style={styles.feeText}>Entrega: R$ {item.deliveryFee.toFixed(2)}</Text>
                 <Text style={styles.total}>R$ {item.total.toFixed(2)}</Text>
@@ -96,7 +130,15 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
   itemsText: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
   feeText: { color: colors.textMuted, fontSize: 12 },
   total: { ...typography.bodyBold, color: colors.primary },
+  codeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 8,
+    backgroundColor: colors.secondaryLight, borderRadius: 12, padding: 12,
+  },
+  codeBannerLabel: { ...typography.bodyBold, color: colors.text, fontSize: 13 },
+  codeBannerSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
+  deliveryCode: { ...typography.h2, color: colors.secondary, letterSpacing: 3 },
+  cancelReason: { color: colors.danger, fontSize: 12.5, marginBottom: 8 },
 });
