@@ -2,7 +2,7 @@ const { z } = require('zod');
 
 const createOrderSchema = z.object({
   restaurantId: z.string().uuid(),
-  addressId: z.string().uuid().optional(),
+  addressId: z.string().uuid({ message: 'Escolha um endereço de entrega' }),
   items: z
     .array(
       z.object({

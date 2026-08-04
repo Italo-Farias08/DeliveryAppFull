@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '../services/socket';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -35,6 +35,7 @@ interface Props {
 }
 
 export default function OrderChatModal({ visible, onClose, orderId, myRole, title, loadMessages, sendMessage }: Props) {
+  const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState('');
@@ -92,9 +93,9 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
   }
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+        <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
           <TouchableOpacity onPress={onClose} hitSlop={10}>
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
