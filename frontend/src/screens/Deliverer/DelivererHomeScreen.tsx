@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,       
+  Easing,          
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -28,6 +30,7 @@ import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
+
 function addressLine(o: { street?: string; number?: string; neighborhood?: string; city?: string }) {
   const parts = [o.street, o.number].filter(Boolean).join(', ');
   const rest = [o.neighborhood, o.city].filter(Boolean).join(' · ');
@@ -49,6 +52,8 @@ export default function DelivererHomeScreen() {
   const [pickupCodeInput, setPickupCodeInput] = useState('');
   const [deliveryCodeInput, setDeliveryCodeInput] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [pickupConfirmed, setPickupConfirmed] = useState(false);
+  const checkScale = useRef(new Animated.Value(0)).current;
 
   const availableRef = useRef(available);
   availableRef.current = available;
@@ -139,23 +144,33 @@ export default function DelivererHomeScreen() {
   }
 
   async function handleConfirmPickup() {
-    if (!activeOrder) return;
-    if (pickupCodeInput.trim().length !== 4) {
-      Alert.alert('Código inválido', 'Peça ao restaurante o código de 4 dígitos da retirada.');
-      return;
-    }
-    setConfirming(true);
-    try {
-      await confirmPickup(activeOrder.id, pickupCodeInput.trim());
-      setPickupCodeInput('');
-      await loadMine();
-    } catch (err: any) {
-      const message = err?.response?.data?.error || 'Código incorreto. Confira com o restaurante.';
-      Alert.alert('Não foi possível confirmar', message);
-    } finally {
-      setConfirming(false);
-    }
+  if (!activeOrder) return;
+  if (pickupCodeInput.trim().length !== 4) {
+    Alert.alert('Código inválido', 'Peça ao restaurante o código de 4 dígitos da retirada.');
+    return;
   }
+  setConfirming(true);
+  try {
+    await confirmPickup(activeOrder.id, pickupCodeInput.trim());
+    setPickupCodeInput('');
+
+    setPickupConfirmed(true);
+    checkScale.setValue(0);
+    Animated.sequence([
+      Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }),
+    ]).start();
+
+    setTimeout(async () => {
+      setPickupConfirmed(false);
+      await loadMine();
+      setConfirming(false);
+    }, 1400);
+  } catch (err: any) {
+    const message = err?.response?.data?.error || 'Código incorreto. Confira com o restaurante.';
+    Alert.alert('Não foi possível confirmar', message);
+    setConfirming(false);
+  }
+}
 
   async function handleConfirmDelivery() {
     if (!activeOrder) return;
@@ -246,32 +261,45 @@ export default function DelivererHomeScreen() {
               <Text style={styles.activeAddress}>{addressLine(activeOrder)}</Text>
               <Text style={styles.activeTotal}>Pedido #{activeOrder.id.slice(-5)} · R$ {Number(activeOrder.total).toFixed(2)}</Text>
 
-              {activeOrder.status === 'procurando_entregador' && (
-                <View style={styles.codeBox}>
-                  <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
-                  <View style={styles.codeRow}>
-                    <TextInput
-                      style={styles.codeInput}
-                      value={pickupCodeInput}
-                      onChangeText={setPickupCodeInput}
-                      placeholder="0000"
-                      keyboardType="number-pad"
-                      maxLength={4}
-                    />
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, confirming && { opacity: 0.6 }]}
-                      onPress={handleConfirmPickup}
-                      disabled={confirming}
-                    >
-                      {confirming ? (
-                        <ActivityIndicator color={colors.white} />
-                      ) : (
-                        <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
+             {activeOrder.status === 'procurando_entregador' && (
+  <View style={styles.codeBox}>
+    {pickupConfirmed ? (
+      <View style={styles.successBox}>
+        <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+          <Ionicons name="checkmark-circle" size={44} color={colors.secondary} />
+        </Animated.View>
+        <Text style={styles.successText}>Retirada confirmada!</Text>
+        <Text style={styles.successSub}>Agora siga até o cliente</Text>
+      </View>
+    ) : (
+      <>
+        <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
+        <View style={styles.codeRow}>
+          <TextInput
+            style={styles.codeInput}
+            value={pickupCodeInput}
+            onChangeText={setPickupCodeInput}
+            placeholder="0000"
+            keyboardType="number-pad"
+            maxLength={4}
+            editable={!confirming}
+          />
+          <TouchableOpacity
+            style={[styles.confirmBtn, confirming && { opacity: 0.6 }]}
+            onPress={handleConfirmPickup}
+            disabled={confirming}
+          >
+            {confirming ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </>
+    )}
+  </View>
+)}
 
               {activeOrder.status === 'a_caminho' && (
                 <View style={styles.codeBox}>
@@ -350,6 +378,9 @@ export default function DelivererHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  successBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6, gap: 4 },
+successText: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginTop: 6 },
+successSub: { color: colors.textMuted, fontSize: 12.5 },
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   hello: { ...typography.h1, color: colors.text },
