@@ -157,7 +157,8 @@ async function markOrderReady(db, tenantId, orderId) {
     `UPDATE orders SET status = 'procurando_entregador', ready_at = now()
      WHERE id = $1 AND tenant_id = $2 AND status = 'preparando'
      RETURNING id, status, client_id AS "clientId", restaurant_id AS "restaurantId", total,
-               pickup_code AS "pickupCode", created_at AS "createdAt"`,
+               delivery_fee AS "deliveryFee", pickup_code AS "pickupCode",
+               created_at AS "createdAt", ready_at AS "readyAt", address_id AS "addressId"`,
     [orderId, tenantId]
   );
   if (result.rowCount === 0) {
@@ -165,12 +166,23 @@ async function markOrderReady(db, tenantId, orderId) {
   }
   const order = result.rows[0];
   const restaurantResult = await db.query('SELECT name FROM restaurants WHERE id = $1', [order.restaurantId]);
+  const addressResult = await db.query(
+    'SELECT street, number, neighborhood, city FROM addresses WHERE id = $1',
+    [order.addressId]
+  );
+  const address = addressResult.rows[0] || {};
   toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
   toDeliverers('order:available', {
     id: order.id,
     total: order.total,
+    deliveryFee: order.deliveryFee,
     createdAt: order.createdAt,
+    readyAt: order.readyAt,
     restaurantName: restaurantResult.rows[0]?.name || '',
+    street: address.street,
+    number: address.number,
+    neighborhood: address.neighborhood,
+    city: address.city,
   });
   return { id: order.id, status: order.status };
 }

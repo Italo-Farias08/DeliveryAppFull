@@ -83,7 +83,20 @@ async function createOrder(clientId, data) {
     const order = await getOrderById(orderId, clientId);
 
     // avisa o restaurante em tempo real que um pedido novo chegou pra aceitar
-    toTenant(restaurant.tenant_id, 'order:new', order);
+    // (usa o mesmo formato que a tela do restaurante espera, com nome do cliente e endereço)
+    const tenantOrderResult = await pool.query(
+      `SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total,
+              o.pickup_code AS "pickupCode", o.created_at AS "createdAt",
+              c.name AS "clientName", c.phone AS "clientPhone",
+              a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a.lat, a.lng
+       FROM orders o
+       JOIN users c ON c.id = o.client_id
+       LEFT JOIN addresses a ON a.id = o.address_id
+       WHERE o.id = $1`,
+      [orderId]
+    );
+    const tenantOrder = { ...tenantOrderResult.rows[0], items: order.items };
+    toTenant(restaurant.tenant_id, 'order:new', tenantOrder);
 
     return order;
   } catch (err) {
