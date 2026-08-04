@@ -63,4 +63,14 @@ const verifyCodeSchema = z.object({
   code: z.string().length(6),
 });
 
-module.exports = { registerSchema, loginSchema, verifyCodeSchema };
+const forgotPasswordSchema = z.object({
+  email: z.string().email(),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email(),
+  code: z.string().length(6),
+  newPassword: z.string().min(6),
+});
+
+module.exports = { registerSchema, loginSchema, verifyCodeSchema, forgotPasswordSchema, resetPasswordSchema };

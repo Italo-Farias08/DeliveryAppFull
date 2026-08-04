@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { listMyOrders } from '../../services/orderService';
+import OrderChatModal from '../../components/OrderChatModal';
+import { getOrderMessages, listMyOrders, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -22,6 +23,7 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [chatOrder, setChatOrder] = useState<Order | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
@@ -74,41 +76,59 @@ export default function OrdersScreen() {
               <Text style={styles.emptySub}>Seus pedidos vão aparecer aqui depois da primeira compra</Text>
             </View>
           }
-          renderItem={({ item }: { item: Order }) => (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.orderId}>{item.restaurantName} · #{item.id.slice(-5)}</Text>
-                <View style={[styles.badge, { backgroundColor: statusMap[item.status].color }]}>
-                  <Text style={styles.badgeText}>{statusMap[item.status].label}</Text>
-                </View>
-              </View>
-              <Text style={styles.itemsText}>
-                {(item.items ?? []).map((it) => `${it.qty}x ${it.name}`).join(', ')}
-              </Text>
-
-              {item.status === 'a_caminho' && item.deliveryCode && (
-                <View style={styles.codeBanner}>
-                  <Ionicons name="key-outline" size={18} color={colors.secondary} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.codeBannerLabel}>Código de entrega</Text>
-                    <Text style={styles.codeBannerSub}>
-                      Informe esse código ao entregador quando ele chegar
-                    </Text>
+          renderItem={({ item }: { item: Order }) => {
+            const info = statusMap[item.status] ?? { label: item.status, color: colors.textMuted };
+            return (
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.orderId}>{item.restaurantName} · #{item.id.slice(-5)}</Text>
+                  <View style={[styles.badge, { backgroundColor: info.color }]}>
+                    <Text style={styles.badgeText}>{info.label}</Text>
                   </View>
-                  <Text style={styles.deliveryCode}>{item.deliveryCode}</Text>
                 </View>
-              )}
+                <Text style={styles.itemsText}>
+                  {(item.items ?? []).map((it) => `${it.qty}x ${it.name}`).join(', ')}
+                </Text>
 
-              {item.status === 'cancelado' && item.cancelReason && (
-                <Text style={styles.cancelReason}>Motivo: {item.cancelReason}</Text>
-              )}
+                {item.status === 'a_caminho' && item.deliveryCode && (
+                  <View style={styles.codeBanner}>
+                    <Ionicons name="key-outline" size={18} color={colors.secondary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.codeBannerLabel}>Código de entrega</Text>
+                      <Text style={styles.codeBannerSub}>
+                        Informe esse código ao entregador quando ele chegar
+                      </Text>
+                    </View>
+                    <Text style={styles.deliveryCode}>{item.deliveryCode}</Text>
+                  </View>
+                )}
 
-              <View style={styles.footerRow}>
-                <Text style={styles.feeText}>Entrega: R$ {item.deliveryFee.toFixed(2)}</Text>
-                <Text style={styles.total}>R$ {item.total.toFixed(2)}</Text>
+                {item.status === 'cancelado' && item.cancelReason && (
+                  <Text style={styles.cancelReason}>Motivo: {item.cancelReason}</Text>
+                )}
+
+                <View style={styles.footerRow}>
+                  <TouchableOpacity style={styles.chatLink} onPress={() => setChatOrder(item)}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.primary} />
+                    <Text style={styles.chatLinkText}>Falar com o restaurante</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.total}>R$ {item.total.toFixed(2)}</Text>
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
+        />
+      )}
+
+      {chatOrder && (
+        <OrderChatModal
+          visible={!!chatOrder}
+          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.id}
+          myRole="client"
+          title={chatOrder.restaurantName}
+          loadMessages={getOrderMessages}
+          sendMessage={sendOrderMessage}
         />
       )}
     </SafeAreaView>
@@ -131,7 +151,8 @@ const styles = StyleSheet.create({
   badgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
   itemsText: { color: colors.textMuted, fontSize: 13, marginBottom: 8 },
   footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  feeText: { color: colors.textMuted, fontSize: 12 },
+  chatLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  chatLinkText: { color: colors.primary, fontSize: 12.5, fontWeight: '700' },
   total: { ...typography.bodyBold, color: colors.primary },
   codeBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 8,

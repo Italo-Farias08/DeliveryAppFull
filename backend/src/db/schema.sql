@@ -186,3 +186,25 @@ CREATE TABLE IF NOT EXISTS login_verification_codes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_login_codes_email ON login_verification_codes (email);
+
+-- Códigos de recuperação de senha por e-mail
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_codes_email ON password_reset_codes(email);
+
+-- Mensagens entre restaurante e cliente, por pedido
+CREATE TABLE IF NOT EXISTS order_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  sender_role TEXT NOT NULL CHECK (sender_role IN ('client', 'restaurant')),
+  sender_id UUID NOT NULL REFERENCES users(id),
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_order_messages_order_id ON order_messages(order_id);

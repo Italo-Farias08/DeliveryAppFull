@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   RefreshControl,
   ScrollView,
@@ -15,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import OrderChatModal from '../../components/OrderChatModal';
 import {
   MenuItemInput,
   RestaurantInput,
@@ -24,11 +26,13 @@ import {
   createRestaurant,
   deleteMenuItem,
   getCategories,
+  getTenantOrderMessages,
   listMenuItems,
   listMyRestaurants,
   listTenantOrders,
   markOrderReady,
   rejectOrder,
+  sendTenantOrderMessage,
   updateMenuItem,
   updateRestaurant,
 } from '../../services/tenantService';
@@ -71,6 +75,7 @@ export default function RestaurantHomeScreen() {
 
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [chatOrder, setChatOrder] = useState<TenantOrder | null>(null);
 
   const [onboardingSaving, setOnboardingSaving] = useState(false);
   const [obName, setObName] = useState('');
@@ -446,6 +451,13 @@ export default function RestaurantHomeScreen() {
           ) : (
             orders.slice(0, 15).map((order) => {
               const saving = savingOrderId === order.id;
+              const addressLine = [order.street, order.number].filter(Boolean).join(', ');
+              const addressRest = [order.neighborhood, order.city].filter(Boolean).join(' · ');
+              const mapsUrl = order.lat && order.lng
+                ? `https://www.google.com/maps/search/?api=1&query=${order.lat},${order.lng}`
+                : addressLine
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${addressLine} ${addressRest}`)}`
+                : null;
               return (
                 <View key={order.id} style={styles.orderCard}>
                   <View style={styles.orderCardHeader}>
@@ -453,9 +465,30 @@ export default function RestaurantHomeScreen() {
                       <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
                       <Text style={styles.orderTotal}>R$ {Number(order.total).toFixed(2)}</Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor[order.status] }]}>
-                      <Text style={styles.statusBadgeText}>{statusLabel[order.status]}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor[order.status] ?? colors.textMuted }]}>
+                      <Text style={styles.statusBadgeText}>{statusLabel[order.status] ?? order.status}</Text>
                     </View>
+                  </View>
+
+                  <View style={styles.clientInfoBox}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.clientName}>{order.clientName || 'Cliente'}</Text>
+                      {!!order.clientPhone && <Text style={styles.clientDetail}>{order.clientPhone}</Text>}
+                      {!!(addressLine || addressRest) && (
+                        <Text style={styles.clientDetail}>
+                          {[addressLine, addressRest].filter(Boolean).join(' — ')}
+                        </Text>
+                      )}
+                      {mapsUrl && (
+                        <TouchableOpacity onPress={() => Linking.openURL(mapsUrl)} style={styles.mapLinkRow}>
+                          <Ionicons name="location-outline" size={13} color={colors.secondary} />
+                          <Text style={styles.mapLinkText}>Ver localização no mapa</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <TouchableOpacity style={styles.chatBtn} onPress={() => setChatOrder(order)}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.primary} />
+                    </TouchableOpacity>
                   </View>
 
                   {(order.items ?? []).length > 0 && (
@@ -598,6 +631,18 @@ export default function RestaurantHomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {chatOrder && (
+        <OrderChatModal
+          visible={!!chatOrder}
+          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.id}
+          myRole="restaurant"
+          title={chatOrder.clientName || `Pedido #${chatOrder.id.slice(-5)}`}
+          loadMessages={getTenantOrderMessages}
+          sendMessage={sendTenantOrderMessage}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -650,6 +695,18 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   orderCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  clientInfoBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 10,
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  clientName: { ...typography.bodyBold, color: colors.text, fontSize: 13.5 },
+  clientDetail: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  mapLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  mapLinkText: { color: colors.secondary, fontSize: 12, fontWeight: '700' },
+  chatBtn: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
   statusBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   statusBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
   orderItemsText: { color: colors.textMuted, fontSize: 12.5, marginTop: 8 },

@@ -312,6 +312,10 @@ export default function LoginScreen({ navigation }: any) {
                 </View>
               </Animated.View>
 
+              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ alignSelf: 'flex-end', marginBottom: 12 }}>
+                <Text style={styles.forgot}>Esqueci minha senha</Text>
+              </TouchableOpacity>
+
               <Animated.View style={{ opacity: buttonFade, transform: [{ translateY: buttonSlide }], width: '100%' }}>
                 <Animated.View style={[styles.loginButton, { backgroundColor: buttonColor }]}>
                   <Animated.View style={[styles.loginButtonInner, { transform: [{ scale: buttonPressScale }] }]}>

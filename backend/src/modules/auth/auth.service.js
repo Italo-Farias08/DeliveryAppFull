@@ -1,7 +1,7 @@
 const { pool } = require('../../config/db');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { signToken } = require('../../utils/jwt');
-const { sendLoginCodeEmail } = require('../../utils/email');
+const { sendLoginCodeEmail, sendPasswordResetEmail } = require('../../utils/email');
 const AppError = require('../../utils/AppError');
 
 function generateCode() {
@@ -127,6 +127,54 @@ async function verifyLoginCode({ email, code }) {
   return buildAuthResponse(userResult.rows[0]);
 }
 
+async function requestPasswordReset({ email }) {
+  const result = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  // Não revela se o e-mail existe ou não — sempre responde "pending" pro front,
+  // só manda o código de verdade se o usuário existir.
+  if (result.rowCount > 0) {
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutos
+    await pool.query(
+      'INSERT INTO password_reset_codes (email, code, expires_at) VALUES ($1, $2, $3)',
+      [email, code, expiresAt]
+    );
+    try {
+      await sendPasswordResetEmail(email, code);
+    } catch (emailErr) {
+      console.error('[password-reset] falha ao enviar e-mail, seguindo mesmo assim:', emailErr.message);
+      console.warn(`[password-reset] Código para ${email}: ${code}`);
+    }
+  } else {
+    console.warn(`[password-reset] tentativa de reset para e-mail não cadastrado: ${email}`);
+  }
+  return { pending: true, email };
+}
+
+async function resetPassword({ email, code, newPassword }) {
+  const result = await pool.query(
+    `SELECT id FROM password_reset_codes
+     WHERE email = $1 AND code = $2 AND used = false AND expires_at > now()
+     ORDER BY created_at DESC LIMIT 1`,
+    [email, code]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError('Código inválido ou expirado', 401);
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  const updateResult = await pool.query(
+    'UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING id',
+    [passwordHash, email]
+  );
+  if (updateResult.rowCount === 0) {
+    throw new AppError('Usuário não encontrado', 404);
+  }
+
+  await pool.query('UPDATE password_reset_codes SET used = true WHERE id = $1', [result.rows[0].id]);
+
+  return { success: true };
+}
+
 function buildAuthResponse(user) {
   const token = signToken({
     sub: user.id,
@@ -150,4 +198,6 @@ module.exports = {
   registerRestaurantAccount,
   requestLoginCode,
   verifyLoginCode,
+  requestPasswordReset,
+  resetPassword,
 };

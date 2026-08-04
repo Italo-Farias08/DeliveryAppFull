@@ -54,10 +54,9 @@ async function sendViaBrevo(to, subject, text, html) {
   return { delivered: true, id: data.messageId };
 }
 
-async function sendLoginCodeEmail(to, code) {
-  const subject = 'Seu código de verificação';
-  const text = `Seu código de verificação é: ${code}\n\nEle expira em 10 minutos.`;
-  const html = `<p>Seu código de verificação é:</p><h1 style="letter-spacing:4px">${code}</h1><p>Ele expira em 10 minutos.</p>`;
+async function sendCodeEmail(to, code, { subject, intro }) {
+  const text = `${intro}\n\n${code}\n\nEle expira em 10 minutos.`;
+  const html = `<p>${intro}</p><h1 style="letter-spacing:4px">${code}</h1><p>Ele expira em 10 minutos.</p>`;
 
   if (hasBrevoConfig()) {
     return sendViaBrevo(to, subject, text, html);
@@ -99,4 +98,18 @@ async function sendLoginCodeEmail(to, code) {
   return { delivered: false };
 }
 
-module.exports = { sendLoginCodeEmail, hasResendConfig, hasGmailConfig, hasBrevoConfig };
+async function sendLoginCodeEmail(to, code) {
+  return sendCodeEmail(to, code, {
+    subject: 'Seu código de verificação',
+    intro: 'Seu código de verificação é:',
+  });
+}
+
+async function sendPasswordResetEmail(to, code) {
+  return sendCodeEmail(to, code, {
+    subject: 'Recuperação de senha',
+    intro: 'Use o código abaixo para redefinir sua senha:',
+  });
+}
+
+module.exports = { sendLoginCodeEmail, sendPasswordResetEmail, hasResendConfig, hasGmailConfig, hasBrevoConfig };

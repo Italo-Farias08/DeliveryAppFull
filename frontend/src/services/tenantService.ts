@@ -16,6 +16,15 @@ export interface TenantOrder {
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
   clientName?: string;
+  clientPhone?: string | null;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  lat?: number | null;
+  lng?: number | null;
   // código que o entregador precisa informar ao retirar o pedido no balcão
   pickupCode?: string;
   delivererName?: string | null;
@@ -97,5 +106,22 @@ export async function rejectOrder(orderId: string, reason?: string): Promise<{ i
 
 export async function markOrderReady(orderId: string): Promise<{ id: string; status: OrderStatus }> {
   const { data } = await api.patch(`/tenant/orders/${orderId}/ready`);
+  return data;
+}
+
+export interface TenantOrderMessage {
+  id: string;
+  senderRole: 'client' | 'restaurant';
+  message: string;
+  createdAt: string;
+}
+
+export async function getTenantOrderMessages(orderId: string): Promise<TenantOrderMessage[]> {
+  const { data } = await api.get(`/tenant/orders/${orderId}/messages`);
+  return data;
+}
+
+export async function sendTenantOrderMessage(orderId: string, message: string): Promise<TenantOrderMessage> {
+  const { data } = await api.post(`/tenant/orders/${orderId}/messages`, { message });
   return data;
 }

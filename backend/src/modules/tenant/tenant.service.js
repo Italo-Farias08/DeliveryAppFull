@@ -8,10 +8,13 @@ const TENANT_ORDER_SELECT = `
          o.total, o.pickup_code AS "pickupCode",
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
-         c.name AS "clientName",
+         c.name AS "clientName", c.phone AS "clientPhone",
+         a.street, a.number, a.complement, a.neighborhood, a.city, a.state,
+         a.lat, a.lng,
          d.name AS "delivererName", d.phone AS "delivererPhone"
   FROM orders o
   JOIN users c ON c.id = o.client_id
+  LEFT JOIN addresses a ON a.id = o.address_id
   LEFT JOIN users d ON d.id = o.deliverer_id
 `;
 

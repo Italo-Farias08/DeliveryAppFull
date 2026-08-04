@@ -21,6 +21,22 @@ export async function verifyLoginCode(email: string, code: string, role: UserRol
   return data.user as User;
 }
 
+export async function requestPasswordReset(email: string): Promise<{ pending: true; email: string }> {
+  if (USE_MOCK) {
+    return { pending: true, email };
+  }
+  const { data } = await api.post('/auth/forgot-password', { email });
+  return data;
+}
+
+export async function resetPassword(email: string, code: string, newPassword: string): Promise<{ success: true }> {
+  if (USE_MOCK) {
+    return { success: true };
+  }
+  const { data } = await api.post('/auth/reset-password', { email, code, newPassword });
+  return data;
+}
+
 export interface RegisterClientPayload {
   role: 'client';
   name: string;
