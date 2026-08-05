@@ -43,13 +43,16 @@ export default function RestaurantDetailScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: showCartBar ? 100 : 30 }}>
         <View>
-          <Image source={{ uri: restaurant.image }} style={styles.cover} />
+          <Image source={{ uri: restaurant.banner || restaurant.image }} style={styles.cover} />
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
+          {!!restaurant.image && (
+            <Image source={{ uri: restaurant.image }} style={styles.logoAvatar} />
+          )}
         </View>
 
-        <View style={styles.infoBlock}>
+        <View style={[styles.infoBlock, !!restaurant.image && { marginTop: 34 }]}>
           <Text style={styles.name}>{restaurant.name}</Text>
           <View style={styles.metaRow}>
             <Ionicons name="star" size={14} color={colors.star} />
@@ -94,6 +97,12 @@ export default function RestaurantDetailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   cover: { width: '100%', height: 200, backgroundColor: colors.border },
+  logoAvatar: {
+    position: 'absolute', bottom: -30, left: 20,
+    width: 68, height: 68, borderRadius: 18,
+    borderWidth: 3, borderColor: colors.background,
+    backgroundColor: colors.surface,
+  },
   backBtn: {
     position: 'absolute', top: 14, left: 14,
     width: 36, height: 36, borderRadius: 18,

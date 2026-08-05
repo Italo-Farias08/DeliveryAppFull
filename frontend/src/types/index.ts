@@ -32,6 +32,9 @@ export interface Restaurant {
   deliveryTimeMax: number;
   deliveryFee: number;
   image: string;
+  // Foto de capa da loja (diferente da logo). Opcional porque restaurantes
+  // antigos ainda não tinham esse campo.
+  banner?: string | null;
   isOpen: boolean;
   menu: MenuItem[];
 }

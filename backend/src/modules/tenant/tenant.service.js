@@ -18,10 +18,12 @@ const TENANT_ORDER_SELECT = `
   LEFT JOIN users d ON d.id = o.deliverer_id
 `;
 
+const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
+            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen"`;
+
 async function listRestaurants(db) {
   const result = await db.query(
-    `SELECT id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
-            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, is_open AS "isOpen"
+    `SELECT ${RESTAURANT_SELECT_FIELDS}
      FROM restaurants
      ORDER BY created_at DESC`
   );
@@ -30,24 +32,48 @@ async function listRestaurants(db) {
 
 async function createRestaurant(db, tenantId, data) {
   const result = await db.query(
-    `INSERT INTO restaurants (tenant_id, category_id, name, delivery_time_min, delivery_time_max, delivery_fee, image, is_open)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, true))
-     RETURNING id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
-               delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, is_open AS "isOpen"`,
-    [tenantId, data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.isOpen]
+    `INSERT INTO restaurants (tenant_id, category_id, name, delivery_time_min, delivery_time_max, delivery_fee, image, banner, is_open)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, true))
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [tenantId, data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen]
   );
   return result.rows[0];
 }
 
 async function updateRestaurant(db, restaurantId, data) {
+  // image/banner só são sobrescritos quando vierem no payload — assim,
+  // salvar outros campos (ex: abrir/fechar a loja) não apaga a foto que já
+  // tinha sido enviada pela rota de upload.
   const result = await db.query(
     `UPDATE restaurants
      SET category_id = $1, name = $2, delivery_time_min = $3, delivery_time_max = $4,
-         delivery_fee = $5, image = $6, is_open = COALESCE($7, is_open)
-     WHERE id = $8
-     RETURNING id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
-               delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, is_open AS "isOpen"`,
-    [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.isOpen, restaurantId]
+         delivery_fee = $5, image = COALESCE($6, image), banner = COALESCE($7, banner),
+         is_open = COALESCE($8, is_open)
+     WHERE id = $9
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen, restaurantId]
+  );
+  if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+// Usadas pelas rotas de upload (multipart/form-data) — trocam só a foto,
+// sem exigir o restante do payload do restaurante.
+async function updateRestaurantLogo(db, restaurantId, tenantId, imageUrl) {
+  const result = await db.query(
+    `UPDATE restaurants SET image = $1 WHERE id = $2 AND tenant_id = $3
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [imageUrl, restaurantId, tenantId]
+  );
+  if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+async function updateRestaurantBanner(db, restaurantId, tenantId, bannerUrl) {
+  const result = await db.query(
+    `UPDATE restaurants SET banner = $1 WHERE id = $2 AND tenant_id = $3
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [bannerUrl, restaurantId, tenantId]
   );
   if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
   return result.rows[0];
@@ -80,12 +106,25 @@ async function createMenuItem(db, tenantId, restaurantId, data) {
 }
 
 async function updateMenuItem(db, menuItemId, data) {
+  // Mesma lógica do restaurante: só troca a imagem se ela vier no payload,
+  // pra editar nome/preço não apagar a foto já enviada.
   const result = await db.query(
     `UPDATE menu_items
-     SET name = $1, description = $2, price = $3, image = $4, is_available = COALESCE($5, is_available)
+     SET name = $1, description = $2, price = $3, image = COALESCE($4, image), is_available = COALESCE($5, is_available)
      WHERE id = $6
      RETURNING id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"`,
     [data.name, data.description || null, data.price, data.image || null, data.isAvailable, menuItemId]
+  );
+  if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+// Usada pela rota de upload de foto do item (multipart/form-data).
+async function updateMenuItemImage(db, menuItemId, tenantId, imageUrl) {
+  const result = await db.query(
+    `UPDATE menu_items SET image = $1 WHERE id = $2 AND tenant_id = $3
+     RETURNING id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"`,
+    [imageUrl, menuItemId, tenantId]
   );
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
   return result.rows[0];
@@ -191,10 +230,13 @@ module.exports = {
   listRestaurants,
   createRestaurant,
   updateRestaurant,
+  updateRestaurantLogo,
+  updateRestaurantBanner,
   ensureRestaurantOwnedByTenant,
   listMenuItems,
   createMenuItem,
   updateMenuItem,
+  updateMenuItemImage,
   deleteMenuItem,
   listOrders,
   acceptOrder,

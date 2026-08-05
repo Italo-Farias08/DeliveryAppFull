@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -15,10 +16,20 @@ const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
 
-app.use(helmet());
+// Necessário para que req.protocol reflita corretamente https quando o
+// backend está atrás de um proxy (Railway, Render, etc.) — assim as URLs
+// de imagem que geramos no upload já saem certas (https://...).
+app.set('trust proxy', 1);
+
+app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Arquivos enviados pelos restaurantes (logo, banner, fotos dos itens do
+// cardápio) ficam salvos em disco em backend/uploads e são servidos aqui.
+// Nada de imagem em base64/blob no banco — só o caminho/URL fica salvo lá.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 

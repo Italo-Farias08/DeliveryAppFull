@@ -46,10 +46,33 @@ Requer PostgreSQL 13+ (usa `gen_random_uuid()` da extensão `pgcrypto`, criada a
 ### Restaurante / tenant (Bearer token, role restaurant)
 - `GET/POST /api/tenant/restaurants`
 - `PUT /api/tenant/restaurants/:id`
+- `POST /api/tenant/restaurants/:id/logo` — upload da logo (multipart/form-data, campo `logo`)
+- `POST /api/tenant/restaurants/:id/banner` — upload do banner/capa (multipart/form-data, campo `banner`)
 - `GET/POST /api/tenant/restaurants/:restaurantId/menu-items`
 - `PUT/DELETE /api/tenant/menu-items/:menuItemId`
+- `POST /api/tenant/menu-items/:menuItemId/image` — upload da foto do item (multipart/form-data, campo `image`)
 - `GET /api/tenant/orders`
 - `PATCH /api/tenant/orders/:orderId/status`
+
+## Upload de imagens (logo, banner, foto dos itens)
+
+As imagens **não** ficam no banco de dados (nada de base64/blob no Postgres,
+pra não pesar) e **não** exigem que o restaurante tenha uma URL https pronta.
+O restaurante escolhe um arquivo (jpg/png/webp/gif, até 5MB) direto do app, o
+backend salva em disco em `backend/uploads/<tipo>/<arquivo>` e devolve a URL
+pública pronta (`/uploads/...`), que fica salva na coluna `image`/`banner` do
+restaurante ou do item. As rotas acima fazem exatamente isso:
+
+1. `logo` e `banner` do restaurante são independentes — pode enviar um sem o
+   outro, e cada envio não afeta o resto do cadastro do restaurante.
+2. A foto de um item do cardápio é enviada depois do item já existir (crie o
+   item primeiro, depois chame `POST /menu-items/:menuItemId/image`).
+
+> **Atenção ao publicar (Railway/Render/etc.):** se o serviço não tiver um
+> volume persistente, o disco é apagado a cada novo deploy e as imagens
+> enviadas se perdem. Configure um *volume* apontando para `/app/uploads` (o
+> mesmo caminho usado pelo `Dockerfile`) para as fotos sobreviverem aos
+> deploys.
 
 ### Entregador (Bearer token, role deliverer)
 - `GET /api/deliverer/orders/available`

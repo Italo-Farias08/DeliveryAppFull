@@ -31,7 +31,12 @@ const SEARCH_DEBOUNCE_MS = 500;
 // Por enquanto fixo em Vitória de Santo Antão, PE — depois dá pra trocar
 // isso pra pegar a localização atual da pessoa dinamicamente (device GPS)
 // em vez de um ponto fixo, se o app for usado em várias cidades/regiões.
-const REGION_BIAS: SearchBias = { lat: -8.1219, lng: -35.2939, radiusDeg: 1.2 };
+const REGION_BIAS: SearchBias = {
+  lat: -8.1219,
+  lng: -35.2939,
+  radiusDeg: 1.2,
+  cityHint: 'Vitória de Santo Antão, PE',
+};
 
 function addressLine(a: { street: string; number?: string | null; neighborhood?: string | null; city: string }) {
   const parts = [a.street, a.number].filter(Boolean).join(', ');
@@ -43,6 +48,17 @@ function labelIcon(label?: string | null) {
   if (label === 'Casa') return 'home-outline';
   if (label === 'Trabalho') return 'briefcase-outline';
   return 'location-outline';
+}
+
+function suggestionPrimary(s: AddressSuggestion) {
+  const line = [s.street, s.number].filter(Boolean).join(', ');
+  return line || s.displayName.split(',')[0];
+}
+
+function suggestionSecondary(s: AddressSuggestion) {
+  const place = [s.neighborhood, s.city].filter(Boolean).join(' · ');
+  const dist = s.distanceKm != null ? `${s.distanceKm < 1 ? Math.round(s.distanceKm * 1000) + ' m' : s.distanceKm.toFixed(1) + ' km'}` : null;
+  return [place, dist].filter(Boolean).join(' — ') || undefined;
 }
 
 export default function AddressesScreen() {
@@ -75,6 +91,24 @@ export default function AddressesScreen() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Ponto usado pra ordenar/priorizar a busca por distância. Começa no
+  // centro fixo da cidade e é refinado pra localização real da pessoa
+  // assim que o GPS responder (sem pedir permissão de novo se ela já foi
+  // concedida antes em outra tela do app).
+  const [searchOrigin, setSearchOrigin] = useState<SearchBias>(REGION_BIAS);
+
+  useEffect(() => {
+    Location.getLastKnownPositionAsync()
+      .then((pos) => {
+        if (pos) {
+          setSearchOrigin({ ...REGION_BIAS, lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }
+      })
+      .catch(() => {
+        // sem permissão ainda ou sem posição em cache — mantém o centro da cidade
+      });
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,7 +145,7 @@ export default function AddressesScreen() {
       const controller = new AbortController();
       abortRef.current = controller;
       try {
-        const results = await searchAddress(searchText, controller.signal, REGION_BIAS);
+        const results = await searchAddress(searchText, controller.signal, searchOrigin);
         setSuggestions(results);
       } catch (err: any) {
         if (err?.name !== 'AbortError') {
@@ -125,7 +159,7 @@ export default function AddressesScreen() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [searchText, selected]);
+  }, [searchText, selected, searchOrigin]);
 
   function resetForm() {
     setLabel('Casa');
@@ -291,14 +325,19 @@ export default function AddressesScreen() {
               </View>
 
               {!selected && suggestions.length > 0 && (
-                <View style={styles.suggestionsBox}>
+                <ScrollView style={styles.suggestionsBox} nestedScrollEnabled keyboardShouldPersistTaps="handled">
                   {suggestions.map((s) => (
                     <TouchableOpacity key={s.id} style={styles.suggestionRow} onPress={() => handlePickSuggestion(s)}>
-                      <Ionicons name="location-outline" size={16} color={colors.primary} />
-                      <Text style={styles.suggestionText} numberOfLines={2}>{s.displayName}</Text>
+                      <Ionicons name="location-outline" size={16} color={colors.primary} style={{ marginTop: 2 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.suggestionPrimary} numberOfLines={1}>{suggestionPrimary(s)}</Text>
+                        {suggestionSecondary(s) && (
+                          <Text style={styles.suggestionSecondary} numberOfLines={1}>{suggestionSecondary(s)}</Text>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
               )}
               {!selected && !searching && searchError && (
                 <Text style={styles.searchErrorText}>{searchError}</Text>
@@ -459,13 +498,14 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, paddingVertical: 11, fontSize: 14.5, color: colors.text },
   suggestionsBox: {
     marginTop: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 12,
-    backgroundColor: colors.surface, overflow: 'hidden',
+    backgroundColor: colors.surface, maxHeight: 260,
   },
   suggestionRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8, padding: 12,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  suggestionText: { flex: 1, fontSize: 13, color: colors.text },
+  suggestionPrimary: { fontSize: 13.5, fontWeight: '700', color: colors.text },
+  suggestionSecondary: { fontSize: 11.5, color: colors.textMuted, marginTop: 1 },
   searchErrorText: { color: colors.danger, fontSize: 12, marginTop: 6 },
   searchHint: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
 

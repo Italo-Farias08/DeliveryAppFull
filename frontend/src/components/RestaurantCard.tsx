@@ -14,7 +14,7 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <View>
-        <Image source={{ uri: restaurant.image }} style={styles.image} />
+        <Image source={{ uri: restaurant.banner || restaurant.image }} style={styles.image} />
         {!restaurant.isOpen && (
           <View style={styles.closedBadge}>
             <Text style={styles.closedText}>Fechado</Text>

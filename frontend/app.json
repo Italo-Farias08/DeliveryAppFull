@@ -32,6 +32,12 @@
     {
       "locationWhenInUsePermission": "Usamos sua localização para mostrar seu endereço de entrega."
     }
+  ],
+  [
+    "expo-image-picker",
+    {
+      "photosPermission": "Precisamos acessar suas fotos para você escolher a logo, o banner e as fotos dos itens do cardápio."
+    }
   ]
 ]
   }

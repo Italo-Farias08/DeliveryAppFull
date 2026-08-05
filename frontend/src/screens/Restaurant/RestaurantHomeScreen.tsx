@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Linking,
   Modal,
   RefreshControl,
@@ -19,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import OrderChatModal from '../../components/OrderChatModal';
 import {
   MenuItemInput,
+  PickedImage,
   RestaurantInput,
   TenantOrder,
   acceptOrder,
@@ -35,6 +38,9 @@ import {
   sendTenantOrderMessage,
   updateMenuItem,
   updateRestaurant,
+  uploadMenuItemImage,
+  uploadRestaurantBanner,
+  uploadRestaurantLogo,
 } from '../../services/tenantService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
@@ -74,6 +80,8 @@ export default function RestaurantHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [savingStatus, setSavingStatus] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [chatOrder, setChatOrder] = useState<TenantOrder | null>(null);
 
@@ -91,7 +99,13 @@ export default function RestaurantHomeScreen() {
   const [miName, setMiName] = useState('');
   const [miDescription, setMiDescription] = useState('');
   const [miPrice, setMiPrice] = useState('');
-  const [miImage, setMiImage] = useState('');
+  // Foto do item: enquanto o item ainda não existe (criação), guardamos só a
+  // URI local escolhida (miPickedImage) e mandamos pro servidor depois que o
+  // item for criado. Em edição, o envio já acontece na hora que a foto é
+  // escolhida, então miPickedImage fica sempre null nesse caso.
+  const [miPickedImage, setMiPickedImage] = useState<PickedImage | null>(null);
+  const [miImagePreview, setMiImagePreview] = useState<string | null>(null);
+  const [miUploadingImage, setMiUploadingImage] = useState(false);
 
   const loadEverything = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoadingInit(true);
@@ -196,12 +210,87 @@ export default function RestaurantHomeScreen() {
     }
   }
 
+  // Abre a galeria do celular e devolve a imagem escolhida (ou null se
+  // cancelou/sem permissão). Usada pela logo, pelo banner e pela foto do item.
+  async function pickImageFromLibrary(aspect: [number, number]): Promise<PickedImage | null> {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permissão necessária', 'Precisamos acessar suas fotos para você escolher a imagem.');
+      return null;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect,
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets?.length) return null;
+    const asset = result.assets[0];
+    return { uri: asset.uri, name: asset.fileName, mimeType: asset.mimeType };
+  }
+
+  async function handlePickRestaurantLogo() {
+    if (!restaurant) return;
+    const picked = await pickImageFromLibrary([1, 1]);
+    if (!picked) return;
+    setUploadingLogo(true);
+    try {
+      const updated = await uploadRestaurantLogo(restaurant.id, picked);
+      setRestaurant(updated);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível enviar a logo. Tente novamente.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function handlePickRestaurantBanner() {
+    if (!restaurant) return;
+    const picked = await pickImageFromLibrary([16, 9]);
+    if (!picked) return;
+    setUploadingBanner(true);
+    try {
+      const updated = await uploadRestaurantBanner(restaurant.id, picked);
+      setRestaurant(updated);
+    } catch (err) {
+      Alert.alert('Erro', 'Não foi possível enviar o banner. Tente novamente.');
+    } finally {
+      setUploadingBanner(false);
+    }
+  }
+
+  async function handlePickMenuItemImage() {
+    const picked = await pickImageFromLibrary([4, 3]);
+    if (!picked) return;
+
+    if (editingItem) {
+      // O item já existe no servidor: manda a foto na hora.
+      setMiUploadingImage(true);
+      try {
+        const updated = await uploadMenuItemImage(editingItem.id, picked);
+        setMenuItems((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+        setEditingItem(updated);
+        setMiImagePreview(updated.image);
+      } catch (err) {
+        Alert.alert('Erro', 'Não foi possível enviar a foto do item.');
+      } finally {
+        setMiUploadingImage(false);
+      }
+    } else {
+      // Item novo ainda não existe: guarda a foto escolhida e só envia
+      // depois que o item for criado (ver handleSaveMenuItem).
+      setMiPickedImage(picked);
+      setMiImagePreview(picked.uri);
+    }
+  }
+
   function openCreateMenuModal() {
     setEditingItem(null);
     setMiName('');
     setMiDescription('');
     setMiPrice('');
-    setMiImage('');
+    setMiPickedImage(null);
+    setMiImagePreview(null);
     setMenuModalVisible(true);
   }
 
@@ -210,7 +299,8 @@ export default function RestaurantHomeScreen() {
     setMiName(item.name);
     setMiDescription(item.description || '');
     setMiPrice(String(item.price));
-    setMiImage(item.image || '');
+    setMiPickedImage(null);
+    setMiImagePreview(item.image || null);
     setMenuModalVisible(true);
   }
 
@@ -229,7 +319,6 @@ export default function RestaurantHomeScreen() {
       name: miName.trim(),
       description: miDescription.trim() || undefined,
       price,
-      image: miImage.trim() || undefined,
       isAvailable: true,
     };
     setSavingItem(true);
@@ -238,7 +327,14 @@ export default function RestaurantHomeScreen() {
         const updated = await updateMenuItem(editingItem.id, payload);
         setMenuItems((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
       } else {
-        const created = await createMenuItem(restaurant.id, payload);
+        let created = await createMenuItem(restaurant.id, payload);
+        if (miPickedImage) {
+          try {
+            created = await uploadMenuItemImage(created.id, miPickedImage);
+          } catch (err) {
+            Alert.alert('Item criado', 'O item foi salvo, mas a foto não pôde ser enviada. Edite o item para tentar de novo.');
+          }
+        }
         setMenuItems((prev) => [created, ...prev]);
       }
       setMenuModalVisible(false);
@@ -427,6 +523,49 @@ export default function RestaurantHomeScreen() {
           />
         </View>
 
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Fotos da loja</Text>
+          <View style={styles.photosRow}>
+            <TouchableOpacity style={styles.logoPicker} onPress={handlePickRestaurantLogo} activeOpacity={0.85}>
+              {restaurant.image ? (
+                <Image source={{ uri: restaurant.image }} style={styles.logoImage} />
+              ) : (
+                <View style={[styles.logoImage, styles.imagePlaceholder]}>
+                  <Ionicons name="storefront-outline" size={22} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={styles.editBadge}>
+                {uploadingLogo ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="camera" size={12} color={colors.white} />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bannerPicker} onPress={handlePickRestaurantBanner} activeOpacity={0.85}>
+              {restaurant.banner ? (
+                <Image source={{ uri: restaurant.banner }} style={styles.bannerImage} />
+              ) : (
+                <View style={[styles.bannerImage, styles.imagePlaceholder]}>
+                  <Ionicons name="image-outline" size={20} color={colors.textMuted} />
+                  <Text style={styles.imagePlaceholderText}>Banner da loja</Text>
+                </View>
+              )}
+              <View style={styles.editBadge}>
+                {uploadingBanner ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="camera" size={12} color={colors.white} />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.helperText}>
+            A logo aparece nos cards da sua loja. O banner é a foto de capa que o cliente vê ao abrir seu restaurante.
+          </Text>
+        </View>
+
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Ionicons name="receipt-outline" size={20} color={colors.primary} />
@@ -583,6 +722,13 @@ export default function RestaurantHomeScreen() {
           ) : (
             menuItems.map((item) => (
               <View key={item.id} style={styles.menuItemRow}>
+                {item.image ? (
+                  <Image source={{ uri: item.image }} style={styles.menuItemThumb} />
+                ) : (
+                  <View style={[styles.menuItemThumb, styles.imagePlaceholder]}>
+                    <Ionicons name="restaurant-outline" size={16} color={colors.textMuted} />
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.menuItemName}>{item.name}</Text>
                   <Text style={styles.menuItemPrice}>R$ {Number(item.price).toFixed(2)}</Text>
@@ -613,8 +759,23 @@ export default function RestaurantHomeScreen() {
             <Text style={styles.label}>Preço (R$)</Text>
             <TextInput style={styles.input} value={miPrice} onChangeText={setMiPrice} placeholder="Ex: 28.90" keyboardType="decimal-pad" />
 
-            <Text style={styles.label}>Imagem — URL (opcional)</Text>
-            <TextInput style={styles.input} value={miImage} onChangeText={setMiImage} placeholder="https://..." autoCapitalize="none" />
+            <Text style={styles.label}>Foto do item (opcional)</Text>
+            <TouchableOpacity style={styles.menuItemImagePicker} onPress={handlePickMenuItemImage} activeOpacity={0.85}>
+              {miImagePreview ? (
+                <Image source={{ uri: miImagePreview }} style={styles.menuItemImagePreview} />
+              ) : (
+                <View style={[styles.menuItemImagePreview, styles.imagePlaceholder]}>
+                  <Ionicons name="camera-outline" size={22} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemImagePickerText}>
+                  {miImagePreview ? 'Trocar foto' : 'Escolher foto do item'}
+                </Text>
+                <Text style={styles.menuItemImagePickerSub}>Foto direto da galeria do celular</Text>
+              </View>
+              {miUploadingImage && <ActivityIndicator color={colors.secondary} />}
+            </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => setMenuModalVisible(false)}>
@@ -728,8 +889,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.border,
   },
+  menuItemThumb: { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.border },
   menuItemName: { ...typography.bodyBold, color: colors.text },
   menuItemPrice: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
+  photosRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  logoPicker: { width: 72, height: 72 },
+  logoImage: { width: 72, height: 72, borderRadius: 16, backgroundColor: colors.border },
+  bannerPicker: { flex: 1, height: 72 },
+  bannerImage: { width: '100%', height: 72, borderRadius: 16, backgroundColor: colors.border },
+  imagePlaceholder: { alignItems: 'center', justifyContent: 'center', gap: 4 },
+  imagePlaceholderText: { fontSize: 10.5, color: colors.textMuted, fontWeight: '600' },
+  editBadge: {
+    position: 'absolute', bottom: 4, right: 4,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: colors.overlay, alignItems: 'center', justifyContent: 'center',
+  },
+  helperText: { color: colors.textMuted, fontSize: 12, marginTop: 10, lineHeight: 17 },
+  menuItemImagePicker: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, marginTop: 4,
+    backgroundColor: colors.surface,
+  },
+  menuItemImagePreview: { width: 52, height: 52, borderRadius: 10, backgroundColor: colors.border },
+  menuItemImagePickerText: { ...typography.bodyBold, color: colors.text, fontSize: 13.5 },
+  menuItemImagePickerSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
   iconBtn: {
     width: 34, height: 34, borderRadius: 10, backgroundColor: colors.background,
     alignItems: 'center', justifyContent: 'center',

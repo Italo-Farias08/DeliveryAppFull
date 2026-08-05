@@ -6,18 +6,31 @@ const { authenticate, authorize } = require('../../middlewares/auth');
 const tenantContext = require('../../middlewares/tenantContext');
 const messagesService = require('../messages/messages.service');
 const controller = require('./tenant.controller');
+const { buildUploader } = require('../../middlewares/upload');
 
 const router = Router();
 
 router.use(authenticate, authorize('restaurant'), tenantContext);
 
+// Um uploader por tipo de imagem, cada um salvando na sua própria subpasta.
+const logoUpload = buildUploader('restaurants/logos');
+const bannerUpload = buildUploader('restaurants/banners');
+const menuItemUpload = buildUploader('menu-items');
+
 router.get('/restaurants', controller.listRestaurants);
 router.post('/restaurants', controller.createRestaurant);
 router.put('/restaurants/:id', controller.updateRestaurant);
 
+// Envio de imagens do restaurante: logo e banner são independentes, cada
+// rota recebe um único arquivo (multipart/form-data) e devolve o
+// restaurante já atualizado com a nova URL da imagem.
+router.post('/restaurants/:id/logo', logoUpload.single('logo'), controller.uploadRestaurantLogo);
+router.post('/restaurants/:id/banner', bannerUpload.single('banner'), controller.uploadRestaurantBanner);
+
 router.get('/restaurants/:restaurantId/menu-items', controller.listMenuItems);
 router.post('/restaurants/:restaurantId/menu-items', controller.createMenuItem);
 router.put('/menu-items/:menuItemId', controller.updateMenuItem);
+router.post('/menu-items/:menuItemId/image', menuItemUpload.single('image'), controller.uploadMenuItemImage);
 router.delete('/menu-items/:menuItemId', controller.deleteMenuItem);
 
 router.get('/orders', controller.listOrders);

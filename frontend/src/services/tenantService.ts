@@ -49,6 +49,7 @@ export interface RestaurantInput {
   deliveryTimeMax: number;
   deliveryFee: number;
   image?: string;
+  banner?: string;
   isOpen?: boolean;
 }
 
@@ -59,6 +60,62 @@ export async function createRestaurant(payload: RestaurantInput): Promise<Restau
 
 export async function updateRestaurant(id: string, payload: RestaurantInput): Promise<Restaurant> {
   const { data } = await api.put(`/tenant/restaurants/${id}`, payload);
+  return data;
+}
+
+// Foto escolhida no picker do celular (ImagePicker.launchImageLibraryAsync)
+// tem esse formato: uma URI local (file://...), sem nome/tipo garantidos.
+export interface PickedImage {
+  uri: string;
+  name?: string | null;
+  mimeType?: string | null;
+}
+
+function guessFileName(uri: string, mimeType?: string | null) {
+  const fromUri = uri.split('/').pop();
+  if (fromUri && fromUri.includes('.')) return fromUri;
+  const ext = mimeType?.split('/')?.[1] || 'jpg';
+  return `upload.${ext}`;
+}
+
+function toFormData(fieldName: string, image: PickedImage): FormData {
+  const form = new FormData();
+  const name = image.name || guessFileName(image.uri, image.mimeType);
+  // No React Native, o valor do campo de arquivo é esse objeto { uri, name, type }
+  // (não um Blob), e o axios cuida do multipart/form-data automaticamente.
+  form.append(fieldName, {
+    uri: image.uri,
+    name,
+    type: image.mimeType || 'image/jpeg',
+  } as any);
+  return form;
+}
+
+// Envia a logo do restaurante. Retorna o restaurante já atualizado com a
+// nova URL da imagem.
+export async function uploadRestaurantLogo(restaurantId: string, image: PickedImage): Promise<Restaurant> {
+  const form = toFormData('logo', image);
+  const { data } = await api.post(`/tenant/restaurants/${restaurantId}/logo`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+// Envia o banner (foto de capa) do restaurante.
+export async function uploadRestaurantBanner(restaurantId: string, image: PickedImage): Promise<Restaurant> {
+  const form = toFormData('banner', image);
+  const { data } = await api.post(`/tenant/restaurants/${restaurantId}/banner`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+// Envia a foto de um item específico do cardápio (o item já precisa existir).
+export async function uploadMenuItemImage(menuItemId: string, image: PickedImage): Promise<MenuItem> {
+  const form = toFormData('image', image);
+  const { data } = await api.post(`/tenant/menu-items/${menuItemId}/image`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return data;
 }
 

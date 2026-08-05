@@ -43,6 +43,7 @@ CREATE TABLE restaurants (
   delivery_time_max INT NOT NULL DEFAULT 40,
   delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
   image TEXT,
+  banner TEXT,
   is_open BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
