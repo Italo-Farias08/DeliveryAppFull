@@ -48,4 +48,18 @@ router.post(
   })
 );
 
+router.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const result = await pool.query(
+      `DELETE FROM addresses WHERE id = $1 AND user_id = $2 RETURNING id`,
+      [req.params.id, req.user.sub]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Endereço não encontrado.' });
+    }
+    res.status(204).send();
+  })
+);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,9 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
-const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; route?: string }[] = [
   { icon: 'person-outline', label: 'Meus dados' },
-  { icon: 'location-outline', label: 'Endereços' },
+  { icon: 'location-outline', label: 'Endereços', route: 'Addresses' },
   { icon: 'card-outline', label: 'Formas de pagamento' },
   { icon: 'heart-outline', label: 'Favoritos' },
   { icon: 'help-circle-outline', label: 'Ajuda' },
@@ -16,6 +17,7 @@ const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
 
 export default function AccountScreen() {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<any>();
   const initials = (user?.name ?? '?').charAt(0).toUpperCase();
 
   return (
@@ -41,7 +43,11 @@ export default function AccountScreen() {
             key={opt.label}
             style={styles.optionRow}
             activeOpacity={0.7}
-            onPress={() => Alert.alert('Em breve', `${opt.label} chega com o backend.`)}
+            onPress={() =>
+              opt.route
+                ? navigation.navigate(opt.route)
+                : Alert.alert('Em breve', `${opt.label} chega com o backend.`)
+            }
           >
             <Ionicons name={opt.icon} size={20} color={colors.text} />
             <Text style={styles.optionLabel}>{opt.label}</Text>

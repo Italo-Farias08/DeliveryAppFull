@@ -36,3 +36,7 @@ export async function createAddress(payload: CreateAddressPayload): Promise<Addr
   const { data } = await api.post('/addresses', payload);
   return data;
 }
+
+export async function deleteAddress(id: string): Promise<void> {
+  await api.delete(`/addresses/${id}`);
+}

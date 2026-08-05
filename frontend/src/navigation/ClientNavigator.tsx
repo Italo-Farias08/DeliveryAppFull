@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import AccountScreen from '../screens/Client/AccountScreen';
+import AddressesScreen from '../screens/Client/AddressesScreen';
 import CartScreen from '../screens/Client/CartScreen';
 import HomeScreen from '../screens/Client/HomeScreen';
 import OrdersScreen from '../screens/Client/OrdersScreen';
@@ -14,6 +15,7 @@ import { colors } from '../theme/colors';
 const Tab = createBottomTabNavigator();
 const HomeStackNav = createNativeStackNavigator();
 const OrdersStackNav = createNativeStackNavigator();
+const AccountStackNav = createNativeStackNavigator();
 
 function HomeStack() {
   return (
@@ -31,6 +33,17 @@ function OrdersStack() {
     <OrdersStackNav.Navigator screenOptions={{ headerShown: false }}>
       <OrdersStackNav.Screen name="OrdersMain" component={OrdersScreen} />
     </OrdersStackNav.Navigator>
+  );
+}
+
+// Nova stack da aba Conta: tela principal + tela de endereços
+// (Casa, Trabalho, Outro), aberta pelo botão "Endereços".
+function AccountStack() {
+  return (
+    <AccountStackNav.Navigator screenOptions={{ headerShown: false }}>
+      <AccountStackNav.Screen name="AccountMain" component={AccountScreen} />
+      <AccountStackNav.Screen name="Addresses" component={AddressesScreen} />
+    </AccountStackNav.Navigator>
   );
 }
 
@@ -57,7 +70,7 @@ export default function ClientNavigator() {
     >
       <Tab.Screen name="Home" component={HomeStack} options={{ title: 'Início' }} />
       <Tab.Screen name="Orders" component={OrdersStack} options={{ title: 'Pedidos' }} />
-      <Tab.Screen name="Account" component={AccountScreen} options={{ title: 'Conta' }} />
+      <Tab.Screen name="Account" component={AccountStack} options={{ title: 'Conta' }} />
     </Tab.Navigator>
   );
 }

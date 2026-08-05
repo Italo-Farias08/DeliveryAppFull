@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,       
-  Easing,          
+  Animated,
+  Linking,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -30,11 +31,56 @@ import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
+// Se o backend passar a mandar lat/lng no pedido, esses campos são
+// usados automaticamente para abrir a rota com coordenadas exatas.
+// Enquanto isso não existir, cai para busca por endereço (funciona
+// igual no Waze e no Google Maps, só é um pouco menos preciso).
+type WithCoords = { lat?: number; lng?: number };
 
 function addressLine(o: { street?: string; number?: string; neighborhood?: string; city?: string }) {
   const parts = [o.street, o.number].filter(Boolean).join(', ');
   const rest = [o.neighborhood, o.city].filter(Boolean).join(' · ');
   return [parts, rest].filter(Boolean).join(' — ') || 'Endereço não informado';
+}
+
+function openNavigation(order: { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords) {
+  const hasCoords = typeof order.lat === 'number' && typeof order.lng === 'number';
+  const query = encodeURIComponent(addressLine(order));
+
+  const wazeAppUrl = hasCoords
+    ? `waze://?ll=${order.lat},${order.lng}&navigate=yes`
+    : `waze://?q=${query}&navigate=yes`;
+  const wazeWebUrl = hasCoords
+    ? `https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes`
+    : `https://waze.com/ul?q=${query}&navigate=yes`;
+  const googleMapsUrl = hasCoords
+    ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}`
+    : `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+
+  Alert.alert('Abrir rota', 'Escolha o app de navegação', [
+    {
+      text: 'Waze',
+      onPress: async () => {
+        try {
+          const supported = await Linking.canOpenURL(wazeAppUrl);
+          await Linking.openURL(supported ? wazeAppUrl : wazeWebUrl);
+        } catch {
+          Alert.alert('Erro', 'Não foi possível abrir o Waze. Ele está instalado?');
+        }
+      },
+    },
+    {
+      text: 'Google Maps',
+      onPress: async () => {
+        try {
+          await Linking.openURL(googleMapsUrl);
+        } catch {
+          Alert.alert('Erro', 'Não foi possível abrir o Google Maps.');
+        }
+      },
+    },
+    { text: 'Cancelar', style: 'cancel' },
+  ]);
 }
 
 export default function DelivererHomeScreen() {
@@ -47,12 +93,15 @@ export default function DelivererHomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
-  const [activeOrder, setActiveOrder] = useState<MyDeliveryOrder | null>(null);
+  // Agora suportamos várias entregas ativas ao mesmo tempo em vez de uma só.
+  const [activeOrders, setActiveOrders] = useState<MyDeliveryOrder[]>([]);
   const [history, setHistory] = useState<MyDeliveryOrder[]>([]);
-  const [pickupCodeInput, setPickupCodeInput] = useState('');
-  const [deliveryCodeInput, setDeliveryCodeInput] = useState('');
-  const [confirming, setConfirming] = useState(false);
-  const [pickupConfirmed, setPickupConfirmed] = useState(false);
+
+  // Estado de código por pedido (cada entrega ativa tem seu próprio input/estado).
+  const [pickupCodes, setPickupCodes] = useState<Record<string, string>>({});
+  const [deliveryCodes, setDeliveryCodes] = useState<Record<string, string>>({});
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [pickupConfirmedId, setPickupConfirmedId] = useState<string | null>(null);
   const checkScale = useRef(new Animated.Value(0)).current;
 
   const availableRef = useRef(available);
@@ -61,8 +110,8 @@ export default function DelivererHomeScreen() {
   const loadMine = useCallback(async () => {
     try {
       const mine = await listMyDeliveries();
-      const active = mine.find((o) => o.status === 'procurando_entregador' || o.status === 'a_caminho') || null;
-      setActiveOrder(active);
+      const active = mine.filter((o) => o.status === 'procurando_entregador' || o.status === 'a_caminho');
+      setActiveOrders(active);
       setHistory(mine.filter((o) => o.status === 'entregue' || o.status === 'cancelado'));
     } catch {
       // silencioso
@@ -143,53 +192,52 @@ export default function DelivererHomeScreen() {
     }
   }
 
-  async function handleConfirmPickup() {
-  if (!activeOrder) return;
-  if (pickupCodeInput.trim().length !== 4) {
-    Alert.alert('Código inválido', 'Peça ao restaurante o código de 4 dígitos da retirada.');
-    return;
+  async function handleConfirmPickup(order: MyDeliveryOrder) {
+    const code = (pickupCodes[order.id] || '').trim();
+    if (code.length !== 4) {
+      Alert.alert('Código inválido', 'Peça ao restaurante o código de 4 dígitos da retirada.');
+      return;
+    }
+    setConfirmingId(order.id);
+    try {
+      await confirmPickup(order.id, code);
+      setPickupCodes((prev) => ({ ...prev, [order.id]: '' }));
+
+      setPickupConfirmedId(order.id);
+      checkScale.setValue(0);
+      Animated.sequence([
+        Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }),
+      ]).start();
+
+      setTimeout(async () => {
+        setPickupConfirmedId(null);
+        await loadMine();
+        setConfirmingId(null);
+      }, 1400);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Código incorreto. Confira com o restaurante.';
+      Alert.alert('Não foi possível confirmar', message);
+      setConfirmingId(null);
+    }
   }
-  setConfirming(true);
-  try {
-    await confirmPickup(activeOrder.id, pickupCodeInput.trim());
-    setPickupCodeInput('');
 
-    setPickupConfirmed(true);
-    checkScale.setValue(0);
-    Animated.sequence([
-      Animated.spring(checkScale, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }),
-    ]).start();
-
-    setTimeout(async () => {
-      setPickupConfirmed(false);
-      await loadMine();
-      setConfirming(false);
-    }, 1400);
-  } catch (err: any) {
-    const message = err?.response?.data?.error || 'Código incorreto. Confira com o restaurante.';
-    Alert.alert('Não foi possível confirmar', message);
-    setConfirming(false);
-  }
-}
-
-  async function handleConfirmDelivery() {
-    if (!activeOrder) return;
-    if (deliveryCodeInput.trim().length !== 4) {
+  async function handleConfirmDelivery(order: MyDeliveryOrder) {
+    const code = (deliveryCodes[order.id] || '').trim();
+    if (code.length !== 4) {
       Alert.alert('Código inválido', 'Peça ao cliente o código de 4 dígitos da entrega.');
       return;
     }
-    setConfirming(true);
+    setConfirmingId(order.id);
     try {
-      await confirmDelivery(activeOrder.id, deliveryCodeInput.trim());
-      setDeliveryCodeInput('');
-      setActiveOrder(null);
+      await confirmDelivery(order.id, code);
+      setDeliveryCodes((prev) => ({ ...prev, [order.id]: '' }));
       await loadMine();
       await loadRadar();
     } catch (err: any) {
       const message = err?.response?.data?.error || 'Código incorreto. Confira com o cliente.';
       Alert.alert('Não foi possível confirmar', message);
     } finally {
-      setConfirming(false);
+      setConfirmingId(null);
     }
   }
 
@@ -234,7 +282,7 @@ export default function DelivererHomeScreen() {
           <Switch
             value={available}
             onValueChange={handleToggleAvailability}
-            disabled={togglingAvailability || !!activeOrder}
+            disabled={togglingAvailability}
             trackColor={{ true: colors.secondary, false: colors.border }}
             thumbColor={colors.white}
           />
@@ -253,125 +301,142 @@ export default function DelivererHomeScreen() {
           </View>
         </View>
 
-        {activeOrder ? (
+        {activeOrders.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Entrega em andamento</Text>
-            <View style={styles.activeCard}>
-              <Text style={styles.activeRestaurant}>{activeOrder.restaurantName}</Text>
-              <Text style={styles.activeAddress}>{addressLine(activeOrder)}</Text>
-              <Text style={styles.activeTotal}>Pedido #{activeOrder.id.slice(-5)} · R$ {Number(activeOrder.total).toFixed(2)}</Text>
+            <Text style={styles.sectionTitle}>
+              Entregas em andamento {activeOrders.length > 1 ? `(${activeOrders.length})` : ''}
+            </Text>
 
-             {activeOrder.status === 'procurando_entregador' && (
-  <View style={styles.codeBox}>
-    {pickupConfirmed ? (
-      <View style={styles.successBox}>
-        <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-          <Ionicons name="checkmark-circle" size={44} color={colors.secondary} />
-        </Animated.View>
-        <Text style={styles.successText}>Retirada confirmada!</Text>
-        <Text style={styles.successSub}>Agora siga até o cliente</Text>
-      </View>
-    ) : (
-      <>
-        <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
-        <View style={styles.codeRow}>
-          <TextInput
-            style={styles.codeInput}
-            value={pickupCodeInput}
-            onChangeText={setPickupCodeInput}
-            placeholder="0000"
-            keyboardType="number-pad"
-            maxLength={4}
-            editable={!confirming}
-          />
-          <TouchableOpacity
-            style={[styles.confirmBtn, confirming && { opacity: 0.6 }]}
-            onPress={handleConfirmPickup}
-            disabled={confirming}
-          >
-            {confirming ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </>
-    )}
-  </View>
-)}
-
-              {activeOrder.status === 'a_caminho' && (
-                <View style={styles.codeBox}>
-                  <Text style={styles.codeLabel}>Peça ao cliente o código de entrega</Text>
-                  <View style={styles.codeRow}>
-                    <TextInput
-                      style={styles.codeInput}
-                      value={deliveryCodeInput}
-                      onChangeText={setDeliveryCodeInput}
-                      placeholder="0000"
-                      keyboardType="number-pad"
-                      maxLength={4}
-                    />
-                    <TouchableOpacity
-                      style={[styles.confirmBtn, confirming && { opacity: 0.6 }]}
-                      onPress={handleConfirmDelivery}
-                      disabled={confirming}
-                    >
-                      {confirming ? (
-                        <ActivityIndicator color={colors.white} />
-                      ) : (
-                        <Text style={styles.confirmBtnText}>Confirmar entrega</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Radar de corridas</Text>
-            {!available ? (
-              <View style={styles.emptyBox}>
-                <Ionicons name="radio-outline" size={40} color={colors.textMuted} />
-                <Text style={styles.emptyText}>Você está indisponível</Text>
-                <Text style={styles.emptySub}>Ative o modo disponível para começar a ver corridas no radar</Text>
-              </View>
-            ) : loadingRadar ? (
-              <View style={styles.emptyBox}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : radar.length === 0 ? (
-              <View style={styles.emptyBox}>
-                <Ionicons name="bicycle-outline" size={40} color={colors.textMuted} />
-                <Text style={styles.emptyText}>Procurando corridas...</Text>
-                <Text style={styles.emptySub}>Assim que um restaurante marcar um pedido como pronto, ele aparece aqui na hora</Text>
-              </View>
-            ) : (
-              radar.map((order) => (
-                <View key={order.id} style={styles.radarCard}>
+            {activeOrders.map((activeOrder) => (
+              <View key={activeOrder.id} style={[styles.activeCard, { marginBottom: 14 }]}>
+                <View style={styles.activeHeaderRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.radarRestaurant}>{order.restaurantName}</Text>
-                    <Text style={styles.radarAddress}>{addressLine(order)}</Text>
-                    <Text style={styles.radarTotal}>Pedido #{order.id.slice(-5)} · R$ {Number(order.total).toFixed(2)}</Text>
+                    <Text style={styles.activeRestaurant}>{activeOrder.restaurantName}</Text>
+                    <Text style={styles.activeAddress}>{addressLine(activeOrder)}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.acceptBtn, acceptingId === order.id && { opacity: 0.6 }]}
-                    onPress={() => handleAcceptOrder(order)}
-                    disabled={acceptingId === order.id}
-                  >
-                    {acceptingId === order.id ? (
-                      <ActivityIndicator color={colors.white} />
-                    ) : (
-                      <Text style={styles.acceptBtnText}>Aceitar</Text>
-                    )}
+                  <TouchableOpacity style={styles.routeBtn} onPress={() => openNavigation(activeOrder)}>
+                    <Ionicons name="navigate" size={16} color={colors.white} />
+                    <Text style={styles.routeBtnText}>Rota</Text>
                   </TouchableOpacity>
                 </View>
-              ))
-            )}
+                <Text style={styles.activeTotal}>Pedido #{activeOrder.id.slice(-5)} · R$ {Number(activeOrder.total).toFixed(2)}</Text>
+
+                {activeOrder.status === 'procurando_entregador' && (
+                  <View style={styles.codeBox}>
+                    {pickupConfirmedId === activeOrder.id ? (
+                      <View style={styles.successBox}>
+                        <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+                          <Ionicons name="checkmark-circle" size={44} color={colors.secondary} />
+                        </Animated.View>
+                        <Text style={styles.successText}>Retirada confirmada!</Text>
+                        <Text style={styles.successSub}>Agora siga até o cliente</Text>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
+                        <View style={styles.codeRow}>
+                          <TextInput
+                            style={styles.codeInput}
+                            value={pickupCodes[activeOrder.id] || ''}
+                            onChangeText={(text) => setPickupCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
+                            placeholder="0000"
+                            keyboardType="number-pad"
+                            maxLength={4}
+                            editable={confirmingId !== activeOrder.id}
+                          />
+                          <TouchableOpacity
+                            style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
+                            onPress={() => handleConfirmPickup(activeOrder)}
+                            disabled={confirmingId === activeOrder.id}
+                          >
+                            {confirmingId === activeOrder.id ? (
+                              <ActivityIndicator color={colors.white} />
+                            ) : (
+                              <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                )}
+
+                {activeOrder.status === 'a_caminho' && (
+                  <View style={styles.codeBox}>
+                    <Text style={styles.codeLabel}>Peça ao cliente o código de entrega</Text>
+                    <View style={styles.codeRow}>
+                      <TextInput
+                        style={styles.codeInput}
+                        value={deliveryCodes[activeOrder.id] || ''}
+                        onChangeText={(text) => setDeliveryCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
+                        placeholder="0000"
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        editable={confirmingId !== activeOrder.id}
+                      />
+                      <TouchableOpacity
+                        style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
+                        onPress={() => handleConfirmDelivery(activeOrder)}
+                        disabled={confirmingId === activeOrder.id}
+                      >
+                        {confirmingId === activeOrder.id ? (
+                          <ActivityIndicator color={colors.white} />
+                        ) : (
+                          <Text style={styles.confirmBtnText}>Confirmar entrega</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))}
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Radar de corridas</Text>
+          {!available ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="radio-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.emptyText}>Você está indisponível</Text>
+              <Text style={styles.emptySub}>Ative o modo disponível para começar a ver corridas no radar</Text>
+            </View>
+          ) : loadingRadar ? (
+            <View style={styles.emptyBox}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : radar.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="bicycle-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.emptyText}>Procurando corridas...</Text>
+              <Text style={styles.emptySub}>Assim que um restaurante marcar um pedido como pronto, ele aparece aqui na hora</Text>
+            </View>
+          ) : (
+            radar.map((order) => (
+              <View key={order.id} style={styles.radarCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.radarRestaurant}>{order.restaurantName}</Text>
+                  <Text style={styles.radarAddress}>{addressLine(order)}</Text>
+                  <Text style={styles.radarTotal}>Pedido #{order.id.slice(-5)} · R$ {Number(order.total).toFixed(2)}</Text>
+                </View>
+                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(order)}>
+                  <Ionicons name="navigate-outline" size={18} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.acceptBtn, acceptingId === order.id && { opacity: 0.6 }]}
+                  onPress={() => handleAcceptOrder(order)}
+                  disabled={acceptingId === order.id}
+                >
+                  {acceptingId === order.id ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={styles.acceptBtnText}>Aceitar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -379,8 +444,8 @@ export default function DelivererHomeScreen() {
 
 const styles = StyleSheet.create({
   successBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6, gap: 4 },
-successText: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginTop: 6 },
-successSub: { color: colors.textMuted, fontSize: 12.5 },
+  successText: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginTop: 6 },
+  successSub: { color: colors.textMuted, fontSize: 12.5 },
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   hello: { ...typography.h1, color: colors.text },
@@ -416,6 +481,10 @@ successSub: { color: colors.textMuted, fontSize: 12.5 },
   radarRestaurant: { ...typography.bodyBold, color: colors.text },
   radarAddress: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
   radarTotal: { color: colors.text, fontSize: 12.5, marginTop: 4, fontWeight: '700' },
+  radarRouteBtn: {
+    width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
+  },
   acceptBtn: {
     backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10,
     minWidth: 90, alignItems: 'center', justifyContent: 'center',
@@ -425,6 +494,12 @@ successSub: { color: colors.textMuted, fontSize: 12.5 },
     backgroundColor: colors.surface, borderRadius: 16, padding: 18,
     borderWidth: 1, borderColor: colors.border, gap: 4,
   },
+  activeHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  routeBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.secondary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  routeBtnText: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
   activeRestaurant: { ...typography.h2, color: colors.text },
   activeAddress: { color: colors.textMuted, fontSize: 13 },
   activeTotal: { color: colors.text, fontWeight: '700', marginTop: 6 },
