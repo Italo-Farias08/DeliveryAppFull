@@ -5,6 +5,8 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  phone?: string | null;
+  cpf?: string | null;
 }
 
 export interface Category {

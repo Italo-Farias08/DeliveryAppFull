@@ -8,6 +8,7 @@ interface AuthContextData {
   loading: boolean;
   signIn: (user: User) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (user: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -36,8 +37,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setAuthToken(null);
   }
 
+  // Atualiza o usuário em memória e no AsyncStorage depois que a pessoa
+  // edita nome/e-mail/telefone/CPF na tela "Meus dados".
+  async function updateUser(updated: User) {
+    setUser(updated);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
