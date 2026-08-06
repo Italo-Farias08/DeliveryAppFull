@@ -30,8 +30,19 @@ async function getRestaurantById(id) {
   );
   if (restaurantResult.rowCount === 0) return null;
   const restaurant = restaurantResult.rows[0];
+
+  const categoriesResult = await pool.query(
+    `SELECT id, restaurant_id AS "restaurantId", name, sort_order AS "sortOrder"
+     FROM menu_categories
+     WHERE restaurant_id = $1
+     ORDER BY sort_order, name`,
+    [id]
+  );
+  restaurant.menuCategories = categoriesResult.rows;
+
   const menuResult = await pool.query(
-    `SELECT id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"
+    `SELECT id, restaurant_id AS "restaurantId", category_id AS "categoryId",
+            name, description, price, image, is_available AS "isAvailable"
      FROM menu_items
      WHERE restaurant_id = $1
      ORDER BY name`,

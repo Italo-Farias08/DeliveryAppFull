@@ -254,10 +254,9 @@ const ListHeader = React.memo(function ListHeader({
 }) {
   return (
     <View>
-      {/* Flat header — no gradient, no rounded crop, sits inside the safe area */}
       <View style={styles.topBar}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.logo}>DeliveryApp</Text>
+          <Text style={styles.logo}>Vitória Delivery</Text>
           {userName ? <Text style={styles.greeting}>Olá, {userName} 👋</Text> : null}
         </View>
         <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
@@ -265,7 +264,6 @@ const ListHeader = React.memo(function ListHeader({
         </TouchableOpacity>
       </View>
 
-      {/* Search + filter row */}
       <View style={styles.searchRow}>
         <View style={{ flex: 1 }}>
           <SearchBar editable={false} onPress={onNavigateSearch} placeholder="Buscar restaurantes ou comidas" />

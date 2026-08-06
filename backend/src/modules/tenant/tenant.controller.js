@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, menuItemSchema, rejectOrderSchema } = require('./tenant.schema');
+const { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema } = require('./tenant.schema');
 const { publicUrlFor } = require('../../middlewares/upload');
 
 const listRestaurants = asyncHandler(async (req, res) => {
@@ -69,6 +69,30 @@ const deleteMenuItem = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
+const listMenuCategories = asyncHandler(async (req, res) => {
+  await service.ensureRestaurantOwnedByTenant(req.db, req.params.restaurantId, req.tenantId);
+  const categories = await service.listMenuCategories(req.db, req.params.restaurantId);
+  res.json(categories);
+});
+
+const createMenuCategory = asyncHandler(async (req, res) => {
+  await service.ensureRestaurantOwnedByTenant(req.db, req.params.restaurantId, req.tenantId);
+  const data = menuCategorySchema.parse(req.body);
+  const category = await service.createMenuCategory(req.db, req.tenantId, req.params.restaurantId, data);
+  res.status(201).json(category);
+});
+
+const updateMenuCategory = asyncHandler(async (req, res) => {
+  const data = menuCategorySchema.parse(req.body);
+  const category = await service.updateMenuCategory(req.db, req.params.categoryId, data);
+  res.json(category);
+});
+
+const deleteMenuCategory = asyncHandler(async (req, res) => {
+  await service.deleteMenuCategory(req.db, req.params.categoryId);
+  res.status(204).send();
+});
+
 const listOrders = asyncHandler(async (req, res) => {
   const orders = await service.listOrders(req.db, req.tenantId);
   res.json(orders);
@@ -101,6 +125,10 @@ module.exports = {
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
+  listMenuCategories,
+  createMenuCategory,
+  updateMenuCategory,
+  deleteMenuCategory,
   listOrders,
   acceptOrder,
   rejectOrder,

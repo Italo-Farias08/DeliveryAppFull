@@ -21,10 +21,17 @@ const menuItemSchema = z.object({
   price: z.number().positive(),
   image: z.string().optional(),
   isAvailable: z.boolean().optional(),
+  // categoria do cardápio (Pizzas, Carnes...); null tira o item de qualquer categoria
+  categoryId: z.string().uuid().nullable().optional(),
+});
+
+const menuCategorySchema = z.object({
+  name: z.string().min(2),
+  sortOrder: z.number().int().optional(),
 });
 
 const rejectOrderSchema = z.object({
   reason: z.string().max(300).optional(),
 });
 
-module.exports = { restaurantSchema, menuItemSchema, rejectOrderSchema };
+module.exports = { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema };

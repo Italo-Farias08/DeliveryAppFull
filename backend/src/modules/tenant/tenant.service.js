@@ -86,7 +86,8 @@ async function ensureRestaurantOwnedByTenant(db, restaurantId, tenantId) {
 
 async function listMenuItems(db, restaurantId) {
   const result = await db.query(
-    `SELECT id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"
+    `SELECT id, restaurant_id AS "restaurantId", category_id AS "categoryId",
+            name, description, price, image, is_available AS "isAvailable"
      FROM menu_items
      WHERE restaurant_id = $1
      ORDER BY created_at DESC`,
@@ -97,10 +98,11 @@ async function listMenuItems(db, restaurantId) {
 
 async function createMenuItem(db, tenantId, restaurantId, data) {
   const result = await db.query(
-    `INSERT INTO menu_items (tenant_id, restaurant_id, name, description, price, image, is_available)
-     VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true))
-     RETURNING id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"`,
-    [tenantId, restaurantId, data.name, data.description || null, data.price, data.image || null, data.isAvailable]
+    `INSERT INTO menu_items (tenant_id, restaurant_id, category_id, name, description, price, image, is_available)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, true))
+     RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
+               name, description, price, image, is_available AS "isAvailable"`,
+    [tenantId, restaurantId, data.categoryId || null, data.name, data.description || null, data.price, data.image || null, data.isAvailable]
   );
   return result.rows[0];
 }
@@ -110,13 +112,54 @@ async function updateMenuItem(db, menuItemId, data) {
   // pra editar nome/preço não apagar a foto já enviada.
   const result = await db.query(
     `UPDATE menu_items
-     SET name = $1, description = $2, price = $3, image = COALESCE($4, image), is_available = COALESCE($5, is_available)
-     WHERE id = $6
-     RETURNING id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"`,
-    [data.name, data.description || null, data.price, data.image || null, data.isAvailable, menuItemId]
+     SET name = $1, description = $2, price = $3, image = COALESCE($4, image),
+         is_available = COALESCE($5, is_available), category_id = $6
+     WHERE id = $7
+     RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
+               name, description, price, image, is_available AS "isAvailable"`,
+    [data.name, data.description || null, data.price, data.image || null, data.isAvailable, data.categoryId || null, menuItemId]
   );
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
   return result.rows[0];
+}
+
+async function listMenuCategories(db, restaurantId) {
+  const result = await db.query(
+    `SELECT id, restaurant_id AS "restaurantId", name, sort_order AS "sortOrder"
+     FROM menu_categories
+     WHERE restaurant_id = $1
+     ORDER BY sort_order, name`,
+    [restaurantId]
+  );
+  return result.rows;
+}
+
+async function createMenuCategory(db, tenantId, restaurantId, data) {
+  const result = await db.query(
+    `INSERT INTO menu_categories (tenant_id, restaurant_id, name, sort_order)
+     VALUES ($1, $2, $3, COALESCE($4, 0))
+     RETURNING id, restaurant_id AS "restaurantId", name, sort_order AS "sortOrder"`,
+    [tenantId, restaurantId, data.name, data.sortOrder]
+  );
+  return result.rows[0];
+}
+
+async function updateMenuCategory(db, categoryId, data) {
+  const result = await db.query(
+    `UPDATE menu_categories
+     SET name = $1, sort_order = COALESCE($2, sort_order)
+     WHERE id = $3
+     RETURNING id, restaurant_id AS "restaurantId", name, sort_order AS "sortOrder"`,
+    [data.name, data.sortOrder, categoryId]
+  );
+  if (result.rowCount === 0) throw new AppError('Categoria não encontrada nesta conta', 404);
+  return result.rows[0];
+}
+
+async function deleteMenuCategory(db, categoryId) {
+  // Os itens dessa categoria não são apagados: category_id vira null
+  // (ON DELETE SET NULL no banco) e eles voltam a aparecer em "Todos".
+  await db.query('DELETE FROM menu_categories WHERE id = $1', [categoryId]);
 }
 
 // Usada pela rota de upload de foto do item (multipart/form-data).
@@ -238,6 +281,10 @@ module.exports = {
   updateMenuItem,
   updateMenuItemImage,
   deleteMenuItem,
+  listMenuCategories,
+  createMenuCategory,
+  updateMenuCategory,
+  deleteMenuCategory,
   listOrders,
   acceptOrder,
   rejectOrder,

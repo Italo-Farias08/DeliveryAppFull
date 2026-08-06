@@ -22,10 +22,15 @@ export const restaurants: Restaurant[] = [
     deliveryFee: 6.9,
     image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800',
     isOpen: true,
+    menuCategories: [
+      { id: 'mc1-lanches', restaurantId: 'r1', name: 'Lanches', sortOrder: 0 },
+      { id: 'mc1-acompanhamentos', restaurantId: 'r1', name: 'Acompanhamentos', sortOrder: 1 },
+      { id: 'mc1-bebidas', restaurantId: 'r1', name: 'Bebidas', sortOrder: 2 },
+    ],
     menu: [
-      { id: 'm1', restaurantId: 'r1', name: 'Cheeseburger Duplo', description: 'Dois blends, queijo cheddar, molho da casa', price: 28.9, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400' },
-      { id: 'm2', restaurantId: 'r1', name: 'Batata Rústica', description: 'Com alecrim e páprica defumada', price: 14.5, image: 'https://images.unsplash.com/photo-1585109649139-366815a0d713?w=400' },
-      { id: 'm3', restaurantId: 'r1', name: 'Milk-shake de Ovomaltine', description: '400ml, cremoso', price: 16.0, image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400' },
+      { id: 'm1', restaurantId: 'r1', categoryId: 'mc1-lanches', name: 'Cheeseburger Duplo', description: 'Dois blends, queijo cheddar, molho da casa', price: 28.9, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400' },
+      { id: 'm2', restaurantId: 'r1', categoryId: 'mc1-acompanhamentos', name: 'Batata Rústica', description: 'Com alecrim e páprica defumada', price: 14.5, image: 'https://images.unsplash.com/photo-1585109649139-366815a0d713?w=400' },
+      { id: 'm3', restaurantId: 'r1', categoryId: 'mc1-bebidas', name: 'Milk-shake de Ovomaltine', description: '400ml, cremoso', price: 16.0, image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=400' },
     ],
   },
   {
@@ -38,9 +43,12 @@ export const restaurants: Restaurant[] = [
     deliveryFee: 8.0,
     image: 'https://images.unsplash.com/photo-1548369937-47519962c11a?w=800',
     isOpen: true,
+    menuCategories: [
+      { id: 'mc2-pizzas', restaurantId: 'r2', name: 'Pizzas', sortOrder: 0 },
+    ],
     menu: [
-      { id: 'm4', restaurantId: 'r2', name: 'Margherita', description: 'Molho de tomate, mussarela de búfala, manjericão', price: 42.0, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400' },
-      { id: 'm5', restaurantId: 'r2', name: 'Calabresa Especial', description: 'Calabresa artesanal, cebola roxa, orégano', price: 39.9, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400' },
+      { id: 'm4', restaurantId: 'r2', categoryId: 'mc2-pizzas', name: 'Margherita', description: 'Molho de tomate, mussarela de búfala, manjericão', price: 42.0, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400' },
+      { id: 'm5', restaurantId: 'r2', categoryId: 'mc2-pizzas', name: 'Calabresa Especial', description: 'Calabresa artesanal, cebola roxa, orégano', price: 39.9, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400' },
     ],
   },
   {

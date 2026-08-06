@@ -24,6 +24,7 @@ export default function RestaurantDetailScreen() {
   const { restaurantId } = route.params;
   const { addItem, totalItems, subtotal, restaurantId: cartRestaurantId } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
     getRestaurantById(restaurantId).then((r) => setRestaurant(r ?? null));
@@ -38,6 +39,10 @@ export default function RestaurantDetailScreen() {
   }
 
   const showCartBar = totalItems > 0 && cartRestaurantId === restaurant.id;
+  const menuCategories = restaurant.menuCategories || [];
+  const filteredMenu = activeCategoryId
+    ? restaurant.menu.filter((item) => item.categoryId === activeCategoryId)
+    : restaurant.menu;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -71,9 +76,40 @@ export default function RestaurantDetailScreen() {
 
         <View style={styles.menuBlock}>
           <Text style={styles.sectionTitle}>Cardápio</Text>
-          {restaurant.menu.map((item) => (
-            <FoodCard key={item.id} item={item} onAdd={() => addItem(item)} />
-          ))}
+
+          {menuCategories.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsRow}
+            >
+              <TouchableOpacity
+                style={[styles.chip, !activeCategoryId && styles.chipActive]}
+                onPress={() => setActiveCategoryId(null)}
+              >
+                <Text style={[styles.chipText, !activeCategoryId && styles.chipTextActive]}>Todos</Text>
+              </TouchableOpacity>
+              {menuCategories.map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.chip, activeCategoryId === cat.id && styles.chipActive]}
+                  onPress={() => setActiveCategoryId(cat.id)}
+                >
+                  <Text style={[styles.chipText, activeCategoryId === cat.id && styles.chipTextActive]}>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {filteredMenu.length === 0 ? (
+            <Text style={styles.emptyMenuText}>Nenhum item nessa categoria ainda.</Text>
+          ) : (
+            filteredMenu.map((item) => (
+              <FoodCard key={item.id} item={item} onAdd={() => addItem(item)} />
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -117,6 +153,15 @@ const styles = StyleSheet.create({
   closedNoticeText: { color: colors.primaryDark, fontSize: 12.5, fontWeight: '700', textAlign: 'center' },
   menuBlock: { paddingHorizontal: 20, marginTop: 12 },
   sectionTitle: { ...typography.h2, color: colors.text, marginBottom: 14 },
+  chipsRow: { gap: 8, paddingBottom: 16 },
+  chip: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surface,
+  },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  chipTextActive: { color: colors.white },
+  emptyMenuText: { color: colors.textMuted, fontSize: 13.5, textAlign: 'center', paddingVertical: 20 },
   cartBar: {
     position: 'absolute', bottom: 16, left: 20, right: 20, height: 56,
     backgroundColor: colors.secondary, borderRadius: 16,

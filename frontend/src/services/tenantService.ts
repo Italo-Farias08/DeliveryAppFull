@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Category, MenuItem, OrderStatus, Restaurant } from '../types';
+import { Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../types';
 
 // Painel do restaurante — sempre fala com o backend de verdade (não tem mock aqui,
 // já que é uma área autenticada específica do dono do restaurante).
@@ -130,6 +130,7 @@ export interface MenuItemInput {
   price: number;
   image?: string;
   isAvailable?: boolean;
+  categoryId?: string | null;
 }
 
 export async function createMenuItem(restaurantId: string, payload: MenuItemInput): Promise<MenuItem> {
@@ -144,6 +145,32 @@ export async function updateMenuItem(menuItemId: string, payload: MenuItemInput)
 
 export async function deleteMenuItem(menuItemId: string): Promise<void> {
   await api.delete(`/tenant/menu-items/${menuItemId}`);
+}
+
+// Categorias do cardápio (Pizzas, Carnes, Hambúrgueres...) — quem controla
+// quais existem e a qual categoria cada item pertence é o próprio restaurante.
+export async function listMenuCategories(restaurantId: string): Promise<MenuCategory[]> {
+  const { data } = await api.get(`/tenant/restaurants/${restaurantId}/menu-categories`);
+  return data;
+}
+
+export interface MenuCategoryInput {
+  name: string;
+  sortOrder?: number;
+}
+
+export async function createMenuCategory(restaurantId: string, payload: MenuCategoryInput): Promise<MenuCategory> {
+  const { data } = await api.post(`/tenant/restaurants/${restaurantId}/menu-categories`, payload);
+  return data;
+}
+
+export async function updateMenuCategory(categoryId: string, payload: MenuCategoryInput): Promise<MenuCategory> {
+  const { data } = await api.put(`/tenant/menu-categories/${categoryId}`, payload);
+  return data;
+}
+
+export async function deleteMenuCategory(categoryId: string): Promise<void> {
+  await api.delete(`/tenant/menu-categories/${categoryId}`);
 }
 
 export async function listTenantOrders(): Promise<TenantOrder[]> {

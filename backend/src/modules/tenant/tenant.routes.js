@@ -33,6 +33,11 @@ router.put('/menu-items/:menuItemId', controller.updateMenuItem);
 router.post('/menu-items/:menuItemId/image', menuItemUpload.single('image'), controller.uploadMenuItemImage);
 router.delete('/menu-items/:menuItemId', controller.deleteMenuItem);
 
+router.get('/restaurants/:restaurantId/menu-categories', controller.listMenuCategories);
+router.post('/restaurants/:restaurantId/menu-categories', controller.createMenuCategory);
+router.put('/menu-categories/:categoryId', controller.updateMenuCategory);
+router.delete('/menu-categories/:categoryId', controller.deleteMenuCategory);
+
 router.get('/orders', controller.listOrders);
 router.patch('/orders/:orderId/accept', controller.acceptOrder);
 router.patch('/orders/:orderId/reject', controller.rejectOrder);

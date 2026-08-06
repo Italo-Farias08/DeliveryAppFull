@@ -13,9 +13,22 @@ export interface Category {
   icon: string;
 }
 
+// Categoria DENTRO do cardápio de um restaurante (ex: Pizzas, Carnes,
+// Hambúrgueres). Diferente de "Category" acima, que é o TIPO do restaurante
+// (Pizzaria, Hamburgueria) usado nos filtros da home do cliente.
+export interface MenuCategory {
+  id: string;
+  restaurantId: string;
+  name: string;
+  sortOrder: number;
+}
+
 export interface MenuItem {
   id: string;
   restaurantId: string;
+  // categoria do cardápio a que esse item pertence (opcional: item pode
+  // não ter categoria e aparece em "Todos")
+  categoryId?: string | null;
   name: string;
   description: string;
   price: number;
@@ -36,6 +49,9 @@ export interface Restaurant {
   // antigos ainda não tinham esse campo.
   banner?: string | null;
   isOpen: boolean;
+  // Opcional por compatibilidade com dados mockados antigos que ainda não
+  // tinham categorias de cardápio.
+  menuCategories?: MenuCategory[];
   menu: MenuItem[];
 }
 

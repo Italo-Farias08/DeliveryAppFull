@@ -20,16 +20,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import OrderChatModal from '../../components/OrderChatModal';
 import {
+  MenuCategoryInput,
   MenuItemInput,
   PickedImage,
   RestaurantInput,
   TenantOrder,
   acceptOrder,
+  createMenuCategory,
   createMenuItem,
   createRestaurant,
+  deleteMenuCategory,
   deleteMenuItem,
   getCategories,
   getTenantOrderMessages,
+  listMenuCategories,
   listMenuItems,
   listMyRestaurants,
   listTenantOrders,
@@ -45,7 +49,7 @@ import {
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { Category, MenuItem, OrderStatus, Restaurant } from '../../types';
+import { Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../../types';
 
 const statusLabel: Record<OrderStatus, string> = {
   pendente: 'Novo pedido',
@@ -79,6 +83,13 @@ export default function RestaurantHomeScreen() {
   const [orders, setOrders] = useState<TenantOrder[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // categorias do cardápio (Pizzas, Carnes, Hambúrgueres...) e qual delas
+  // está selecionada pra filtrar a lista de itens aqui embaixo
+  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
+  const [activeMenuCategoryId, setActiveMenuCategoryId] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+
   const [savingStatus, setSavingStatus] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -106,6 +117,7 @@ export default function RestaurantHomeScreen() {
   const [miPickedImage, setMiPickedImage] = useState<PickedImage | null>(null);
   const [miImagePreview, setMiImagePreview] = useState<string | null>(null);
   const [miUploadingImage, setMiUploadingImage] = useState(false);
+  const [miCategoryId, setMiCategoryId] = useState<string | null>(null);
 
   const loadEverything = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoadingInit(true);
@@ -115,12 +127,14 @@ export default function RestaurantHomeScreen() {
       const current = myRestaurants[0] || null;
       setRestaurant(current);
       if (current) {
-        const [items, tenantOrders] = await Promise.all([
+        const [items, tenantOrders, menuCats] = await Promise.all([
           listMenuItems(current.id),
           listTenantOrders(),
+          listMenuCategories(current.id),
         ]);
         setMenuItems(items);
         setOrders(tenantOrders);
+        setMenuCategories(menuCats);
       }
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível carregar os dados do painel.');
@@ -291,6 +305,8 @@ export default function RestaurantHomeScreen() {
     setMiPrice('');
     setMiPickedImage(null);
     setMiImagePreview(null);
+    // se o dono já estava filtrando por uma categoria, o novo item já nasce nela
+    setMiCategoryId(activeMenuCategoryId);
     setMenuModalVisible(true);
   }
 
@@ -301,6 +317,7 @@ export default function RestaurantHomeScreen() {
     setMiPrice(String(item.price));
     setMiPickedImage(null);
     setMiImagePreview(item.image || null);
+    setMiCategoryId(item.categoryId || null);
     setMenuModalVisible(true);
   }
 
@@ -320,6 +337,7 @@ export default function RestaurantHomeScreen() {
       description: miDescription.trim() || undefined,
       price,
       isAvailable: true,
+      categoryId: miCategoryId,
     };
     setSavingItem(true);
     try {
@@ -361,6 +379,49 @@ export default function RestaurantHomeScreen() {
         },
       },
     ]);
+  }
+
+  async function handleCreateMenuCategory() {
+    if (!restaurant) return;
+    const name = newCategoryName.trim();
+    if (!name) return;
+    const payload: MenuCategoryInput = { name, sortOrder: menuCategories.length };
+    setSavingCategory(true);
+    try {
+      const created = await createMenuCategory(restaurant.id, payload);
+      setMenuCategories((prev) => [...prev, created]);
+      setNewCategoryName('');
+    } catch (err: any) {
+      Alert.alert('Erro ao criar categoria', err?.response?.data?.error || 'Tente novamente.');
+    } finally {
+      setSavingCategory(false);
+    }
+  }
+
+  function handleDeleteMenuCategory(category: MenuCategory) {
+    Alert.alert(
+      'Remover categoria',
+      `Remover "${category.name}"? Os itens dela continuam no cardápio, só ficam sem categoria.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMenuCategory(category.id);
+              setMenuCategories((prev) => prev.filter((c) => c.id !== category.id));
+              setMenuItems((prev) =>
+                prev.map((m) => (m.categoryId === category.id ? { ...m, categoryId: null } : m))
+              );
+              if (activeMenuCategoryId === category.id) setActiveMenuCategoryId(null);
+            } catch {
+              Alert.alert('Erro', 'Não foi possível remover a categoria.');
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function handleAcceptOrder(order: TenantOrder) {
@@ -407,6 +468,10 @@ export default function RestaurantHomeScreen() {
       setSavingOrderId(null);
     }
   }
+
+  const filteredMenuItems = activeMenuCategoryId
+    ? menuItems.filter((item) => item.categoryId === activeMenuCategoryId)
+    : menuItems;
 
   const todayStr = new Date().toDateString();
   const ordersToday = orders.filter((o) => todayKey(o.createdAt) === todayStr);
@@ -708,39 +773,107 @@ export default function RestaurantHomeScreen() {
             <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Cardápio</Text>
           </View>
 
-          <TouchableOpacity style={styles.menuBtn} activeOpacity={0.8} onPress={openCreateMenuModal}>
+          <Text style={styles.label}>Categorias do cardápio</Text>
+          <Text style={styles.helperText}>
+            Crie categorias como Pizzas, Carnes ou Hambúrgueres. Elas aparecem como filtros para o
+            cliente e ajudam a organizar seus itens.
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 10 }}
+          >
+            <TouchableOpacity
+              style={[styles.pill, !activeMenuCategoryId && styles.pillActive]}
+              onPress={() => setActiveMenuCategoryId(null)}
+            >
+              <Text style={[styles.pillText, !activeMenuCategoryId && styles.pillTextActive]}>Todos</Text>
+            </TouchableOpacity>
+            {menuCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.pill, styles.pillWithAction, activeMenuCategoryId === cat.id && styles.pillActive]}
+                onPress={() => setActiveMenuCategoryId(cat.id)}
+                onLongPress={() => handleDeleteMenuCategory(cat)}
+              >
+                <Text style={[styles.pillText, activeMenuCategoryId === cat.id && styles.pillTextActive]}>
+                  {cat.name}
+                </Text>
+                <TouchableOpacity hitSlop={8} onPress={() => handleDeleteMenuCategory(cat)}>
+                  <Ionicons
+                    name="close-circle"
+                    size={15}
+                    color={activeMenuCategoryId === cat.id ? colors.white : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <View style={styles.addCategoryRow}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+              placeholder="Nova categoria, ex: Pizzas"
+              onSubmitEditing={handleCreateMenuCategory}
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              style={[styles.addCategoryBtn, savingCategory && { opacity: 0.6 }]}
+              onPress={handleCreateMenuCategory}
+              disabled={savingCategory}
+            >
+              {savingCategory ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Ionicons name="add" size={20} color={colors.white} />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={[styles.menuBtn, { marginTop: 18 }]} activeOpacity={0.8} onPress={openCreateMenuModal}>
             <Ionicons name="add-circle-outline" size={20} color={colors.secondary} />
             <Text style={styles.menuBtnText}>Adicionar item ao cardápio</Text>
           </TouchableOpacity>
 
-          {menuItems.length === 0 ? (
+          {filteredMenuItems.length === 0 ? (
             <View style={styles.emptyBox}>
               <Ionicons name="restaurant-outline" size={40} color={colors.textMuted} />
               <Text style={styles.emptyText}>Nenhum item cadastrado</Text>
-              <Text style={styles.emptySub}>Adicione o primeiro item do seu cardápio</Text>
+              <Text style={styles.emptySub}>
+                {activeMenuCategoryId ? 'Nenhum item nesta categoria ainda' : 'Adicione o primeiro item do seu cardápio'}
+              </Text>
             </View>
           ) : (
-            menuItems.map((item) => (
-              <View key={item.id} style={styles.menuItemRow}>
-                {item.image ? (
-                  <Image source={{ uri: item.image }} style={styles.menuItemThumb} />
-                ) : (
-                  <View style={[styles.menuItemThumb, styles.imagePlaceholder]}>
-                    <Ionicons name="restaurant-outline" size={16} color={colors.textMuted} />
+            filteredMenuItems.map((item) => {
+              const itemCategory = menuCategories.find((c) => c.id === item.categoryId);
+              return (
+                <View key={item.id} style={styles.menuItemRow}>
+                  {item.image ? (
+                    <Image source={{ uri: item.image }} style={styles.menuItemThumb} />
+                  ) : (
+                    <View style={[styles.menuItemThumb, styles.imagePlaceholder]}>
+                      <Ionicons name="restaurant-outline" size={16} color={colors.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.menuItemName}>{item.name}</Text>
+                    <Text style={styles.menuItemPrice}>
+                      R$ {Number(item.price).toFixed(2)}
+                      {itemCategory ? `  ·  ${itemCategory.name}` : ''}
+                    </Text>
                   </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.menuItemName}>{item.name}</Text>
-                  <Text style={styles.menuItemPrice}>R$ {Number(item.price).toFixed(2)}</Text>
+                  <TouchableOpacity style={styles.iconBtn} onPress={() => openEditMenuModal(item)}>
+                    <Ionicons name="pencil-outline" size={18} color={colors.secondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.iconBtn} onPress={() => handleDeleteMenuItem(item)}>
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => openEditMenuModal(item)}>
-                  <Ionicons name="pencil-outline" size={18} color={colors.secondary} />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => handleDeleteMenuItem(item)}>
-                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
-                </TouchableOpacity>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -758,6 +891,31 @@ export default function RestaurantHomeScreen() {
 
             <Text style={styles.label}>Preço (R$)</Text>
             <TextInput style={styles.input} value={miPrice} onChangeText={setMiPrice} placeholder="Ex: 28.90" keyboardType="decimal-pad" />
+
+            {menuCategories.length > 0 && (
+              <>
+                <Text style={styles.label}>Categoria</Text>
+                <View style={styles.pillsWrap}>
+                  <TouchableOpacity
+                    style={[styles.pill, !miCategoryId && styles.pillActive]}
+                    onPress={() => setMiCategoryId(null)}
+                  >
+                    <Text style={[styles.pillText, !miCategoryId && styles.pillTextActive]}>Sem categoria</Text>
+                  </TouchableOpacity>
+                  {menuCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.pill, miCategoryId === cat.id && styles.pillActive]}
+                      onPress={() => setMiCategoryId(cat.id)}
+                    >
+                      <Text style={[styles.pillText, miCategoryId === cat.id && styles.pillTextActive]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
 
             <Text style={styles.label}>Foto do item (opcional)</Text>
             <TouchableOpacity style={styles.menuItemImagePicker} onPress={handlePickMenuItemImage} activeOpacity={0.85}>
@@ -930,6 +1088,12 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: colors.secondary, borderColor: colors.secondary },
   pillText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   pillTextActive: { color: colors.white },
+  pillWithAction: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  addCategoryRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  addCategoryBtn: {
+    width: 44, height: 44, borderRadius: 12, backgroundColor: colors.secondary,
+    alignItems: 'center', justifyContent: 'center',
+  },
   primaryBtn: {
     marginTop: 20, backgroundColor: colors.primary, borderRadius: 14, height: 50,
     alignItems: 'center', justifyContent: 'center',
