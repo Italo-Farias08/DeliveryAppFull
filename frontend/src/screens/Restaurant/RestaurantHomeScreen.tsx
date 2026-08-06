@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Modal,
   RefreshControl,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import OrderChatModal from '../../components/OrderChatModal';
@@ -233,7 +233,7 @@ export default function RestaurantHomeScreen() {
       return null;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect,
       quality: 0.7,
@@ -593,7 +593,7 @@ export default function RestaurantHomeScreen() {
           <View style={styles.photosRow}>
             <TouchableOpacity style={styles.logoPicker} onPress={handlePickRestaurantLogo} activeOpacity={0.85}>
               {restaurant.image ? (
-                <Image source={{ uri: restaurant.image }} style={styles.logoImage} />
+                <Image source={{ uri: restaurant.image }} style={styles.logoImage} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <View style={[styles.logoImage, styles.imagePlaceholder]}>
                   <Ionicons name="storefront-outline" size={22} color={colors.textMuted} />
@@ -610,7 +610,7 @@ export default function RestaurantHomeScreen() {
 
             <TouchableOpacity style={styles.bannerPicker} onPress={handlePickRestaurantBanner} activeOpacity={0.85}>
               {restaurant.banner ? (
-                <Image source={{ uri: restaurant.banner }} style={styles.bannerImage} />
+                <Image source={{ uri: restaurant.banner }} style={styles.bannerImage} contentFit="cover" cachePolicy="memory-disk" />
               ) : (
                 <View style={[styles.bannerImage, styles.imagePlaceholder]}>
                   <Ionicons name="image-outline" size={20} color={colors.textMuted} />
@@ -852,7 +852,7 @@ export default function RestaurantHomeScreen() {
               return (
                 <View key={item.id} style={styles.menuItemRow}>
                   {item.image ? (
-                    <Image source={{ uri: item.image }} style={styles.menuItemThumb} />
+                    <Image source={{ uri: item.image }} style={styles.menuItemThumb} contentFit="cover" cachePolicy="memory-disk" />
                   ) : (
                     <View style={[styles.menuItemThumb, styles.imagePlaceholder]}>
                       <Ionicons name="restaurant-outline" size={16} color={colors.textMuted} />
@@ -920,7 +920,7 @@ export default function RestaurantHomeScreen() {
             <Text style={styles.label}>Foto do item (opcional)</Text>
             <TouchableOpacity style={styles.menuItemImagePicker} onPress={handlePickMenuItemImage} activeOpacity={0.85}>
               {miImagePreview ? (
-                <Image source={{ uri: miImagePreview }} style={styles.menuItemImagePreview} />
+                <Image source={{ uri: miImagePreview }} style={styles.menuItemImagePreview} contentFit="cover" />
               ) : (
                 <View style={[styles.menuItemImagePreview, styles.imagePlaceholder]}>
                   <Ionicons name="camera-outline" size={22} color={colors.textMuted} />

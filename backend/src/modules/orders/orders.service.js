@@ -9,7 +9,7 @@ const ORDER_SELECT = `
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt", o.cancelled_at AS "cancelledAt",
          o.cancel_reason AS "cancelReason",
-         r.name AS "restaurantName",
+         r.id AS "restaurantId", r.name AS "restaurantName", r.image AS "restaurantImage",
          d.name AS "delivererName", d.phone AS "delivererPhone"
   FROM orders o
   JOIN restaurants r ON r.id = o.restaurant_id

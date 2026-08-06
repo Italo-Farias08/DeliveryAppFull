@@ -6,13 +6,13 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { useAuth } from '../../context/AuthContext';
@@ -23,12 +23,15 @@ import { Category, Restaurant } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 20;
+
+// Banner do carrossel promocional — agora com margem lateral (não cobre mais
+// a tela inteira). BANNER_GAP é o espaço entre um banner e o próximo.
+const BANNER_GAP = 12;
 const BANNER_WIDTH = SCREEN_WIDTH - H_PAD * 2;
 const BANNER_HEIGHT = 170;
 
-// Imagens de comida usadas enquanto o backend não manda foto real do
-// restaurante (ou se a URL vier quebrada). Quando o banco de dados
-// estiver populado com fotos de verdade, isso deixa de ser necessário.
+// Imagem usada só se o restaurante não tiver NENHUMA foto própria (nem
+// image, nem banner). Isso deve ser raro -- é só um último recurso.
 const FOOD_FALLBACKS = [
   'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', // pizza
   'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', // burger
@@ -39,6 +42,23 @@ const FOOD_FALLBACKS = [
 function getShortName(fullName?: string) {
   if (!fullName) return undefined;
   return fullName.trim().split(/\s+/).slice(0, 2).join(' ');
+}
+
+// Emojis mais certeiros por categoria (bem mais vivos que ícone monocromático).
+// Comparamos pelo NOME, não pelo id -- o id vem do banco (UUID) e muda a
+// cada seed, mas o nome da categoria é sempre o mesmo.
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Hambúrguer': '🍔',
+  'Pizza': '🍕',
+  'Japonesa': '🍱',
+  'Brasileira': '🍲',
+  'Doces': '🧁',
+  'Saudável': '🥗',
+  'Bebidas': '🧋',
+};
+function getCategoryEmoji(name: string | null) {
+  if (!name) return '🍽️'; // "Tudo"
+  return CATEGORY_EMOJIS[name] ?? '🍴';
 }
 
 function getFallbackImage(id: string) {
@@ -71,7 +91,7 @@ function PromoCarousel() {
     const timer = setInterval(() => {
       indexRef.current = (indexRef.current + 1) % BANNERS.length;
       listRef.current?.scrollToOffset({
-        offset: indexRef.current * (BANNER_WIDTH + 12),
+        offset: indexRef.current * (BANNER_WIDTH + BANNER_GAP),
         animated: true,
       });
       setActiveIndex(indexRef.current);
@@ -80,7 +100,7 @@ function PromoCarousel() {
   }, []);
 
   const onMomentumEnd = (e: any) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_WIDTH + 12));
+    const idx = Math.round(e.nativeEvent.contentOffset.x / (BANNER_WIDTH + BANNER_GAP));
     indexRef.current = idx;
     setActiveIndex(idx);
   };
@@ -91,13 +111,15 @@ function PromoCarousel() {
         ref={listRef}
         data={BANNERS}
         horizontal
-        snapToInterval={BANNER_WIDTH + 12}
+        pagingEnabled
+        snapToInterval={BANNER_WIDTH + BANNER_GAP}
         decelerationRate="fast"
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
         onMomentumScrollEnd={onMomentumEnd}
+        contentContainerStyle={{ paddingHorizontal: H_PAD }}
         renderItem={({ item }) => (
-          <Image source={item.image} style={styles.bannerImage} resizeMode="cover" />
+          <Image source={item.image} style={styles.bannerImage} contentFit="cover" />
         )}
       />
       <View style={styles.dotsRow}>
@@ -115,19 +137,19 @@ function PromoCarousel() {
 // ---------------------------------------------------------------------------
 function CategoryChip({
   name,
-  icon,
+  emoji,
   active,
   onPress,
 }: {
   name: string;
-  icon: any;
+  emoji: string;
   active: boolean;
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.categoryChip} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity style={styles.categoryChip} onPress={onPress} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4 }}>
       <View style={[styles.categoryCircle, active && styles.categoryCircleActive]}>
-        <Ionicons name={icon} size={24} color={active ? colors.primary : colors.textMuted} />
+        <Text style={styles.categoryEmoji}>{emoji}</Text>
       </View>
       <Text style={[styles.categoryLabel, active && styles.categoryLabelActive]} numberOfLines={1}>
         {name}
@@ -165,9 +187,9 @@ function CompactCategoryChip({
 
 // ---------------------------------------------------------------------------
 // Restaurant card — compacto, pensado para grid de 2 colunas.
-// NOTE: field names (imageUrl, rating, deliveryTimeMin/Max, deliveryFee) are
-// a best guess — if your Restaurant type uses different names, send me
-// types.ts and I'll line these up exactly.
+// Usa a LOGO do restaurante (restaurant.image), igual à tela de detalhes.
+// Se um dia você quiser mostrar o banner/foto de capa em vez da logo aqui,
+// troque `restaurant.image` por `restaurant.banner || restaurant.image`.
 // ---------------------------------------------------------------------------
 function AnimatedCard({ children, index }: { children: React.ReactNode; index: number }) {
   const fade = useRef(new Animated.Value(0)).current;
@@ -182,12 +204,14 @@ function AnimatedCard({ children, index }: { children: React.ReactNode; index: n
   return <Animated.View style={{ opacity: fade, transform: [{ translateY: translate }] }}>{children}</Animated.View>;
 }
 
-function RestaurantListCard({ restaurant, onPress }: { restaurant: any; onPress: () => void }) {
+function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; onPress: () => void }) {
   const [favorite, setFavorite] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  const hasImage = !!restaurant.imageUrl && !imgError;
-  const imageSource = hasImage ? { uri: restaurant.imageUrl } : getFallbackImage(restaurant.id);
+  // campo certo é `image` (a logo do restaurante) -- `imageUrl` não existe
+  // no tipo Restaurant, então antes isso sempre caía no fallback aleatório.
+  const hasImage = !!restaurant.image && !imgError;
+  const imageSource = hasImage ? { uri: restaurant.image } : getFallbackImage(restaurant.id);
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
@@ -195,7 +219,9 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: any; onPress:
         <Image
           source={imageSource}
           style={styles.cardImage}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
           onError={() => setImgError(true)}
         />
         <TouchableOpacity
@@ -203,7 +229,7 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: any; onPress:
           onPress={() => setFavorite((f) => !f)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={16} color={colors.primary} />
+          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={15} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -241,6 +267,8 @@ const ListHeader = React.memo(function ListHeader({
   locationText,
   locationLoading,
   onPressLocation,
+  categoriesRowOpacity,
+  categoriesRowTranslate,
 }: {
   userName?: string;
   categories: Category[];
@@ -251,9 +279,12 @@ const ListHeader = React.memo(function ListHeader({
   locationText: string;
   locationLoading: boolean;
   onPressLocation: () => void;
+  categoriesRowOpacity: Animated.AnimatedInterpolation<number>;
+  categoriesRowTranslate: Animated.AnimatedInterpolation<number>;
 }) {
   return (
     <View>
+      {/* Flat header — no gradient, no rounded crop, sits inside the safe area */}
       <View style={styles.topBar}>
         <View style={{ flex: 1 }}>
           <Text style={styles.logo}>Vitória Delivery</Text>
@@ -283,12 +314,30 @@ const ListHeader = React.memo(function ListHeader({
       </TouchableOpacity>
 
       {/* Categorias (versão normal, circular) — a posição Y daqui é o
-          gatilho pra mostrar a barra fixa e compacta lá embaixo */}
-      <View style={styles.categoriesRow} onLayout={(e) => onMeasureCategories(e.nativeEvent.layout.y)}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          gatilho pra mostrar a barra fixa e compacta lá embaixo. O grupo
+          inteiro recebe um fade + leve subida conforme o scroll se aproxima
+          do ponto de troca, pra dar a sensação de que ele "encolhe" pra
+          virar a barra fixa em vez de simplesmente sumir de tela.
+          O padding fica no CONTEÚDO do ScrollView (não no wrapper de fora):
+          assim a área de toque/arraste ocupa a tela inteira, de ponta a
+          ponta, em vez de deixar uma faixa "morta" de 20px nas bordas onde
+          o gesto de arrastar não pegava (a "barreira invisível"). */}
+      <Animated.View
+        style={[
+          styles.categoriesRow,
+          { opacity: categoriesRowOpacity, transform: [{ translateY: categoriesRowTranslate }] },
+        ]}
+        onLayout={(e) => onMeasureCategories(e.nativeEvent.layout.y)}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
+          contentContainerStyle={styles.categoriesScrollContent}
+        >
           <CategoryChip
             name="Tudo"
-            icon="grid-outline"
+            emoji={getCategoryEmoji(null)}
             active={activeCategory === null}
             onPress={() => onSelectCategory(null)}
           />
@@ -296,19 +345,19 @@ const ListHeader = React.memo(function ListHeader({
             <CategoryChip
               key={c.id}
               name={c.name}
-              icon={c.icon as any}
+              emoji={getCategoryEmoji(c.name)}
               active={activeCategory === c.id}
               onPress={() => onSelectCategory(c.id)}
             />
           ))}
         </ScrollView>
+      </Animated.View>
+
+      <View style={{ marginTop: 18 }}>
+        <PromoCarousel />
       </View>
 
       <View style={styles.contentPad}>
-        <View style={{ marginTop: 18 }}>
-          <PromoCarousel />
-        </View>
-
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Restaurantes</Text>
           <TouchableOpacity activeOpacity={0.7}>
@@ -340,6 +389,20 @@ export default function HomeScreen() {
 
   const [locationText, setLocationText] = useState('Toque para definir localização');
   const [locationLoading, setLocationLoading] = useState(false);
+
+  // ------------------------------------------------------------------
+  // Splash de entrada — cobre a tela por um tempinho mínimo (pra não
+  // "piscar" em conexões rápidas) e só some quando ele já passou E os
+  // dados iniciais (restaurantes) já carregaram. Assim o usuário nunca
+  // vê a lista aparecendo pela metade ou o layout pulando.
+  // ------------------------------------------------------------------
+  const [showSplash, setShowSplash] = useState(true);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [initialDataReady, setInitialDataReady] = useState(false);
+  const initialLoadRef = useRef(false);
+  const splashOpacity = useRef(new Animated.Value(1)).current;
+  const splashLogoScale = useRef(new Animated.Value(0.85)).current;
+  const splashPulse = useRef(new Animated.Value(1)).current;
 
   const fetchLocation = useCallback(async () => {
     try {
@@ -387,6 +450,53 @@ export default function HomeScreen() {
       .finally(() => setLoading(false));
   }, [activeCategory]);
 
+  // Assim que o primeiro carregamento de restaurantes termina (loading passa
+  // de true pra false pela primeira vez), marcamos os dados como prontos.
+  // Trocas de categoria depois disso não mexem mais nisso.
+  useEffect(() => {
+    if (!loading && !initialLoadRef.current) {
+      initialLoadRef.current = true;
+      setInitialDataReady(true);
+    }
+  }, [loading]);
+
+  // Animação de entrada do splash: ícone "pulsando" enquanto tudo carrega,
+  // e um tempo mínimo de exibição pra não parecer um piscar rápido demais.
+  useEffect(() => {
+    Animated.spring(splashLogoScale, {
+      toValue: 1,
+      friction: 6,
+      tension: 50,
+      useNativeDriver: true,
+    }).start();
+
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(splashPulse, { toValue: 1.08, duration: 600, useNativeDriver: true }),
+        Animated.timing(splashPulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ])
+    );
+    pulseLoop.start();
+
+    const timer = setTimeout(() => setMinTimeElapsed(true), 1200);
+    return () => {
+      clearTimeout(timer);
+      pulseLoop.stop();
+    };
+  }, []);
+
+  // Quando o tempo mínimo já passou E os dados já chegaram, faz o fade-out
+  // do splash e só então desmonta (pra não bloquear toques desnecessariamente).
+  useEffect(() => {
+    if (minTimeElapsed && initialDataReady && showSplash) {
+      Animated.timing(splashOpacity, {
+        toValue: 0,
+        duration: 380,
+        useNativeDriver: true,
+      }).start(() => setShowSplash(false));
+    }
+  }, [minTimeElapsed, initialDataReady, showSplash]);
+
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
@@ -404,14 +514,35 @@ export default function HomeScreen() {
   const handleMeasureCategories = useCallback((y: number) => setCategoriesY(y), []);
 
   const stickyThreshold = categoriesY ?? 99999;
+  // A barra fixa entra com fade + leve deslizar + escala, numa faixa um
+  // pouco mais larga (40px) pra ficar suave em vez de um corte seco.
   const stickyOpacity = scrollY.interpolate({
-    inputRange: [Math.max(stickyThreshold - 1, 0), stickyThreshold],
+    inputRange: [Math.max(stickyThreshold - 40, 0), stickyThreshold],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
   const stickyTranslate = scrollY.interpolate({
-    inputRange: [Math.max(stickyThreshold - 1, 0), stickyThreshold],
-    outputRange: [-12, 0],
+    inputRange: [Math.max(stickyThreshold - 40, 0), stickyThreshold],
+    outputRange: [-16, 0],
+    extrapolate: 'clamp',
+  });
+  const stickyScale = scrollY.interpolate({
+    inputRange: [Math.max(stickyThreshold - 40, 0), stickyThreshold],
+    outputRange: [0.94, 1],
+    extrapolate: 'clamp',
+  });
+
+  // As categorias circulares (versão normal) fazem o caminho inverso: vão
+  // sumindo e subindo levemente conforme o scroll se aproxima do ponto de
+  // troca, como se estivessem "encolhendo" pra dar lugar à barra fixa.
+  const categoriesRowOpacity = scrollY.interpolate({
+    inputRange: [Math.max(stickyThreshold - 40, 0), stickyThreshold],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const categoriesRowTranslate = scrollY.interpolate({
+    inputRange: [Math.max(stickyThreshold - 40, 0), stickyThreshold],
+    outputRange: [0, -10],
     extrapolate: 'clamp',
   });
 
@@ -436,6 +567,8 @@ export default function HomeScreen() {
             locationText={locationText}
             locationLoading={locationLoading}
             onPressLocation={fetchLocation}
+            categoriesRowOpacity={categoriesRowOpacity}
+            categoriesRowTranslate={categoriesRowTranslate}
           />
         }
         renderItem={({ item, index }) => (
@@ -468,13 +601,14 @@ export default function HomeScreen() {
           {
             paddingTop: insets.top + 8,
             opacity: stickyOpacity,
-            transform: [{ translateY: stickyTranslate }],
+            transform: [{ translateY: stickyTranslate }, { scale: stickyScale }],
           },
         ]}
       >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled
           contentContainerStyle={styles.stickyBarContent}
         >
           <CompactCategoryChip
@@ -492,6 +626,28 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       </Animated.View>
+
+      {/* Splash de entrada — some sozinho quando os dados chegam e o tempo
+          mínimo já passou. pointerEvents "none" evita bloquear a tela toda
+          vez que ele já estiver invisível mas ainda montado durante o fade. */}
+      {showSplash && (
+        <Animated.View
+          style={[styles.splashOverlay, { opacity: splashOpacity }]}
+          pointerEvents={showSplash ? 'auto' : 'none'}
+        >
+          <Animated.View
+            style={{
+              transform: [{ scale: Animated.multiply(splashLogoScale, splashPulse) }],
+            }}
+          >
+            <View style={styles.splashLogoCircle}>
+              <Ionicons name="restaurant" size={38} color={colors.white} />
+            </View>
+          </Animated.View>
+          <Text style={styles.splashTitle}>Vitória Delivery</Text>
+          <Text style={styles.splashSubtitle}>Preparando tudo pra você...</Text>
+        </Animated.View>
+      )}
     </SafeAreaView>
   );
 }
@@ -547,7 +703,8 @@ const styles = StyleSheet.create({
 
   contentPad: { paddingHorizontal: H_PAD },
 
-  categoriesRow: { paddingHorizontal: H_PAD, marginTop: 14 },
+  categoriesRow: { marginTop: 14 },
+  categoriesScrollContent: { paddingHorizontal: H_PAD },
 
   categoryChip: { alignItems: 'center', width: 68, marginRight: 6 },
   categoryCircle: {
@@ -566,6 +723,7 @@ const styles = StyleSheet.create({
   },
   categoryLabel: { fontSize: 11.5, color: colors.textMuted, marginTop: 6, fontWeight: '600' },
   categoryLabelActive: { color: colors.primary },
+  categoryEmoji: { fontSize: 26 },
 
   // --- barra fixa (sticky) compacta ---
   stickyBar: {
@@ -606,7 +764,7 @@ const styles = StyleSheet.create({
     width: BANNER_WIDTH,
     height: BANNER_HEIGHT,
     borderRadius: 20,
-    marginRight: 12,
+    marginRight: BANNER_GAP,
     backgroundColor: colors.border,
   },
   dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
@@ -632,18 +790,16 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+    borderRadius: 22,
+    marginBottom: 14,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  cardImage: { width: '100%', height: 90, backgroundColor: colors.border },
+  cardImage: { width: '100%', height: 104, borderRadius: 16, backgroundColor: colors.border },
   favoriteBtn: {
     position: 'absolute',
     top: 8,
@@ -655,13 +811,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardBody: { padding: 8 },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
-  cardRating: { fontSize: 11, color: colors.text, fontWeight: '700' },
-  cardMeta: { fontSize: 11, color: colors.textMuted, fontWeight: '600' },
-  cardFee: { fontSize: 11, color: colors.textMuted, fontWeight: '600', marginTop: 2 },
+  cardBody: { paddingTop: 10, paddingHorizontal: 2 },
+  cardTitle: { fontSize: 13.5, fontWeight: '700', color: colors.text, marginBottom: 5 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
+  cardRating: { fontSize: 11.5, color: colors.text, fontWeight: '700' },
+  cardMeta: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600' },
+  cardFee: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600', marginTop: 3 },
 
   emptyState: { alignItems: 'center', marginTop: 40, gap: 10 },
   emptyText: { color: colors.textMuted, textAlign: 'center' },
+
+  // --- splash de entrada ---
+  splashOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  splashLogoCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  splashTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.primary,
+    marginTop: 18,
+  },
+  splashSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginTop: 6,
+  },
 });

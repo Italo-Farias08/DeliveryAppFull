@@ -2,7 +2,8 @@ const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
 const { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema } = require('./tenant.schema');
-const { publicUrlFor } = require('../../middlewares/upload');
+const { saveProcessedImage } = require('../../middlewares/upload');
+const { processImage } = require('../../utils/imageProcessing');
 
 const listRestaurants = asyncHandler(async (req, res) => {
   const restaurants = await service.listRestaurants(req.db);
@@ -24,7 +25,8 @@ const updateRestaurant = asyncHandler(async (req, res) => {
 // Upload da logo do restaurante (arquivo em multipart/form-data, campo "logo").
 const uploadRestaurantLogo = asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('Envie um arquivo de imagem no campo "logo".', 400);
-  const url = publicUrlFor(req, 'restaurants/logos', req.file.filename);
+  const processed = await processImage(req.file.buffer, 'logo');
+  const url = saveProcessedImage(req, 'restaurants/logos', processed);
   const restaurant = await service.updateRestaurantLogo(req.db, req.params.id, req.tenantId, url);
   res.json(restaurant);
 });
@@ -32,7 +34,8 @@ const uploadRestaurantLogo = asyncHandler(async (req, res) => {
 // Upload do banner (foto de capa) do restaurante (campo "banner").
 const uploadRestaurantBanner = asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('Envie um arquivo de imagem no campo "banner".', 400);
-  const url = publicUrlFor(req, 'restaurants/banners', req.file.filename);
+  const processed = await processImage(req.file.buffer, 'banner');
+  const url = saveProcessedImage(req, 'restaurants/banners', processed);
   const restaurant = await service.updateRestaurantBanner(req.db, req.params.id, req.tenantId, url);
   res.json(restaurant);
 });
@@ -40,7 +43,8 @@ const uploadRestaurantBanner = asyncHandler(async (req, res) => {
 // Upload da foto de um item do cardápio (campo "image").
 const uploadMenuItemImage = asyncHandler(async (req, res) => {
   if (!req.file) throw new AppError('Envie um arquivo de imagem no campo "image".', 400);
-  const url = publicUrlFor(req, 'menu-items', req.file.filename);
+  const processed = await processImage(req.file.buffer, 'menuItem');
+  const url = saveProcessedImage(req, 'menu-items', processed);
   const item = await service.updateMenuItemImage(req.db, req.params.menuItemId, req.tenantId, url);
   res.json(item);
 });

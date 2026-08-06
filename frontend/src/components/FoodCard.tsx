@@ -1,29 +1,41 @@
-import { Ionicons } from '@expo/vector-icons';
+// components/FoodCard.tsx
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MenuItem } from '../types';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { MenuItem } from '../types';
 
-interface Props {
+interface FoodCardProps {
   item: MenuItem;
   onAdd: () => void;
 }
 
-export function FoodCard({ item, onAdd }: Props) {
+export function FoodCard({ item, onAdd }: FoodCardProps) {
   return (
     <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.image} />
-      <View style={styles.info}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.desc} numberOfLines={2}>{item.description}</Text>
-        <View style={styles.bottomRow}>
-          <Text style={styles.price}>R$ {item.price.toFixed(2)}</Text>
-          <TouchableOpacity onPress={onAdd} style={styles.addBtn} activeOpacity={0.8}>
-            <Ionicons name="add" size={20} color={colors.white} />
-          </TouchableOpacity>
-        </View>
+      <Image
+        source={{ uri: item.image }}
+        style={styles.image}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={150}
+      />
+
+      <View style={styles.content}>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.description} numberOfLines={3}>
+          {item.description}
+        </Text>
+        <Text style={styles.price}>R$ {item.price.toFixed(2)}</Text>
       </View>
+
+      <TouchableOpacity style={styles.addBtn} onPress={onAdd} activeOpacity={0.8}>
+        <Ionicons name="add" size={22} color={colors.white} />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -32,20 +44,57 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 10,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 18,
+    padding: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 2,
   },
-  image: { width: 84, height: 84, borderRadius: 12, backgroundColor: colors.border },
-  info: { flex: 1, marginLeft: 12, justifyContent: 'space-between' },
-  name: { ...typography.bodyBold, color: colors.text },
-  desc: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
-  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  price: { ...typography.bodyBold, color: colors.text },
+  image: {
+    width: 96,
+    height: 96,
+    borderRadius: 14,
+    backgroundColor: colors.border,
+  },
+  content: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: 'center',
+  },
+  name: {
+    ...typography.bodyBold,
+    color: colors.text,
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 12.5,
+    color: colors.textMuted,
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.primary,
+  },
   addBtn: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 3,
   },
 });

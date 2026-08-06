@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Restaurant } from '../types';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -14,7 +15,13 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <View>
-        <Image source={{ uri: restaurant.banner || restaurant.image }} style={styles.image} />
+        <Image
+          source={{ uri: restaurant.banner || restaurant.image }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
         {!restaurant.isOpen && (
           <View style={styles.closedBadge}>
             <Text style={styles.closedText}>Fechado</Text>

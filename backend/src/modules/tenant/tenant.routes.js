@@ -12,10 +12,12 @@ const router = Router();
 
 router.use(authenticate, authorize('restaurant'), tenantContext);
 
-// Um uploader por tipo de imagem, cada um salvando na sua própria subpasta.
-const logoUpload = buildUploader('restaurants/logos');
-const bannerUpload = buildUploader('restaurants/banners');
-const menuItemUpload = buildUploader('menu-items');
+// Multer só valida e guarda o arquivo em memória; o processamento
+// (redimensionar/comprimir) e o destino final em disco acontecem no
+// controller, então um único uploader serve pros três casos.
+const logoUpload = buildUploader();
+const bannerUpload = buildUploader();
+const menuItemUpload = buildUploader();
 
 router.get('/restaurants', controller.listRestaurants);
 router.post('/restaurants', controller.createRestaurant);

@@ -1,22 +1,31 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
+  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FoodCard } from '../../components/FoodCard';
 import { useCart } from '../../context/CartContext';
 import { getRestaurantById } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Restaurant } from '../../types';
+
+// altura do banner calculada a partir da largura da tela (proporção 4:3),
+// assim o enquadramento da foto fica sempre consistente, em qualquer
+// aparelho, sem cortar de forma estranha
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const COVER_HEIGHT = SCREEN_WIDTH * 0.75;
 
 export default function RestaurantDetailScreen() {
   const navigation = useNavigation<any>();
@@ -25,6 +34,7 @@ export default function RestaurantDetailScreen() {
   const { addItem, totalItems, subtotal, restaurantId: cartRestaurantId } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getRestaurantById(restaurantId).then((r) => setRestaurant(r ?? null));
@@ -45,27 +55,68 @@ export default function RestaurantDetailScreen() {
     : restaurant.menu;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['bottom']}>
+      {/* barra de status transparente, ícones do sistema em branco,
+          por cima da foto de capa -- sem faixa branca no topo */}
+      <StatusBar style="light" translucent />
+
       <ScrollView contentContainerStyle={{ paddingBottom: showCartBar ? 100 : 30 }}>
-        <View>
-          <Image source={{ uri: restaurant.banner || restaurant.image }} style={styles.cover} />
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        {/* ---- BANNER com texto sobreposto, indo até o topo real da tela ---- */}
+        <View style={styles.coverWrapper}>
+          <View style={styles.coverClip}>
+            <Image
+              source={{ uri: restaurant.banner || restaurant.image }}
+              style={styles.cover}
+              contentFit="cover"
+              contentPosition="center"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+
+            {/* degradê escuro para o texto e os ícones do sistema ficarem legíveis */}
+            <LinearGradient
+              colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+              locations={[0, 0.45, 1]}
+              style={styles.coverOverlay}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[styles.backBtn, { top: insets.top + 10 }]}
+          >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
+
+          {/* nome + tagline, desenhados por cima do banner */}
+          <View style={styles.coverContent}>
+            <View style={styles.flameBadge}>
+              <Ionicons name="flame" size={22} color="#FFB020" />
+            </View>
+            <Text style={styles.coverTitle}>{restaurant.name}</Text>
+            <Text style={styles.coverTagline}></Text>
+          </View>
+
           {!!restaurant.image && (
-            <Image source={{ uri: restaurant.image }} style={styles.logoAvatar} />
+            <Image source={{ uri: restaurant.image }} style={styles.logoAvatar} contentFit="cover" cachePolicy="memory-disk" />
           )}
         </View>
 
-        <View style={[styles.infoBlock, !!restaurant.image && { marginTop: 34 }]}>
+        <View style={[styles.infoBlock, !!restaurant.image && { marginTop: 46 }]}>
           <Text style={styles.name}>{restaurant.name}</Text>
           <View style={styles.metaRow}>
             <Ionicons name="star" size={14} color={colors.star} />
             <Text style={styles.metaText}>{restaurant.rating.toFixed(1)}</Text>
-            <Text style={styles.dot}>·</Text>
-            <Text style={styles.metaText}>{restaurant.deliveryTimeMin}-{restaurant.deliveryTimeMax} min</Text>
-            <Text style={styles.dot}>·</Text>
-            <Text style={styles.metaText}>R$ {restaurant.deliveryFee.toFixed(2)} entrega</Text>
+            <Text style={styles.dot}>-</Text>
+            <View style={styles.metaIconGroup}>
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.metaText}>{restaurant.deliveryTimeMin}-{restaurant.deliveryTimeMax} min</Text>
+            </View>
+            <Text style={styles.dot}>-</Text>
+            <View style={styles.metaIconGroup}>
+              <MaterialCommunityIcons name="moped" size={16} color={colors.textMuted} />
+              <Text style={styles.metaText}>R$ {restaurant.deliveryFee.toFixed(2)}</Text>
+            </View>
           </View>
           {!restaurant.isOpen && (
             <View style={styles.closedNotice}>
@@ -132,21 +183,52 @@ export default function RestaurantDetailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  cover: { width: '100%', height: 200, backgroundColor: colors.border },
-  logoAvatar: {
-    position: 'absolute', bottom: -30, left: 20,
-    width: 68, height: 68, borderRadius: 18,
-    borderWidth: 3, borderColor: colors.background,
-    backgroundColor: colors.surface,
+  coverWrapper: { width: '100%', height: COVER_HEIGHT },
+  coverClip: { width: '100%', height: '100%', overflow: 'hidden' },
+  cover: { width: '100%', height: '100%', backgroundColor: colors.border },
+  coverOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
   },
   backBtn: {
-    position: 'absolute', top: 14, left: 14,
+    position: 'absolute', left: 14,
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
+    zIndex: 2,
+  },
+  coverContent: {
+    position: 'absolute', left: 20, right: 20, bottom: 44,
+  },
+  flameBadge: { marginBottom: 6 },
+  coverTitle: {
+    ...typography.display,
+    color: colors.white,
+    fontSize: 26,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  coverTagline: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+    opacity: 0.9,
+  },
+  logoAvatar: {
+    position: 'absolute', bottom: -42, left: 20,
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 2, borderColor: colors.background,
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
   },
   infoBlock: { padding: 20, paddingBottom: 8 },
   name: { ...typography.display, fontSize: 24, color: colors.text },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  metaIconGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
   dot: { color: colors.textMuted },
   closedNotice: { backgroundColor: colors.primaryLight, padding: 10, borderRadius: 10, marginTop: 12 },

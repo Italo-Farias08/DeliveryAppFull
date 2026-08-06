@@ -70,7 +70,9 @@ export type OrderStatus =
 
 export interface Order {
   id: string;
+  restaurantId?: string;
   restaurantName: string;
+  restaurantImage?: string | null;
   subtotal: number;
   deliveryFee: number;
   total: number;

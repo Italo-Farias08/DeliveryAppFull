@@ -6,13 +6,13 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { useCart } from '../../context/CartContext';
@@ -185,7 +185,7 @@ export default function CartScreen() {
         }
         renderItem={({ item: ci }) => (
           <View style={styles.row}>
-            <Image source={{ uri: ci.item.image }} style={styles.image} />
+            <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.name}>{ci.item.name}</Text>
               <Text style={styles.price}>R$ {ci.item.price.toFixed(2)}</Text>

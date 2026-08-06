@@ -97,6 +97,7 @@ export async function uploadRestaurantLogo(restaurantId: string, image: PickedIm
   const form = toFormData('logo', image);
   const { data } = await api.post(`/tenant/restaurants/${restaurantId}/logo`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000, // uploads de imagem podem demorar mais que o timeout padrão (10s)
   });
   return data;
 }
@@ -106,6 +107,7 @@ export async function uploadRestaurantBanner(restaurantId: string, image: Picked
   const form = toFormData('banner', image);
   const { data } = await api.post(`/tenant/restaurants/${restaurantId}/banner`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
   });
   return data;
 }
@@ -115,6 +117,7 @@ export async function uploadMenuItemImage(menuItemId: string, image: PickedImage
   const form = toFormData('image', image);
   const { data } = await api.post(`/tenant/menu-items/${menuItemId}/image`, form, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
   });
   return data;
 }

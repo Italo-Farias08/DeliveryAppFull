@@ -5,7 +5,9 @@ const multer = require('multer');
 const AppError = require('../utils/AppError');
 
 // Pastas ficam em backend/uploads/<subpasta>, fora do banco de dados —
-// arquivo em disco, sem blob pesado no Postgres.
+// arquivo em disco, sem blob pesado no Postgres. Em produção, essa pasta
+// precisa estar num Volume persistente do Railway (montado em /app/uploads),
+// senão os arquivos somem a cada deploy.
 const UPLOAD_ROOT = path.join(__dirname, '..', '..', 'uploads');
 
 function ensureDir(dir) {
@@ -13,7 +15,7 @@ function ensureDir(dir) {
 }
 
 const ALLOWED_MIME = /^image\/(jpe?g|png|webp|gif)$/i;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB por imagem
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB por imagem (antes de comprimir)
 
 function imageFileFilter(req, file, cb) {
   if (ALLOWED_MIME.test(file.mimetype)) {
@@ -23,25 +25,26 @@ function imageFileFilter(req, file, cb) {
   }
 }
 
-// Cria um middleware multer que salva em uploads/<subfolder>/<uuid>.<ext>
-function buildUploader(subfolder) {
-  const dir = path.join(UPLOAD_ROOT, subfolder);
-  ensureDir(dir);
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, dir),
-    filename: (req, file, cb) => {
-      const ext = (path.extname(file.originalname || '').toLowerCase() || '.jpg').slice(0, 10);
-      cb(null, `${crypto.randomUUID()}${ext}`);
-    },
+// O arquivo fica em memória (req.file.buffer) em vez de ir direto pro disco,
+// porque antes de salvar a gente redimensiona/comprime com sharp
+// (ver utils/imageProcessing.js). Isso evita guardar fotos de celular
+// gigantes (vários MB, 3000x4000px) sem necessidade.
+function buildUploader() {
+  return multer({
+    storage: multer.memoryStorage(),
+    fileFilter: imageFileFilter,
+    limits: { fileSize: MAX_FILE_SIZE },
   });
-  return multer({ storage, fileFilter: imageFileFilter, limits: { fileSize: MAX_FILE_SIZE } });
 }
 
-// Monta a URL pública final (absoluta) para o arquivo que acabou de ser salvo.
-// Guardamos essa URL pronta no banco, então o app não precisa saber nada
-// sobre onde/como o arquivo está guardado no servidor.
-function publicUrlFor(req, subfolder, filename) {
+// Salva o buffer já processado (webp) em uploads/<subfolder>/<uuid>.webp
+// e devolve a URL pública final.
+function saveProcessedImage(req, subfolder, buffer) {
+  const dir = path.join(UPLOAD_ROOT, subfolder);
+  ensureDir(dir);
+  const filename = `${crypto.randomUUID()}.webp`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
   return `${req.protocol}://${req.get('host')}/uploads/${subfolder}/${filename}`;
 }
 
-module.exports = { buildUploader, publicUrlFor, UPLOAD_ROOT, MAX_FILE_SIZE };
+module.exports = { buildUploader, saveProcessedImage, UPLOAD_ROOT, MAX_FILE_SIZE };
