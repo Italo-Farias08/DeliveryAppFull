@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import AccountScreen from '../screens/Client/AccountScreen';
 import AddressesScreen from '../screens/Client/AddressesScreen';
 import MyDataScreen from '../screens/Client/MyDataScreen';
+import FavoritesScreen from '../screens/Client/FavoritesScreen';
+import HelpScreen from '../screens/Client/HelpScreen';
 import CartScreen from '../screens/Client/CartScreen';
 import HomeScreen from '../screens/Client/HomeScreen';
 import OrdersScreen from '../screens/Client/OrdersScreen';
@@ -45,6 +47,8 @@ function AccountStack() {
       <AccountStackNav.Screen name="AccountMain" component={AccountScreen} />
       <AccountStackNav.Screen name="Addresses" component={AddressesScreen} />
       <AccountStackNav.Screen name="MyData" component={MyDataScreen} />
+      <AccountStackNav.Screen name="Favorites" component={FavoritesScreen} />
+      <AccountStackNav.Screen name="Help" component={HelpScreen} />
     </AccountStackNav.Navigator>
   );
 }

@@ -16,6 +16,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SearchBar } from '../../components/SearchBar';
 import { useAuth } from '../../context/AuthContext';
+import { useFavorites } from '../../context/FavoritesContext';
 import { getCategories, getRestaurants } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -205,7 +206,8 @@ function AnimatedCard({ children, index }: { children: React.ReactNode; index: n
 }
 
 function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; onPress: () => void }) {
-  const [favorite, setFavorite] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorite = isFavorite(restaurant.id);
   const [imgError, setImgError] = useState(false);
 
   // campo certo é `image` (a logo do restaurante) -- `imageUrl` não existe
@@ -226,7 +228,7 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; o
         />
         <TouchableOpacity
           style={styles.favoriteBtn}
-          onPress={() => setFavorite((f) => !f)}
+          onPress={() => toggleFavorite(restaurant)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={15} color={colors.primary} />

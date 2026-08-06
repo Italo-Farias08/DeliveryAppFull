@@ -7,6 +7,7 @@ const morgan = require('morgan');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const favoritesRoutes = require('./modules/favorites/favorites.routes');
 const categoriesRoutes = require('./modules/categories/categories.routes');
 const restaurantsRoutes = require('./modules/restaurants/restaurants.routes');
 const ordersRoutes = require('./modules/orders/orders.routes');
@@ -36,6 +37,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/favorites', favoritesRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/restaurants', restaurantsRoutes);
 app.use('/api/orders', ordersRoutes);
