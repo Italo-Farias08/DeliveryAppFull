@@ -35,6 +35,11 @@ router.put('/menu-items/:menuItemId', controller.updateMenuItem);
 router.post('/menu-items/:menuItemId/image', menuItemUpload.single('image'), controller.uploadMenuItemImage);
 router.delete('/menu-items/:menuItemId', controller.deleteMenuItem);
 
+router.get('/menu-items/:menuItemId/addons', controller.listAddons);
+router.post('/menu-items/:menuItemId/addons', controller.createAddon);
+router.put('/addons/:addonId', controller.updateAddon);
+router.delete('/addons/:addonId', controller.deleteAddon);
+
 router.get('/restaurants/:restaurantId/menu-categories', controller.listMenuCategories);
 router.post('/restaurants/:restaurantId/menu-categories', controller.createMenuCategory);
 router.put('/menu-categories/:categoryId', controller.updateMenuCategory);

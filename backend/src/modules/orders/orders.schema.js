@@ -8,6 +8,8 @@ const createOrderSchema = z.object({
       z.object({
         menuItemId: z.string().uuid(),
         qty: z.number().int().positive(),
+        // ids dos adicionais escolhidos para esse item (ex: bacon extra)
+        addonIds: z.array(z.string().uuid()).optional().default([]),
       })
     )
     .min(1),

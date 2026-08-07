@@ -31,7 +31,7 @@ function addressLabel(a: Address) {
 export default function CartScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { items, addItem, decreaseItem, subtotal, clear, restaurantId } = useCart();
+  const { items, increaseItem, decreaseItem, subtotal, clear, restaurantId } = useCart();
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [loadingFee, setLoadingFee] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -135,7 +135,11 @@ export default function CartScreen() {
       await createOrder({
         restaurantId,
         addressId: selectedAddressId,
-        items: items.map((ci) => ({ menuItemId: ci.item.id, qty: ci.qty })),
+        items: items.map((ci) => ({
+          menuItemId: ci.item.id,
+          qty: ci.qty,
+          addonIds: ci.selectedAddons.map((a) => a.id),
+        })),
       });
       clear();
       Alert.alert('Pedido enviado!', 'Seu pedido foi enviado ao restaurante.');
@@ -165,7 +169,7 @@ export default function CartScreen() {
       <Text style={styles.title}>Seu carrinho</Text>
       <FlatList
         data={items}
-        keyExtractor={(ci) => ci.item.id}
+        keyExtractor={(ci) => ci.key}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
         ListHeaderComponent={
           <TouchableOpacity style={styles.addressCard} onPress={() => setPickerVisible(true)}>
@@ -183,24 +187,32 @@ export default function CartScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         }
-        renderItem={({ item: ci }) => (
-          <View style={styles.row}>
-            <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.name}>{ci.item.name}</Text>
-              <Text style={styles.price}>R$ {ci.item.price.toFixed(2)}</Text>
+        renderItem={({ item: ci }) => {
+          const unitPrice = ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
+          return (
+            <View style={styles.row}>
+              <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.name}>{ci.item.name}</Text>
+                {ci.selectedAddons.length > 0 && (
+                  <Text style={styles.addonsText}>
+                    {ci.selectedAddons.map((a) => a.name).join(', ')}
+                  </Text>
+                )}
+                <Text style={styles.price}>R$ {unitPrice.toFixed(2)}</Text>
+              </View>
+              <View style={styles.qtyRow}>
+                <TouchableOpacity onPress={() => decreaseItem(ci.key)} style={styles.qtyBtn}>
+                  <Ionicons name="remove" size={16} color={colors.secondary} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{ci.qty}</Text>
+                <TouchableOpacity onPress={() => increaseItem(ci.key)} style={styles.qtyBtn}>
+                  <Ionicons name="add" size={16} color={colors.secondary} />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.qtyRow}>
-              <TouchableOpacity onPress={() => decreaseItem(ci.item.id)} style={styles.qtyBtn}>
-                <Ionicons name="remove" size={16} color={colors.secondary} />
-              </TouchableOpacity>
-              <Text style={styles.qtyText}>{ci.qty}</Text>
-              <TouchableOpacity onPress={() => addItem(ci.item)} style={styles.qtyBtn}>
-                <Ionicons name="add" size={16} color={colors.secondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
 
       <View style={styles.summary}>
@@ -292,6 +304,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   image: { width: 60, height: 60, borderRadius: 10, backgroundColor: colors.border },
   name: { ...typography.bodyBold, color: colors.text },
+  addonsText: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
   price: { color: colors.textMuted, marginTop: 2, fontSize: 13 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   qtyBtn: {

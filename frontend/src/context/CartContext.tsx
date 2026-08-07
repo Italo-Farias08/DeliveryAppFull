@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { CartItem, MenuItem } from '../types';
+import { Addon, CartItem, MenuItem } from '../types';
 
 interface CartContextData {
   items: CartItem[];
   restaurantId: string | null;
-  addItem: (item: MenuItem) => void;
-  removeItem: (itemId: string) => void;
-  decreaseItem: (itemId: string) => void;
+  addItem: (item: MenuItem, selectedAddons?: Addon[]) => void;
+  removeItem: (key: string) => void;
+  decreaseItem: (key: string) => void;
+  increaseItem: (key: string) => void;
   clear: () => void;
   totalItems: number;
   subtotal: number;
@@ -14,38 +15,51 @@ interface CartContextData {
 
 const CartContext = createContext<CartContextData>({} as CartContextData);
 
+// Cada linha do carrinho é identificada pelo item + a combinação exata de
+// adicionais escolhidos, assim "X-Burger" e "X-Burger + bacon" viram duas
+// linhas separadas em vez de se misturarem.
+function buildKey(itemId: string, selectedAddons: Addon[]) {
+  const addonIds = selectedAddons.map((a) => a.id).sort().join(',');
+  return `${itemId}::${addonIds}`;
+}
+
+function lineUnitPrice(ci: CartItem) {
+  return ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
 
-  function addItem(item: MenuItem) {
+  function addItem(item: MenuItem, selectedAddons: Addon[] = []) {
+    const key = buildKey(item.id, selectedAddons);
     setItems((prev) => {
       // carrinho é de um restaurante por vez, como nos apps reais
       if (restaurantId && restaurantId !== item.restaurantId) {
         setRestaurantId(item.restaurantId);
-        return [{ item, qty: 1 }];
+        return [{ key, item, qty: 1, selectedAddons }];
       }
       setRestaurantId(item.restaurantId);
-      const existing = prev.find((ci) => ci.item.id === item.id);
+      const existing = prev.find((ci) => ci.key === key);
       if (existing) {
-        return prev.map((ci) =>
-          ci.item.id === item.id ? { ...ci, qty: ci.qty + 1 } : ci
-        );
+        return prev.map((ci) => (ci.key === key ? { ...ci, qty: ci.qty + 1 } : ci));
       }
-      return [...prev, { item, qty: 1 }];
+      return [...prev, { key, item, qty: 1, selectedAddons }];
     });
   }
 
-  function decreaseItem(itemId: string) {
+  function increaseItem(key: string) {
+    setItems((prev) => prev.map((ci) => (ci.key === key ? { ...ci, qty: ci.qty + 1 } : ci)));
+  }
+
+  function decreaseItem(key: string) {
     setItems((prev) =>
-      prev
-        .map((ci) => (ci.item.id === itemId ? { ...ci, qty: ci.qty - 1 } : ci))
-        .filter((ci) => ci.qty > 0)
+      prev.map((ci) => (ci.key === key ? { ...ci, qty: ci.qty - 1 } : ci)).filter((ci) => ci.qty > 0)
     );
   }
 
-  function removeItem(itemId: string) {
-    setItems((prev) => prev.filter((ci) => ci.item.id !== itemId));
+  function removeItem(key: string) {
+    setItems((prev) => prev.filter((ci) => ci.key !== key));
   }
 
   function clear() {
@@ -55,13 +69,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalItems = useMemo(() => items.reduce((s, ci) => s + ci.qty, 0), [items]);
   const subtotal = useMemo(
-    () => items.reduce((s, ci) => s + ci.qty * ci.item.price, 0),
+    () => items.reduce((s, ci) => s + ci.qty * lineUnitPrice(ci), 0),
     [items]
   );
 
   return (
     <CartContext.Provider
-      value={{ items, restaurantId, addItem, removeItem, decreaseItem, clear, totalItems, subtotal }}
+      value={{ items, restaurantId, addItem, removeItem, decreaseItem, increaseItem, clear, totalItems, subtotal }}
     >
       {children}
     </CartContext.Provider>

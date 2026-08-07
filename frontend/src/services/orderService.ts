@@ -4,7 +4,7 @@ import { Order } from '../types';
 export interface CreateOrderPayload {
   restaurantId: string;
   addressId?: string;
-  items: { menuItemId: string; qty: number }[];
+  items: { menuItemId: string; qty: number; addonIds?: string[] }[];
 }
 
 export async function createOrder(payload: CreateOrderPayload): Promise<Order> {

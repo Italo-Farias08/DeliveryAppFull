@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../types';
+import { Addon, Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../types';
 
 // Painel do restaurante — sempre fala com o backend de verdade (não tem mock aqui,
 // já que é uma área autenticada específica do dono do restaurante).
@@ -174,6 +174,33 @@ export async function updateMenuCategory(categoryId: string, payload: MenuCatego
 
 export async function deleteMenuCategory(categoryId: string): Promise<void> {
   await api.delete(`/tenant/menu-categories/${categoryId}`);
+}
+
+// Adicionais de um item do cardápio (ex: "Bacon extra", "Borda recheada") —
+// o restaurante controla tudo: cria, edita nome/preço, apaga.
+export interface AddonInput {
+  name: string;
+  price: number;
+  isAvailable?: boolean;
+}
+
+export async function listAddons(menuItemId: string): Promise<Addon[]> {
+  const { data } = await api.get(`/tenant/menu-items/${menuItemId}/addons`);
+  return data;
+}
+
+export async function createAddon(menuItemId: string, payload: AddonInput): Promise<Addon> {
+  const { data } = await api.post(`/tenant/menu-items/${menuItemId}/addons`, payload);
+  return data;
+}
+
+export async function updateAddon(addonId: string, payload: AddonInput): Promise<Addon> {
+  const { data } = await api.put(`/tenant/addons/${addonId}`, payload);
+  return data;
+}
+
+export async function deleteAddon(addonId: string): Promise<void> {
+  await api.delete(`/tenant/addons/${addonId}`);
 }
 
 export async function listTenantOrders(): Promise<TenantOrder[]> {

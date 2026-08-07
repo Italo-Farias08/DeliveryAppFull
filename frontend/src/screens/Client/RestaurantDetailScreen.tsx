@@ -15,11 +15,12 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FoodCard } from '../../components/FoodCard';
+import { AddonsModal } from '../../components/AddonsModal';
 import { useCart } from '../../context/CartContext';
 import { getRestaurantById } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { Restaurant } from '../../types';
+import { Addon, MenuItem, Restaurant } from '../../types';
 
 // altura do banner calculada a partir da largura da tela (proporção 4:3),
 // assim o enquadramento da foto fica sempre consistente, em qualquer
@@ -34,11 +35,26 @@ export default function RestaurantDetailScreen() {
   const { addItem, totalItems, subtotal, restaurantId: cartRestaurantId } = useCart();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [addonsItem, setAddonsItem] = useState<MenuItem | null>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getRestaurantById(restaurantId).then((r) => setRestaurant(r ?? null));
   }, [restaurantId]);
+
+  function handleAdd(item: MenuItem) {
+    if (item.addons && item.addons.length > 0) {
+      setAddonsItem(item);
+      return;
+    }
+    addItem(item);
+  }
+
+  function handleConfirmAddons(selectedAddons: Addon[], qty: number) {
+    if (!addonsItem) return;
+    for (let i = 0; i < qty; i++) addItem(addonsItem, selectedAddons);
+    setAddonsItem(null);
+  }
 
   if (!restaurant) {
     return (
@@ -158,7 +174,7 @@ export default function RestaurantDetailScreen() {
             <Text style={styles.emptyMenuText}>Nenhum item nessa categoria ainda.</Text>
           ) : (
             filteredMenu.map((item) => (
-              <FoodCard key={item.id} item={item} onAdd={() => addItem(item)} />
+              <FoodCard key={item.id} item={item} onAdd={() => handleAdd(item)} />
             ))
           )}
         </View>
@@ -177,6 +193,13 @@ export default function RestaurantDetailScreen() {
           <Text style={styles.cartBarTotal}>R$ {subtotal.toFixed(2)}</Text>
         </TouchableOpacity>
       )}
+
+      <AddonsModal
+        visible={!!addonsItem}
+        item={addonsItem}
+        onClose={() => setAddonsItem(null)}
+        onConfirm={handleConfirmAddons}
+      />
     </SafeAreaView>
   );
 }

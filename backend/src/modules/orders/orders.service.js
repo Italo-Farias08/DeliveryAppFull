@@ -44,6 +44,33 @@ async function createOrder(clientId, data) {
       }
     }
 
+    // Adicionais escolhidos (ex: bacon extra) — busca todos de uma vez e
+    // confere que cada um realmente pertence ao item do cardápio ao qual
+    // foi vinculado no pedido, pra ninguém forjar um adicional de outro item.
+    const allAddonIds = [...new Set(data.items.flatMap((i) => i.addonIds || []))];
+    let addonsById = {};
+    if (allAddonIds.length > 0) {
+      const addonsResult = await client.query(
+        `SELECT id, menu_item_id, name, price, is_available FROM menu_item_addons WHERE id = ANY($1::uuid[])`,
+        [allAddonIds]
+      );
+      if (addonsResult.rowCount !== allAddonIds.length) {
+        throw new AppError('Um ou mais adicionais são inválidos', 400);
+      }
+      addonsById = Object.fromEntries(addonsResult.rows.map((a) => [a.id, a]));
+      for (const item of data.items) {
+        for (const addonId of item.addonIds || []) {
+          const addon = addonsById[addonId];
+          if (addon.menu_item_id !== item.menuItemId) {
+            throw new AppError('Um adicional não pertence ao item selecionado', 400);
+          }
+          if (!addon.is_available) {
+            throw new AppError(`Adicional "${addon.name}" não está mais disponível`, 400);
+          }
+        }
+      }
+    }
+
     if (data.addressId) {
       const addressResult = await client.query(
         'SELECT id FROM addresses WHERE id = $1 AND user_id = $2',
@@ -52,10 +79,15 @@ async function createOrder(clientId, data) {
       if (addressResult.rowCount === 0) throw new AppError('Endereço inválido', 400);
     }
 
-    const subtotal = data.items.reduce((sum, item) => {
+    // Preço unitário de cada item já soma o preço dos adicionais escolhidos
+    // (ex: item R$ 20 + bacon R$ 4 + borda R$ 6 = R$ 30 por unidade).
+    function unitPrice(item) {
       const menuItem = menuItemsById[item.menuItemId];
-      return sum + Number(menuItem.price) * item.qty;
-    }, 0);
+      const addonsTotal = (item.addonIds || []).reduce((s, id) => s + Number(addonsById[id].price), 0);
+      return Number(menuItem.price) + addonsTotal;
+    }
+
+    const subtotal = data.items.reduce((sum, item) => sum + unitPrice(item) * item.qty, 0);
     const deliveryFee = Number(restaurant.delivery_fee);
     const total = subtotal + deliveryFee;
 
@@ -72,10 +104,17 @@ async function createOrder(clientId, data) {
 
     for (const item of data.items) {
       const menuItem = menuItemsById[item.menuItemId];
+      const chosenAddons = (item.addonIds || []).map((id) => addonsById[id]);
+      // Nome do adicional entra no "recibo" do item (name_snapshot), já que
+      // o pedido não tem uma tabela própria pra isso — só guarda o retrato
+      // do que foi pedido, do jeito que o restaurante e o cliente veem.
+      const nameSnapshot = chosenAddons.length
+        ? `${menuItem.name} (+ ${chosenAddons.map((a) => a.name).join(', ')})`
+        : menuItem.name;
       await client.query(
         `INSERT INTO order_items (order_id, menu_item_id, name_snapshot, price_snapshot, qty)
          VALUES ($1, $2, $3, $4, $5)`,
-        [orderId, menuItem.id, menuItem.name, menuItem.price, item.qty]
+        [orderId, menuItem.id, nameSnapshot, unitPrice(item), item.qty]
       );
     }
 

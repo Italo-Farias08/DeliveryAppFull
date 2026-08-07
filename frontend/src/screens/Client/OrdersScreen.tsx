@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import OrderChatModal from '../../components/OrderChatModal';
+import { useCart } from '../../context/CartContext';
 import { getOrderMessages, listMyOrders, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
@@ -51,6 +52,8 @@ function formatOrderDate(dateStr: string) {
 }
 
 export default function OrdersScreen() {
+  const navigation = useNavigation<any>();
+  const { addItem } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,6 +90,27 @@ export default function OrdersScreen() {
     };
   }, []);
 
+  // "Pedir novamente": reconstrói o carrinho com os mesmos itens do pedido
+  // entregue e manda o usuário direto pro Carrinho, já pronto pra revisar
+  // e finalizar. addItem é chamado uma vez por unidade (qty) de cada item,
+  // igual ao fluxo normal de adicionar pelo FoodCard.
+  // OBS: assume que `Order.items[].qty/name/price/id` tem o mesmo formato
+  // aceito por `addItem` no CartContext (o mesmo objeto usado ao montar o
+  // pedido originalmente). Se o carrinho travar restaurantes diferentes,
+  // o próprio addItem/CartContext deve tratar a troca de restaurante.
+  const handleReorder = useCallback(
+    (order: Order) => {
+      (order.items ?? []).forEach((orderItem) => {
+        const qty = orderItem.qty ?? 1;
+        for (let i = 0; i < qty; i++) {
+          addItem(orderItem as any);
+        }
+      });
+      navigation.navigate('Cart');
+    },
+    [addItem, navigation]
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <Text style={styles.title}>Meus pedidos</Text>
@@ -114,6 +138,7 @@ export default function OrdersScreen() {
               icon: 'ellipse-outline' as const,
             };
             const itemsSummary = (item.items ?? []).map((it) => `${it.qty}x ${it.name}`).join(' · ');
+            const isDelivered = item.status === 'entregue';
 
             return (
               <View style={styles.card}>
@@ -175,12 +200,27 @@ export default function OrdersScreen() {
                   </View>
                 )}
 
-                {/* ---- Rodapé: falar com restaurante + total ---- */}
+                {/* ---- Rodapé: ação (conversar OU pedir de novo) + total ----
+                    Enquanto o pedido está em andamento, faz sentido falar
+                    com o restaurante. Depois de entregue, essa conversa já
+                    não serve pra muito -- então trocamos pela ação que o
+                    cliente realmente quer nesse ponto: repetir o pedido. */}
                 <View style={styles.footerRow}>
-                  <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => setChatOrder(item)}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} />
-                    <Text style={styles.chatBtnText}>Conversar</Text>
-                  </TouchableOpacity>
+                  {isDelivered ? (
+                    <TouchableOpacity
+                      style={styles.reorderBtn}
+                      activeOpacity={0.8}
+                      onPress={() => handleReorder(item)}
+                    >
+                      <Ionicons name="repeat-outline" size={15} color={colors.white} />
+                      <Text style={styles.reorderBtnText}>Pedir novamente</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => setChatOrder(item)}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} />
+                      <Text style={styles.chatBtnText}>Conversar</Text>
+                    </TouchableOpacity>
+                  )}
 
                   <View style={styles.totalWrap}>
                     <Text style={styles.totalLabel}>Total</Text>
@@ -278,6 +318,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   chatBtnText: { color: colors.primary, fontSize: 12.5, fontWeight: '700' },
+
+  reorderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  reorderBtnText: { color: colors.white, fontSize: 12.5, fontWeight: '700' },
 
   totalWrap: { alignItems: 'flex-end' },
   totalLabel: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },

@@ -34,4 +34,12 @@ const rejectOrderSchema = z.object({
   reason: z.string().max(300).optional(),
 });
 
-module.exports = { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema };
+// Adicional de um item do cardápio (ex: "Bacon extra", "Borda recheada").
+// price pode ser 0 (adicional sem custo), mas nunca negativo.
+const addonSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().nonnegative(),
+  isAvailable: z.boolean().optional(),
+});
+
+module.exports = { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema };

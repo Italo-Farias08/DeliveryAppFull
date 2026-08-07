@@ -48,7 +48,21 @@ async function getRestaurantById(id) {
      ORDER BY name`,
     [id]
   );
-  restaurant.menu = menuResult.rows;
+  const menuItemIds = menuResult.rows.map((m) => m.id);
+  let addonsByItem = {};
+  if (menuItemIds.length > 0) {
+    const addonsResult = await pool.query(
+      `SELECT id, menu_item_id AS "menuItemId", name, price, is_available AS "isAvailable"
+       FROM menu_item_addons
+       WHERE menu_item_id = ANY($1::uuid[]) AND is_available = true
+       ORDER BY created_at`,
+      [menuItemIds]
+    );
+    for (const addon of addonsResult.rows) {
+      (addonsByItem[addon.menuItemId] ||= []).push(addon);
+    }
+  }
+  restaurant.menu = menuResult.rows.map((item) => ({ ...item, addons: addonsByItem[item.id] || [] }));
   return restaurant;
 }
 

@@ -25,6 +25,17 @@ export interface MenuCategory {
   sortOrder: number;
 }
 
+// Adicional de um item do cardápio (ex: "Bacon extra", "Borda recheada").
+// O restaurante controla tudo (cria, edita, apaga) e o preço soma ao preço
+// do item quando o cliente escolhe esse adicional.
+export interface Addon {
+  id: string;
+  menuItemId: string;
+  name: string;
+  price: number;
+  isAvailable?: boolean;
+}
+
 export interface MenuItem {
   id: string;
   restaurantId: string;
@@ -36,6 +47,8 @@ export interface MenuItem {
   price: number;
   image: string;
   isAvailable?: boolean;
+  // opcional por compatibilidade com telas/dados antigos sem adicionais
+  addons?: Addon[];
 }
 
 export interface Restaurant {
@@ -58,8 +71,12 @@ export interface Restaurant {
 }
 
 export interface CartItem {
+  // chave única da linha do carrinho: mesmo item com adicionais diferentes
+  // vira uma linha separada (ex: "X-Burger + bacon" e "X-Burger" puro)
+  key: string;
   item: MenuItem;
   qty: number;
+  selectedAddons: Addon[];
 }
 
 export type OrderStatus =

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
+import { StatusBar } from 'expo-status-bar';
 import {
   Animated,
   Dimensions,
@@ -276,6 +277,7 @@ const ListHeader = React.memo(function ListHeader({
   onToggleNotifications,
   topRatedOnly,
   onToggleTopRated,
+  topInset,
 }: {
   userName?: string;
   categories: Category[];
@@ -292,11 +294,15 @@ const ListHeader = React.memo(function ListHeader({
   onToggleNotifications: () => void;
   topRatedOnly: boolean;
   onToggleTopRated: () => void;
+  topInset: number;
 }) {
   return (
     <View>
-      {/* Flat header — no gradient, no rounded crop, sits inside the safe area */}
-      <View style={styles.topBar}>
+      {/* Flat header — no gradient, no rounded crop, sits inside the safe area.
+          paddingTop aqui é O ÚNICO lugar que aplica o inset de topo agora
+          (insets.top + o respiro visual de 8px que já existia). Controlado
+          na mão, sem depender do SafeAreaView calcular sozinho. */}
+      <View style={[styles.topBar, { paddingTop: topInset + 8 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.logo}>Vitória Delivery</Text>
           {userName ? <Text style={styles.greeting}>Olá, {userName} 👋</Text> : null}
@@ -592,7 +598,16 @@ export default function HomeScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    // edges={[]} DE PROPÓSITO: não deixamos o SafeAreaView calcular/aplicar
+    // o inset de topo sozinho. Em vez disso, controlamos esse espaço na mão
+    // (ver `paddingTop: insets.top` logo abaixo, no topBar). Isso existe
+    // porque, se houver QUALQUER outro SafeAreaView/wrapper por fora desta
+    // tela (App.tsx, Tab/Stack Navigator) também aplicando edges={['top']},
+    // os dois insets se somavam e empurravam o conteúdo pra baixo -- essa
+    // é a causa mais comum de uma "faixa em branco" estrutural no topo que
+    // não é resolvida mexendo em cor ou em StatusBar.
+    <SafeAreaView style={styles.safe} edges={[]}>
+      <StatusBar style="dark" translucent backgroundColor="transparent" />
       <AnimatedFlatList
         data={displayedRestaurants}
         keyExtractor={(item) => item.id}
@@ -618,6 +633,7 @@ export default function HomeScreen() {
             onToggleNotifications={toggleNotifications}
             topRatedOnly={topRatedOnly}
             onToggleTopRated={toggleTopRated}
+            topInset={insets.top}
           />
         }
         renderItem={({ item, index }) => (
@@ -718,7 +734,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: H_PAD,
-    paddingTop: 8,
+    // paddingTop é aplicado via inline style em ListHeader (insets.top + 8),
+    // não aqui -- ver comentário no componente ListHeader.
   },
   logo: { fontSize: 24, fontWeight: '800', color: colors.primary },
   greeting: { fontSize: 12.5, color: colors.textMuted, marginTop: 2, fontWeight: '600' },

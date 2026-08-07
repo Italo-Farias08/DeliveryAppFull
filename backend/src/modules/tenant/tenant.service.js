@@ -178,6 +178,48 @@ async function deleteMenuItem(db, menuItemId) {
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
 }
 
+const ADDON_SELECT_FIELDS = `id, menu_item_id AS "menuItemId", name, price, is_available AS "isAvailable"`;
+
+async function ensureMenuItemOwnedByTenant(db, menuItemId, tenantId) {
+  const result = await db.query('SELECT id FROM menu_items WHERE id = $1 AND tenant_id = $2', [menuItemId, tenantId]);
+  if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
+}
+
+async function listAddons(db, menuItemId) {
+  const result = await db.query(
+    `SELECT ${ADDON_SELECT_FIELDS} FROM menu_item_addons WHERE menu_item_id = $1 ORDER BY created_at`,
+    [menuItemId]
+  );
+  return result.rows;
+}
+
+async function createAddon(db, tenantId, menuItemId, data) {
+  const result = await db.query(
+    `INSERT INTO menu_item_addons (tenant_id, menu_item_id, name, price, is_available)
+     VALUES ($1, $2, $3, $4, COALESCE($5, true))
+     RETURNING ${ADDON_SELECT_FIELDS}`,
+    [tenantId, menuItemId, data.name, data.price, data.isAvailable]
+  );
+  return result.rows[0];
+}
+
+async function updateAddon(db, addonId, data) {
+  const result = await db.query(
+    `UPDATE menu_item_addons
+     SET name = $1, price = $2, is_available = COALESCE($3, is_available)
+     WHERE id = $4
+     RETURNING ${ADDON_SELECT_FIELDS}`,
+    [data.name, data.price, data.isAvailable, addonId]
+  );
+  if (result.rowCount === 0) throw new AppError('Adicional não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+async function deleteAddon(db, addonId) {
+  const result = await db.query('DELETE FROM menu_item_addons WHERE id = $1', [addonId]);
+  if (result.rowCount === 0) throw new AppError('Adicional não encontrado nesta conta', 404);
+}
+
 async function listOrders(db, tenantId) {
   const ordersResult = await db.query(
     `${TENANT_ORDER_SELECT}
@@ -289,4 +331,9 @@ module.exports = {
   acceptOrder,
   rejectOrder,
   markOrderReady,
+  ensureMenuItemOwnedByTenant,
+  listAddons,
+  createAddon,
+  updateAddon,
+  deleteAddon,
 };

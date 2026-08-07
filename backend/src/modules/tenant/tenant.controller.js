@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema } = require('./tenant.schema');
+const { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema } = require('./tenant.schema');
 const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
@@ -97,6 +97,30 @@ const deleteMenuCategory = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
+const listAddons = asyncHandler(async (req, res) => {
+  await service.ensureMenuItemOwnedByTenant(req.db, req.params.menuItemId, req.tenantId);
+  const addons = await service.listAddons(req.db, req.params.menuItemId);
+  res.json(addons);
+});
+
+const createAddon = asyncHandler(async (req, res) => {
+  await service.ensureMenuItemOwnedByTenant(req.db, req.params.menuItemId, req.tenantId);
+  const data = addonSchema.parse(req.body);
+  const addon = await service.createAddon(req.db, req.tenantId, req.params.menuItemId, data);
+  res.status(201).json(addon);
+});
+
+const updateAddon = asyncHandler(async (req, res) => {
+  const data = addonSchema.parse(req.body);
+  const addon = await service.updateAddon(req.db, req.params.addonId, data);
+  res.json(addon);
+});
+
+const deleteAddon = asyncHandler(async (req, res) => {
+  await service.deleteAddon(req.db, req.params.addonId);
+  res.status(204).send();
+});
+
 const listOrders = asyncHandler(async (req, res) => {
   const orders = await service.listOrders(req.db, req.tenantId);
   res.json(orders);
@@ -137,4 +161,8 @@ module.exports = {
   acceptOrder,
   rejectOrder,
   markOrderReady,
+  listAddons,
+  createAddon,
+  updateAddon,
+  deleteAddon,
 };

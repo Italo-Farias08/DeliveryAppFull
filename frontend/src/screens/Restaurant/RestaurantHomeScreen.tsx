@@ -20,19 +20,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import OrderChatModal from '../../components/OrderChatModal';
 import {
+  AddonInput,
   MenuCategoryInput,
   MenuItemInput,
   PickedImage,
   RestaurantInput,
   TenantOrder,
   acceptOrder,
+  createAddon,
   createMenuCategory,
   createMenuItem,
   createRestaurant,
+  deleteAddon,
   deleteMenuCategory,
   deleteMenuItem,
   getCategories,
   getTenantOrderMessages,
+  listAddons,
   listMenuCategories,
   listMenuItems,
   listMyRestaurants,
@@ -40,6 +44,7 @@ import {
   markOrderReady,
   rejectOrder,
   sendTenantOrderMessage,
+  updateAddon,
   updateMenuItem,
   updateRestaurant,
   uploadMenuItemImage,
@@ -49,7 +54,7 @@ import {
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../../types';
+import { Addon, Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../../types';
 
 const statusLabel: Record<OrderStatus, string> = {
   pendente: 'Novo pedido',
@@ -118,6 +123,15 @@ export default function RestaurantHomeScreen() {
   const [miImagePreview, setMiImagePreview] = useState<string | null>(null);
   const [miUploadingImage, setMiUploadingImage] = useState(false);
   const [miCategoryId, setMiCategoryId] = useState<string | null>(null);
+
+  // adicionais do item que está sendo editado (ex: bacon extra, borda
+  // recheada) — só existe pra item que já foi salvo (tem id)
+  const [itemAddons, setItemAddons] = useState<Addon[]>([]);
+  const [loadingAddons, setLoadingAddons] = useState(false);
+  const [addonName, setAddonName] = useState('');
+  const [addonPrice, setAddonPrice] = useState('');
+  const [editingAddonId, setEditingAddonId] = useState<string | null>(null);
+  const [savingAddon, setSavingAddon] = useState(false);
 
   const loadEverything = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoadingInit(true);
@@ -298,6 +312,12 @@ export default function RestaurantHomeScreen() {
     }
   }
 
+  function resetAddonForm() {
+    setAddonName('');
+    setAddonPrice('');
+    setEditingAddonId(null);
+  }
+
   function openCreateMenuModal() {
     setEditingItem(null);
     setMiName('');
@@ -307,6 +327,8 @@ export default function RestaurantHomeScreen() {
     setMiImagePreview(null);
     // se o dono já estava filtrando por uma categoria, o novo item já nasce nela
     setMiCategoryId(activeMenuCategoryId);
+    setItemAddons([]);
+    resetAddonForm();
     setMenuModalVisible(true);
   }
 
@@ -318,7 +340,68 @@ export default function RestaurantHomeScreen() {
     setMiPickedImage(null);
     setMiImagePreview(item.image || null);
     setMiCategoryId(item.categoryId || null);
+    resetAddonForm();
     setMenuModalVisible(true);
+    setLoadingAddons(true);
+    listAddons(item.id)
+      .then(setItemAddons)
+      .catch(() => setItemAddons([]))
+      .finally(() => setLoadingAddons(false));
+  }
+
+  function startEditAddon(addon: Addon) {
+    setEditingAddonId(addon.id);
+    setAddonName(addon.name);
+    setAddonPrice(String(addon.price));
+  }
+
+  async function handleSaveAddon() {
+    if (!editingItem) return;
+    const name = addonName.trim();
+    if (!name) {
+      Alert.alert('Preencha o nome', 'O adicional precisa de um nome.');
+      return;
+    }
+    const price = Number(addonPrice.replace(',', '.'));
+    if (Number.isNaN(price) || price < 0) {
+      Alert.alert('Preço inválido', 'Informe um preço válido (pode ser 0).');
+      return;
+    }
+    const payload: AddonInput = { name, price };
+    setSavingAddon(true);
+    try {
+      if (editingAddonId) {
+        const updated = await updateAddon(editingAddonId, payload);
+        setItemAddons((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      } else {
+        const created = await createAddon(editingItem.id, payload);
+        setItemAddons((prev) => [...prev, created]);
+      }
+      resetAddonForm();
+    } catch (err: any) {
+      Alert.alert('Erro ao salvar adicional', err?.response?.data?.error || 'Tente novamente.');
+    } finally {
+      setSavingAddon(false);
+    }
+  }
+
+  function handleDeleteAddon(addon: Addon) {
+    Alert.alert('Remover adicional', `Remover "${addon.name}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteAddon(addon.id);
+            setItemAddons((prev) => prev.filter((a) => a.id !== addon.id));
+            if (editingAddonId === addon.id) resetAddonForm();
+          } catch {
+            Alert.alert('Erro', 'Não foi possível remover o adicional.');
+          }
+        },
+      },
+    ]);
   }
 
   async function handleSaveMenuItem() {
@@ -935,6 +1018,74 @@ export default function RestaurantHomeScreen() {
               {miUploadingImage && <ActivityIndicator color={colors.secondary} />}
             </TouchableOpacity>
 
+            {editingItem && (
+              <>
+                <Text style={styles.label}>Adicionais</Text>
+                {loadingAddons ? (
+                  <ActivityIndicator color={colors.secondary} style={{ marginVertical: 10 }} />
+                ) : (
+                  <>
+                    {itemAddons.map((addon) => (
+                      <View key={addon.id} style={styles.addonRow}>
+                        <TouchableOpacity style={{ flex: 1 }} onPress={() => startEditAddon(addon)}>
+                          <Text style={styles.addonRowName}>{addon.name}</Text>
+                          <Text style={styles.addonRowPrice}>+ R$ {addon.price.toFixed(2)}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.iconBtn} onPress={() => startEditAddon(addon)}>
+                          <Ionicons name="pencil" size={16} color={colors.secondary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.iconBtn} onPress={() => handleDeleteAddon(addon)}>
+                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {itemAddons.length === 0 && (
+                      <Text style={styles.emptySub}>Nenhum adicional ainda. Ex: bacon extra, borda recheada.</Text>
+                    )}
+
+                    <View style={styles.addAddonRow}>
+                      <TextInput
+                        style={[styles.input, { flex: 1 }]}
+                        value={addonName}
+                        onChangeText={setAddonName}
+                        placeholder="Nome (ex: Bacon extra)"
+                      />
+                      <TextInput
+                        style={[styles.input, { width: 90 }]}
+                        value={addonPrice}
+                        onChangeText={setAddonPrice}
+                        placeholder="R$"
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                      {editingAddonId && (
+                        <TouchableOpacity style={styles.outlineBtn} onPress={resetAddonForm}>
+                          <Text style={styles.outlineBtnText}>Cancelar</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        style={[styles.addCategoryBtn, { flex: 1, flexDirection: 'row', gap: 6 }, savingAddon && { opacity: 0.6 }]}
+                        onPress={handleSaveAddon}
+                        disabled={savingAddon}
+                      >
+                        {savingAddon ? (
+                          <ActivityIndicator color={colors.white} />
+                        ) : (
+                          <>
+                            <Ionicons name={editingAddonId ? 'checkmark' : 'add'} size={18} color={colors.white} />
+                            <Text style={{ color: colors.white, fontWeight: '700', fontSize: 13 }}>
+                              {editingAddonId ? 'Salvar adicional' : 'Adicionar'}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => setMenuModalVisible(false)}>
                 <Text style={styles.outlineBtnText}>Cancelar</Text>
@@ -1110,4 +1261,12 @@ const styles = StyleSheet.create({
     padding: 20, paddingBottom: 32,
   },
   modalTitle: { ...typography.h2, color: colors.text },
+  addonRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8, backgroundColor: colors.surface,
+  },
+  addonRowName: { color: colors.text, fontSize: 14, fontWeight: '600' },
+  addonRowPrice: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  addAddonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
 });
