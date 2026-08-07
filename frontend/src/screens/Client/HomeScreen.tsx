@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import {
   Animated,
@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { SearchBar } from '../../components/SearchBar';
 import { useAuth } from '../../context/AuthContext';
 import { useFavorites } from '../../context/FavoritesContext';
+import { useNotifications } from '../../context/NotificationsContext';
 import { getCategories, getRestaurants } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -271,6 +272,10 @@ const ListHeader = React.memo(function ListHeader({
   onPressLocation,
   categoriesRowOpacity,
   categoriesRowTranslate,
+  notificationsEnabled,
+  onToggleNotifications,
+  topRatedOnly,
+  onToggleTopRated,
 }: {
   userName?: string;
   categories: Category[];
@@ -283,6 +288,10 @@ const ListHeader = React.memo(function ListHeader({
   onPressLocation: () => void;
   categoriesRowOpacity: Animated.AnimatedInterpolation<number>;
   categoriesRowTranslate: Animated.AnimatedInterpolation<number>;
+  notificationsEnabled: boolean;
+  onToggleNotifications: () => void;
+  topRatedOnly: boolean;
+  onToggleTopRated: () => void;
 }) {
   return (
     <View>
@@ -292,8 +301,18 @@ const ListHeader = React.memo(function ListHeader({
           <Text style={styles.logo}>Vitória Delivery</Text>
           {userName ? <Text style={styles.greeting}>Olá, {userName} 👋</Text> : null}
         </View>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="notifications-outline" size={20} color={colors.primary} />
+        <TouchableOpacity
+          style={[styles.iconBtn, !notificationsEnabled && styles.iconBtnMuted]}
+          activeOpacity={0.7}
+          onPress={onToggleNotifications}
+          accessibilityRole="button"
+          accessibilityLabel={notificationsEnabled ? 'Desativar notificações' : 'Ativar notificações'}
+        >
+          <Ionicons
+            name={notificationsEnabled ? 'notifications' : 'notifications-off-outline'}
+            size={20}
+            color={notificationsEnabled ? colors.primary : colors.textMuted}
+          />
         </TouchableOpacity>
       </View>
 
@@ -301,8 +320,18 @@ const ListHeader = React.memo(function ListHeader({
         <View style={{ flex: 1 }}>
           <SearchBar editable={false} onPress={onNavigateSearch} placeholder="Buscar restaurantes ou comidas" />
         </View>
-        <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
-          <Ionicons name="options-outline" size={20} color={colors.primary} />
+        <TouchableOpacity
+          style={[styles.starBtn, topRatedOnly && styles.starBtnActive]}
+          activeOpacity={0.7}
+          onPress={onToggleTopRated}
+          accessibilityRole="button"
+          accessibilityLabel={topRatedOnly ? 'Ver todos os restaurantes' : 'Ver restaurantes mais bem avaliados'}
+        >
+          <Ionicons
+            name={topRatedOnly ? 'star' : 'star-outline'}
+            size={21}
+            color={topRatedOnly ? colors.star : colors.primary}
+          />
         </TouchableOpacity>
       </View>
 
@@ -377,10 +406,15 @@ const ListHeader = React.memo(function ListHeader({
 export default function HomeScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const { enabled: notificationsEnabled, toggle: toggleNotifications } = useNotifications();
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
+  // Estrelinha ao lado da busca: quando ativa, mostra só os restaurantes
+  // mais bem avaliados (nota mais alta primeiro).
+  const [topRatedOnly, setTopRatedOnly] = useState(false);
+  const toggleTopRated = useCallback(() => setTopRatedOnly((prev) => !prev), []);
 
   // Posição (Y) de onde começa a fileira de categorias dentro do header —
   // é o ponto que usamos pra saber quando trocar pra barra fixa e compacta.
@@ -451,6 +485,15 @@ export default function HomeScreen() {
       .then(setRestaurants)
       .finally(() => setLoading(false));
   }, [activeCategory]);
+
+  // Com a estrelinha ativa, mostra só quem tem nota alta (4.5+), do maior
+  // pro menor -- os restaurantes mais bem avaliados primeiro.
+  const displayedRestaurants = useMemo(() => {
+    if (!topRatedOnly) return restaurants;
+    return [...restaurants]
+      .filter((r) => r.rating >= 4.5)
+      .sort((a, b) => b.rating - a.rating);
+  }, [restaurants, topRatedOnly]);
 
   // Assim que o primeiro carregamento de restaurantes termina (loading passa
   // de true pra false pela primeira vez), marcamos os dados como prontos.
@@ -551,7 +594,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <AnimatedFlatList
-        data={restaurants}
+        data={displayedRestaurants}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.columnWrapper}
@@ -571,6 +614,10 @@ export default function HomeScreen() {
             onPressLocation={fetchLocation}
             categoriesRowOpacity={categoriesRowOpacity}
             categoriesRowTranslate={categoriesRowTranslate}
+            notificationsEnabled={notificationsEnabled}
+            onToggleNotifications={toggleNotifications}
+            topRatedOnly={topRatedOnly}
+            onToggleTopRated={toggleTopRated}
           />
         }
         renderItem={({ item, index }) => (
@@ -586,8 +633,16 @@ export default function HomeScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyState}>
-              <Ionicons name="restaurant-outline" size={40} color={colors.textMuted} />
-              <Text style={styles.emptyText}>Nenhum restaurante nessa categoria ainda.</Text>
+              <Ionicons
+                name={topRatedOnly ? 'star-outline' : 'restaurant-outline'}
+                size={40}
+                color={colors.textMuted}
+              />
+              <Text style={styles.emptyText}>
+                {topRatedOnly
+                  ? 'Nenhum restaurante muito bem avaliado por aqui ainda.'
+                  : 'Nenhum restaurante nessa categoria ainda.'}
+              </Text>
             </View>
           ) : null
         }
@@ -675,6 +730,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconBtnMuted: {
+    backgroundColor: colors.border,
+  },
 
   searchRow: {
     flexDirection: 'row',
@@ -683,7 +741,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_PAD,
     marginTop: 14,
   },
-  filterBtn: {
+  starBtn: {
     width: 46,
     height: 46,
     borderRadius: 14,
@@ -692,6 +750,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  starBtnActive: {
+    borderColor: colors.star,
+    backgroundColor: 'rgba(255,180,0,0.12)',
   },
 
   locationRow: {

@@ -37,8 +37,8 @@ const FAQ: { question: string; answer: string }[] = [
   },
 ];
 
-const CONTACT_PHONE = '5581999999999';
-const CONTACT_EMAIL = 'suporte@deliveryapp.com.br';
+const CONTACT_PHONE = '5581991204180';
+const CONTACT_EMAIL = 'italo.farias1wi@gmail.com';
 
 export default function HelpScreen() {
   const navigation = useNavigation<any>();
@@ -117,13 +117,13 @@ export default function HelpScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.contactTitle}>Telefone</Text>
-              <Text style={styles.contactSubtitle}>(81) 99999-9999</Text>
+              <Text style={styles.contactSubtitle}>(81) 99120-4180</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>versão 1.0.0 · demonstração</Text>
+        <Text style={styles.version}>versão 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

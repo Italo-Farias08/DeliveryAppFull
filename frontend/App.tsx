@@ -6,6 +6,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { OrderProvider } from './src/context/OrderContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
+import { NotificationsProvider } from './src/context/NotificationsContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
@@ -16,12 +17,14 @@ export default function App() {
           <CartProvider>
             <OrderProvider>
               <FavoritesProvider>
-                {/* translucent + backgroundColor transparent: a área de status
-                    (bateria, wifi, relógio) deixa de ter aquela faixa branca
-                    genérica e passa a herdar a cor de fundo de cada tela, que
-                    já é pintada por baixo pelo SafeAreaView de cada uma. */}
-                <StatusBar style="dark" translucent backgroundColor="transparent" />
-                <RootNavigator />
+                <NotificationsProvider>
+                  {/* translucent + backgroundColor transparent: a área de status
+                      (bateria, wifi, relógio) deixa de ter aquela faixa branca
+                      genérica e passa a herdar a cor de fundo de cada tela, que
+                      já é pintada por baixo pelo SafeAreaView de cada uma. */}
+                  <StatusBar style="dark" translucent backgroundColor="transparent" />
+                  <RootNavigator />
+                </NotificationsProvider>
               </FavoritesProvider>
             </OrderProvider>
           </CartProvider>
