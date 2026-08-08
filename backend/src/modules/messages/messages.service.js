@@ -1,6 +1,7 @@
 const { pool } = require('../../config/db');
 const AppError = require('../../utils/AppError');
 const { toClient, toTenant } = require('../../realtime/socket');
+const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
 
 async function getOrderParties(orderId) {
   const result = await pool.query(
@@ -36,6 +37,23 @@ async function sendMessage(orderId, senderRole, senderId, message) {
   // mas o socket garante que o outro lado da conversa recebe na hora
   toClient(order.clientId, 'order:message', payload);
   toTenant(order.tenantId, 'order:message', payload);
+
+  // push só pra quem não escreveu a mensagem -- quem enviou já vê na hora
+  // pela própria tela de chat
+  if (senderRole === 'restaurant') {
+    sendPushToUser(order.clientId, {
+      title: 'Nova mensagem do restaurante 💬',
+      body: message,
+      data: { orderId, type: 'order:message' },
+    });
+  } else {
+    sendPushToTenant(order.tenantId, {
+      title: 'Nova mensagem do cliente 💬',
+      body: message,
+      data: { orderId, type: 'order:message' },
+    });
+  }
+
   return saved;
 }
 

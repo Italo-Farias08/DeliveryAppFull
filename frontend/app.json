@@ -38,6 +38,13 @@
     {
       "photosPermission": "Precisamos acessar suas fotos para você escolher a logo, o banner e as fotos dos itens do cardápio."
     }
+  ],
+  [
+    "expo-notifications",
+    {
+      "icon": "./src/img/logo.png",
+      "color": "#FFFBF7"
+    }
   ]
 ]
   }

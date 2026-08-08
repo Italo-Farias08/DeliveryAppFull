@@ -80,4 +80,67 @@ router.put(
   })
 );
 
+// Liga/desliga notificações (o sininho). Fica salvo no banco porque é o
+// backend que decide se manda push -- mesmo com o app fechado.
+const notificationsSchema = z.object({
+  enabled: z.boolean(),
+});
+
+router.put(
+  '/me/notifications',
+  asyncHandler(async (req, res) => {
+    const { enabled } = notificationsSchema.parse(req.body);
+
+    await pool.query('UPDATE users SET notifications_enabled = $1 WHERE id = $2', [
+      enabled,
+      req.user.sub,
+    ]);
+
+    // se a pessoa desligou, apagamos os tokens dela: assim nem sobra
+    // nada guardado tentando mandar push pra quem não quer receber.
+    if (!enabled) {
+      await pool.query('DELETE FROM push_tokens WHERE user_id = $1', [req.user.sub]);
+    }
+
+    res.json({ enabled });
+  })
+);
+
+// Salva o token de push (Expo) deste dispositivo. Chamado sempre que o
+// app abre com notificações ligadas, pra manter o token atualizado.
+const pushTokenSchema = z.object({
+  token: z.string().min(10),
+  platform: z.enum(['ios', 'android']).optional(),
+});
+
+router.put(
+  '/me/push-token',
+  asyncHandler(async (req, res) => {
+    const { token, platform } = pushTokenSchema.parse(req.body);
+
+    await pool.query(
+      `INSERT INTO push_tokens (user_id, token, platform)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (token) DO UPDATE SET user_id = $1, platform = $3`,
+      [req.user.sub, token, platform || null]
+    );
+
+    res.status(204).send();
+  })
+);
+
+// Remove o token deste dispositivo (chamado ao desligar o sininho ou
+// fazer logout, pra não continuar mandando push pra esse aparelho).
+router.delete(
+  '/me/push-token',
+  asyncHandler(async (req, res) => {
+    const { token } = z.object({ token: z.string().min(10) }).parse(req.body);
+    await pool.query('DELETE FROM push_tokens WHERE token = $1 AND user_id = $2', [
+      token,
+      req.user.sub,
+    ]);
+    res.status(204).send();
+  })
+);
+
 module.exports = router;

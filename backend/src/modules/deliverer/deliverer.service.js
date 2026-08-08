@@ -1,6 +1,7 @@
 const { pool } = require('../../config/db');
 const AppError = require('../../utils/AppError');
 const { toClient, toTenant, toDeliverers } = require('../../realtime/socket');
+const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
 
 const MINE_SELECT = `
   SELECT o.id, o.status, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt",
@@ -61,6 +62,16 @@ async function acceptOrder(delivererId, orderId) {
   toDeliverers('order:taken', { id: order.id });
   toTenant(order.tenantId, 'order:courierAssigned', { id: order.id });
   toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
+  sendPushToTenant(order.tenantId, {
+    title: 'Entregador designado 🛵',
+    body: 'Um entregador aceitou a corrida e vai buscar o pedido.',
+    data: { orderId: order.id, type: 'order:courierAssigned' },
+  });
+  sendPushToUser(order.clientId, {
+    title: 'Entregador a caminho do restaurante 🛵',
+    body: 'Já achamos um entregador pro seu pedido.',
+    data: { orderId: order.id, type: 'order:status', status: order.status },
+  });
 
   return { id: order.id, status: order.status };
 }
@@ -89,6 +100,11 @@ async function confirmPickup(delivererId, orderId, code) {
   );
   toTenant(order.tenantId, 'order:status', { id: order.id, status: result.rows[0].status });
   toClient(order.clientId, 'order:status', { id: order.id, status: result.rows[0].status });
+  sendPushToUser(order.clientId, {
+    title: 'Pedido a caminho! 🚴',
+    body: 'O entregador retirou seu pedido e já está indo até você.',
+    data: { orderId: order.id, type: 'order:status', status: result.rows[0].status },
+  });
   return result.rows[0];
 }
 
@@ -116,6 +132,11 @@ async function confirmDelivery(delivererId, orderId, code) {
   );
   toTenant(order.tenantId, 'order:status', { id: order.id, status: result.rows[0].status });
   toClient(order.clientId, 'order:status', { id: order.id, status: result.rows[0].status });
+  sendPushToUser(order.clientId, {
+    title: 'Pedido entregue! 🎉',
+    body: 'Seu pedido foi entregue. Bom apetite!',
+    data: { orderId: order.id, type: 'order:status', status: result.rows[0].status },
+  });
   return result.rows[0];
 }
 

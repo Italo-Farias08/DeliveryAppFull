@@ -1,6 +1,7 @@
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/db');
 const { toClient, toDeliverers } = require('../../realtime/socket');
+const { sendPushToUser, sendPushToDeliverers } = require('../../utils/push');
 
 const TENANT_ORDER_SELECT = `
   SELECT o.id, o.restaurant_id AS "restaurantId", o.client_id AS "clientId",
@@ -255,6 +256,11 @@ async function acceptOrder(db, tenantId, orderId) {
   }
   const order = result.rows[0];
   toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
+  sendPushToUser(order.clientId, {
+    title: 'Pedido aceito! 👍',
+    body: 'O restaurante aceitou seu pedido e já vai começar a preparar.',
+    data: { orderId: order.id, type: 'order:status', status: order.status },
+  });
   return order;
 }
 
@@ -271,6 +277,11 @@ async function rejectOrder(db, tenantId, orderId, reason) {
   }
   const order = result.rows[0];
   toClient(order.clientId, 'order:status', { id: order.id, status: order.status, cancelReason: reason });
+  sendPushToUser(order.clientId, {
+    title: 'Pedido recusado 😕',
+    body: reason || 'O restaurante recusou seu pedido.',
+    data: { orderId: order.id, type: 'order:status', status: order.status },
+  });
   return order;
 }
 
@@ -307,6 +318,16 @@ async function markOrderReady(db, tenantId, orderId) {
     number: address.number,
     neighborhood: address.neighborhood,
     city: address.city,
+  });
+  sendPushToUser(order.clientId, {
+    title: 'Pedido pronto! 📦',
+    body: 'Seu pedido está pronto e já estamos buscando um entregador.',
+    data: { orderId: order.id, type: 'order:status', status: order.status },
+  });
+  sendPushToDeliverers({
+    title: 'Nova corrida disponível 🛵',
+    body: `${restaurantResult.rows[0]?.name || 'Um restaurante'} tem uma entrega esperando.`,
+    data: { orderId: order.id, type: 'order:available' },
   });
   return { id: order.id, status: order.status };
 }

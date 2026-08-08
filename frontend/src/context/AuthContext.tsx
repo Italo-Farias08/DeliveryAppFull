@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
 import { setAuthToken } from '../services/api';
+import { unregisterPushNotifications } from '../services/pushNotifications';
 
 interface AuthContextData {
   user: User | null;
@@ -32,6 +33,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
+    // remove o token de push deste aparelho ANTES de tirar a autenticação --
+    // senão a conta que saiu continuaria recebendo push nesse celular
+    await unregisterPushNotifications();
     setUser(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
     await setAuthToken(null);

@@ -281,3 +281,19 @@ CREATE TABLE IF NOT EXISTS favorites (
   UNIQUE (user_id, restaurant_id)
 );
 CREATE INDEX IF NOT EXISTS idx_favorites_user_id ON favorites(user_id);
+
+-- Preferência de notificações (o sininho do app). Fica no banco, e não só
+-- no celular, porque quem decide se manda push com o app fechado é o
+-- backend -- ele precisa saber se a pessoa quer receber ou não.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT true;
+
+-- Tokens de push (Expo). Um usuário pode ter mais de um (trocou de
+-- celular, reinstalou o app etc.) -- por isso token é único e não o user_id.
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  platform TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user_id ON push_tokens(user_id);

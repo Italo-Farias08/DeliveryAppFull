@@ -2,6 +2,7 @@ const { pool } = require('../../config/db');
 const AppError = require('../../utils/AppError');
 const { generateFourDigitCode } = require('../../utils/codes');
 const { toTenant } = require('../../realtime/socket');
+const { sendPushToTenant } = require('../../utils/push');
 
 const ORDER_SELECT = `
   SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total,
@@ -136,6 +137,11 @@ async function createOrder(clientId, data) {
     );
     const tenantOrder = { ...tenantOrderResult.rows[0], items: order.items };
     toTenant(restaurant.tenant_id, 'order:new', tenantOrder);
+    sendPushToTenant(restaurant.tenant_id, {
+      title: 'Novo pedido! 🛎️',
+      body: `${tenantOrder.clientName} acabou de fazer um pedido.`,
+      data: { orderId: order.id, type: 'order:new' },
+    });
 
     return order;
   } catch (err) {
@@ -190,6 +196,11 @@ async function cancelOrder(clientId, orderId, reason) {
   // avisa o restaurante em tempo real, no mesmo canal que ele já escuta
   // pra mudanças de status de pedido
   toTenant(order.tenantId, 'order:cancelled', { id: order.id, status: order.status, cancelReason: reason });
+  sendPushToTenant(order.tenantId, {
+    title: 'Pedido cancelado',
+    body: 'O cliente cancelou um pedido.',
+    data: { orderId: order.id, type: 'order:cancelled' },
+  });
   return { id: order.id, status: order.status };
 }
 
