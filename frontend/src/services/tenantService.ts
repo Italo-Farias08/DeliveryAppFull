@@ -29,6 +29,7 @@ export interface TenantOrder {
   pickupCode?: string;
   delivererName?: string | null;
   delivererPhone?: string | null;
+  cancelReason?: string | null;
   items: { id: string; name: string; price: number; qty: number }[];
 }
 

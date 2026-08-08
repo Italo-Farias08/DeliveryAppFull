@@ -12,6 +12,7 @@ const router = Router();
 router.use(authenticate, authorize('client'));
 
 const messageSchema = z.object({ message: z.string().min(1).max(1000) });
+const cancelOrderSchema = z.object({ reason: z.string().min(1).max(300).optional() });
 
 router.post(
   '/',
@@ -34,6 +35,15 @@ router.get(
   '/:id',
   asyncHandler(async (req, res) => {
     const order = await service.getOrderById(req.params.id, req.user.sub);
+    res.json(order);
+  })
+);
+
+router.patch(
+  '/:id/cancel',
+  asyncHandler(async (req, res) => {
+    const { reason } = cancelOrderSchema.parse(req.body ?? {});
+    const order = await service.cancelOrder(req.user.sub, req.params.id, reason);
     res.json(order);
   })
 );

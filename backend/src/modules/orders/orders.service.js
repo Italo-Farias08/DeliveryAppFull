@@ -168,6 +168,31 @@ async function listOrdersByClient(clientId) {
   return orders.map((o) => ({ ...o, items: itemsByOrder[o.id] || [] }));
 }
 
+// Cliente cancela o próprio pedido — só permitido enquanto o restaurante
+// ainda não começou o preparo (status 'pendente'). Depois disso, o pedido
+// já está em produção na cozinha e cancelar unilateralmente causaria
+// prejuízo/confusão pro restaurante; nesse ponto o cliente deve falar com
+// o restaurante pelo chat em vez de cancelar direto.
+async function cancelOrder(clientId, orderId, reason) {
+  const result = await pool.query(
+    `UPDATE orders SET status = 'cancelado', cancelled_at = now(), cancel_reason = $1
+     WHERE id = $2 AND client_id = $3 AND status = 'pendente'
+     RETURNING id, status, tenant_id AS "tenantId"`,
+    [reason || 'Cancelado pelo cliente', orderId, clientId]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError(
+      'Pedido não encontrado ou não pode mais ser cancelado (o restaurante já começou o preparo)',
+      409
+    );
+  }
+  const order = result.rows[0];
+  // avisa o restaurante em tempo real, no mesmo canal que ele já escuta
+  // pra mudanças de status de pedido
+  toTenant(order.tenantId, 'order:cancelled', { id: order.id, status: order.status, cancelReason: reason });
+  return { id: order.id, status: order.status };
+}
+
 async function getOrderById(orderId, clientId) {
   const orderResult = await pool.query(
     `${ORDER_SELECT}
@@ -186,4 +211,4 @@ async function getOrderById(orderId, clientId) {
   return order;
 }
 
-module.exports = { createOrder, listOrdersByClient, getOrderById };
+module.exports = { createOrder, listOrdersByClient, getOrderById, cancelOrder };

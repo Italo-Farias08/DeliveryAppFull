@@ -17,6 +17,13 @@ export async function listMyOrders(): Promise<Order[]> {
   return data;
 }
 
+// Só funciona enquanto o pedido ainda está "pendente" (restaurante não
+// começou o preparo) — o backend recusa (409) fora dessa janela.
+export async function cancelOrder(orderId: string, reason?: string): Promise<{ id: string; status: string }> {
+  const { data } = await api.patch(`/orders/${orderId}/cancel`, reason ? { reason } : {});
+  return data;
+}
+
 export interface OrderMessage {
   id: string;
   senderRole: 'client' | 'restaurant';

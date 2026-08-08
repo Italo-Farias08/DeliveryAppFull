@@ -216,40 +216,54 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; o
   // no tipo Restaurant, então antes isso sempre caía no fallback aleatório.
   const hasImage = !!restaurant.image && !imgError;
   const imageSource = hasImage ? { uri: restaurant.image } : getFallbackImage(restaurant.id);
+  const isFree = (restaurant.deliveryFee ?? 0) === 0;
+  const closed = restaurant.isOpen === false;
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
-      <View>
+    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
+      <View style={styles.cardImageWrap}>
         <Image
           source={imageSource}
-          style={styles.cardImage}
+          style={[styles.cardImage, closed && styles.cardImageClosed]}
           contentFit="cover"
           cachePolicy="memory-disk"
           transition={150}
           onError={() => setImgError(true)}
         />
+
+        {/* nota em badge sobre a foto, como nos apps de referência do setor */}
+        <View style={styles.ratingBadge}>
+          <Ionicons name="star" size={10} color={colors.star} />
+          <Text style={styles.ratingBadgeText}>{restaurant.rating?.toFixed(1) ?? '—'}</Text>
+        </View>
+
         <TouchableOpacity
           style={styles.favoriteBtn}
           onPress={() => toggleFavorite(restaurant)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={15} color={colors.primary} />
+          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={14} color={colors.primary} />
         </TouchableOpacity>
+
+        {closed && (
+          <View style={styles.closedBadge}>
+            <Text style={styles.closedBadgeText}>Fechado</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle} numberOfLines={1}>{restaurant.name}</Text>
-        <View style={styles.cardRow}>
-          <Ionicons name="star" size={12} color={colors.star} />
-          <Text style={styles.cardRating}>{restaurant.rating?.toFixed(1) ?? '—'}</Text>
-        </View>
-        <View style={styles.cardRow}>
-          <Ionicons name="bicycle-outline" size={12} color={colors.textMuted} />
+        <View style={styles.cardMetaRow}>
+          <Ionicons name="time-outline" size={12} color={colors.textMuted} />
           <Text style={styles.cardMeta} numberOfLines={1}>
             {restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} min
           </Text>
+          <View style={styles.metaDot} />
+          <Text style={[styles.cardMeta, isFree && styles.cardFeeFree]} numberOfLines={1}>
+            {isFree ? 'Grátis' : `R$ ${restaurant.deliveryFee?.toFixed(2) ?? '0,00'}`}
+          </Text>
         </View>
-        <Text style={styles.cardFee}>R$ {restaurant.deliveryFee?.toFixed(2) ?? '0.00'}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -278,6 +292,7 @@ const ListHeader = React.memo(function ListHeader({
   topRatedOnly,
   onToggleTopRated,
   topInset,
+  restaurantCount,
 }: {
   userName?: string;
   categories: Category[];
@@ -295,6 +310,7 @@ const ListHeader = React.memo(function ListHeader({
   topRatedOnly: boolean;
   onToggleTopRated: () => void;
   topInset: number;
+  restaurantCount: number;
 }) {
   return (
     <View>
@@ -304,8 +320,8 @@ const ListHeader = React.memo(function ListHeader({
           na mão, sem depender do SafeAreaView calcular sozinho. */}
       <View style={[styles.topBar, { paddingTop: topInset + 8 }]}>
         <View style={{ flex: 1 }}>
+          {userName ? <Text style={styles.greeting}>Olá, {userName} 👋</Text> : <Text style={styles.greeting}>Bem-vindo</Text>}
           <Text style={styles.logo}>Vitória Delivery</Text>
-          {userName ? <Text style={styles.greeting}>Olá, {userName} 👋</Text> : null}
         </View>
         <TouchableOpacity
           style={[styles.iconBtn, !notificationsEnabled && styles.iconBtnMuted]}
@@ -316,7 +332,7 @@ const ListHeader = React.memo(function ListHeader({
         >
           <Ionicons
             name={notificationsEnabled ? 'notifications' : 'notifications-off-outline'}
-            size={20}
+            size={19}
             color={notificationsEnabled ? colors.primary : colors.textMuted}
           />
         </TouchableOpacity>
@@ -343,10 +359,15 @@ const ListHeader = React.memo(function ListHeader({
 
       {/* Address selector */}
       <TouchableOpacity style={styles.locationRow} activeOpacity={0.7} onPress={onPressLocation}>
-        <Ionicons name="location" size={15} color={colors.primary} />
-        <Text style={styles.locationText} numberOfLines={1}>
-          {locationLoading ? 'Buscando localização...' : locationText}
-        </Text>
+        <View style={styles.locationIconWrap}>
+          <Ionicons name="location" size={13} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.locationLabel}>Entregar em</Text>
+          <Text style={styles.locationText} numberOfLines={1}>
+            {locationLoading ? 'Buscando localização...' : locationText}
+          </Text>
+        </View>
         <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
       </TouchableOpacity>
 
@@ -396,7 +417,12 @@ const ListHeader = React.memo(function ListHeader({
 
       <View style={styles.contentPad}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Restaurantes</Text>
+          <View>
+            <Text style={styles.sectionTitle}>Restaurantes</Text>
+            <Text style={styles.sectionSubtitle}>
+              {restaurantCount} {restaurantCount === 1 ? 'opção' : 'opções'} por perto
+            </Text>
+          </View>
           <TouchableOpacity activeOpacity={0.7}>
             <View style={styles.seeAllRow}>
               <Text style={styles.seeAllText}>Ver todos</Text>
@@ -634,6 +660,7 @@ export default function HomeScreen() {
             topRatedOnly={topRatedOnly}
             onToggleTopRated={toggleTopRated}
             topInset={insets.top}
+            restaurantCount={displayedRestaurants.length}
           />
         }
         renderItem={({ item, index }) => (
@@ -737,18 +764,25 @@ const styles = StyleSheet.create({
     // paddingTop é aplicado via inline style em ListHeader (insets.top + 8),
     // não aqui -- ver comentário no componente ListHeader.
   },
-  logo: { fontSize: 24, fontWeight: '800', color: colors.primary },
-  greeting: { fontSize: 12.5, color: colors.textMuted, marginTop: 2, fontWeight: '600' },
+  logo: { fontSize: 21, fontWeight: '800', color: colors.text, letterSpacing: -0.3, marginTop: 1 },
+  greeting: { fontSize: 12.5, color: colors.primary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   iconBtnMuted: {
     backgroundColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
   searchRow: {
@@ -759,14 +793,19 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   starBtn: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   starBtnActive: {
     borderColor: colors.star,
@@ -776,35 +815,59 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: H_PAD,
-    marginTop: 12,
+    gap: 10,
+    marginHorizontal: H_PAD,
+    marginTop: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  locationText: { fontSize: 13, color: colors.text, fontWeight: '600' },
+  locationIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationLabel: { fontSize: 10.5, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
+  locationText: { fontSize: 13, color: colors.text, fontWeight: '700', marginTop: 1 },
 
   contentPad: { paddingHorizontal: H_PAD },
 
   categoriesRow: { marginTop: 14 },
   categoriesScrollContent: { paddingHorizontal: H_PAD },
 
-  categoryChip: { alignItems: 'center', width: 68, marginRight: 6 },
+  categoryChip: { alignItems: 'center', width: 68, marginRight: 8 },
   categoryCircle: {
     width: 58,
     height: 58,
     borderRadius: 29,
     backgroundColor: colors.surface,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   categoryCircleActive: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  categoryLabel: { fontSize: 11.5, color: colors.textMuted, marginTop: 6, fontWeight: '600' },
-  categoryLabelActive: { color: colors.primary },
-  categoryEmoji: { fontSize: 26 },
+  categoryLabel: { fontSize: 11.5, color: colors.textMuted, marginTop: 7, fontWeight: '600' },
+  categoryLabelActive: { color: colors.primary, fontWeight: '700' },
+  categoryEmoji: { fontSize: 24 },
 
   // --- barra fixa (sticky) compacta ---
   stickyBar: {
@@ -860,6 +923,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { ...typography.h2, color: colors.text },
+  sectionSubtitle: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 2 },
   seeAllRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAllText: { fontSize: 13, color: colors.primary, fontWeight: '700' },
 
@@ -871,35 +935,64 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 22,
-    marginBottom: 14,
-    padding: 10,
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
-  cardImage: { width: '100%', height: 104, borderRadius: 16, backgroundColor: colors.border },
+  cardImageWrap: { position: 'relative' },
+  cardImage: { width: '100%', height: 110, backgroundColor: colors.border },
+  cardImageClosed: { opacity: 0.45 },
+  ratingBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(28,27,26,0.72)',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  ratingBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
   favoriteBtn: {
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.92)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardBody: { paddingTop: 10, paddingHorizontal: 2 },
+  closedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(28,27,26,0.75)',
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  closedBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  cardBody: { paddingTop: 10, paddingHorizontal: 10, paddingBottom: 12 },
   cardTitle: { fontSize: 13.5, fontWeight: '700', color: colors.text, marginBottom: 5 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
-  cardRating: { fontSize: 11.5, color: colors.text, fontWeight: '700' },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   cardMeta: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600' },
-  cardFee: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600', marginTop: 3 },
+  cardFeeFree: { color: colors.secondary, fontWeight: '700' },
+  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.border },
 
-  emptyState: { alignItems: 'center', marginTop: 40, gap: 10 },
+  emptyState: { alignItems: 'center', marginTop: 40, gap: 10, paddingHorizontal: 30 },
+  emptyIconCircle: {
+    width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
   emptyText: { color: colors.textMuted, textAlign: 'center' },
 
   // --- splash de entrada ---

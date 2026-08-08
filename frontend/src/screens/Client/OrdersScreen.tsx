@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import OrderChatModal from '../../components/OrderChatModal';
 import { useCart } from '../../context/CartContext';
-import { getOrderMessages, listMyOrders, sendOrderMessage } from '../../services/orderService';
+import { cancelOrder, getOrderMessages, listMyOrders, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -58,6 +58,7 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
@@ -110,6 +111,37 @@ export default function OrdersScreen() {
     },
     [addItem, navigation]
   );
+
+  // Só funciona enquanto o restaurante ainda não aceitou o pedido -- passado
+  // isso, o backend recusa (409) e sugerimos falar com o restaurante pelo chat.
+  const handleCancelOrder = useCallback((order: Order) => {
+    Alert.alert('Cancelar pedido', 'Tem certeza que deseja cancelar este pedido?', [
+      { text: 'Manter pedido', style: 'cancel' },
+      {
+        text: 'Cancelar pedido',
+        style: 'destructive',
+        onPress: async () => {
+          setCancelingId(order.id);
+          try {
+            await cancelOrder(order.id);
+            setOrders((prev) =>
+              prev.map((o) =>
+                o.id === order.id ? { ...o, status: 'cancelado', cancelReason: 'Cancelado por você' } : o
+              )
+            );
+          } catch (err: any) {
+            const message =
+              err?.response?.status === 409
+                ? 'Não foi possível cancelar: o restaurante já começou a preparar o pedido. Fale com ele pelo chat.'
+                : 'Não foi possível cancelar o pedido. Tente novamente.';
+            Alert.alert('Erro', message);
+          } finally {
+            setCancelingId(null);
+          }
+        },
+      },
+    ]);
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -198,6 +230,24 @@ export default function OrdersScreen() {
                     <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
                     <Text style={styles.cancelReasonText}>{item.cancelReason}</Text>
                   </View>
+                )}
+
+                {item.status === 'pendente' && (
+                  <TouchableOpacity
+                    style={[styles.cancelOrderBtn, cancelingId === item.id && { opacity: 0.6 }]}
+                    activeOpacity={0.8}
+                    onPress={() => handleCancelOrder(item)}
+                    disabled={cancelingId === item.id}
+                  >
+                    {cancelingId === item.id ? (
+                      <ActivityIndicator color={colors.danger} size="small" />
+                    ) : (
+                      <>
+                        <Ionicons name="close-circle-outline" size={15} color={colors.danger} />
+                        <Text style={styles.cancelOrderBtnText}>Cancelar pedido</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
 
                 {/* ---- Rodapé: ação (conversar OU pedir de novo) + total ----
@@ -353,4 +403,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cancelReasonText: { color: colors.danger, fontSize: 12.5, flex: 1, lineHeight: 17 },
+
+  cancelOrderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+    borderRadius: 12,
+    paddingVertical: 9,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  cancelOrderBtnText: { color: colors.danger, fontSize: 12.5, fontWeight: '700' },
 });
