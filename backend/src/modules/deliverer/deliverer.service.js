@@ -9,7 +9,7 @@ const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
 const MINE_SELECT = `
   SELECT o.id, o.status, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt",
          o.ready_at AS "readyAt", o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
-         r.name AS "restaurantName",
+         r.name AS "restaurantName", r.image AS "restaurantImage",
          r.street AS "restaurantStreet", r.number AS "restaurantNumber",
          r.neighborhood AS "restaurantNeighborhood", r.city AS "restaurantCity",
          r.lat AS "restaurantLat", r.lng AS "restaurantLng",
@@ -33,7 +33,7 @@ async function setAvailability(userId, isAvailable) {
 async function listAvailable() {
   const result = await pool.query(
     `SELECT o.id, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt", o.ready_at AS "readyAt",
-            r.name AS "restaurantName",
+            r.name AS "restaurantName", r.image AS "restaurantImage",
             r.street AS "restaurantStreet", r.number AS "restaurantNumber",
             r.neighborhood AS "restaurantNeighborhood", r.city AS "restaurantCity",
             r.lat AS "restaurantLat", r.lng AS "restaurantLng",

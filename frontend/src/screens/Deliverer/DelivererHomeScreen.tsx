@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
   Linking,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -36,16 +36,18 @@ import { typography } from '../../theme/typography';
 // Enquanto isso não existir, cai para busca por endereço (funciona
 // igual no Waze e no Google Maps, só é um pouco menos preciso).
 type WithCoords = { lat?: number; lng?: number };
+type PlainAddress = { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords;
 
 function addressLine(o: { street?: string; number?: string; neighborhood?: string; city?: string }) {
   const parts = [o.street, o.number].filter(Boolean).join(', ');
   const rest = [o.neighborhood, o.city].filter(Boolean).join(' · ');
-  return [parts, rest].filter(Boolean).join(' — ') || 'Endereço não informado';
+  const full = [parts, rest].filter(Boolean).join(' — ');
+  return full || null;
 }
 
 // Endereço da loja (pra retirar o pedido) — separado do endereço do
-// cliente (pra entregar). Antes do "a_caminho" o entregador precisa ir
-// até o restaurante, não até o cliente.
+// cliente (pra entregar). Vem com prefixo "restaurant" desde o backend
+// exatamente pra nunca ser confundido com o endereço de entrega.
 type WithRestaurantAddress = {
   restaurantStreet?: string;
   restaurantNumber?: string;
@@ -55,11 +57,7 @@ type WithRestaurantAddress = {
   restaurantLng?: number | null;
 };
 
-function restaurantAddressLine(o: WithRestaurantAddress) {
-  return addressLine({ street: o.restaurantStreet, number: o.restaurantNumber, neighborhood: o.restaurantNeighborhood, city: o.restaurantCity });
-}
-
-function pickupDestination(o: WithRestaurantAddress): { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords {
+function restaurantDestination(o: WithRestaurantAddress): PlainAddress {
   return {
     street: o.restaurantStreet,
     number: o.restaurantNumber,
@@ -70,18 +68,27 @@ function pickupDestination(o: WithRestaurantAddress): { street?: string; number?
   };
 }
 
-function openNavigation(order: { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords) {
-  const hasCoords = typeof order.lat === 'number' && typeof order.lng === 'number';
-  const query = encodeURIComponent(addressLine(order));
+function clientDestination(o: { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords): PlainAddress {
+  return { street: o.street, number: o.number, neighborhood: o.neighborhood, city: o.city, lat: o.lat, lng: o.lng };
+}
+
+function openNavigation(destination: PlainAddress) {
+  const line = addressLine(destination);
+  const hasCoords = typeof destination.lat === 'number' && typeof destination.lng === 'number';
+  if (!hasCoords && !line) {
+    Alert.alert('Endereço indisponível', 'Esse endereço ainda não foi cadastrado.');
+    return;
+  }
+  const query = encodeURIComponent(line || '');
 
   const wazeAppUrl = hasCoords
-    ? `waze://?ll=${order.lat},${order.lng}&navigate=yes`
+    ? `waze://?ll=${destination.lat},${destination.lng}&navigate=yes`
     : `waze://?q=${query}&navigate=yes`;
   const wazeWebUrl = hasCoords
-    ? `https://waze.com/ul?ll=${order.lat},${order.lng}&navigate=yes`
+    ? `https://waze.com/ul?ll=${destination.lat},${destination.lng}&navigate=yes`
     : `https://waze.com/ul?q=${query}&navigate=yes`;
   const googleMapsUrl = hasCoords
-    ? `https://www.google.com/maps/dir/?api=1&destination=${order.lat},${order.lng}`
+    ? `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}`
     : `https://www.google.com/maps/dir/?api=1&destination=${query}`;
 
   Alert.alert('Abrir rota', 'Escolha o app de navegação', [
@@ -110,20 +117,92 @@ function openNavigation(order: { street?: string; number?: string; neighborhood?
   ]);
 }
 
+// ---------------------------------------------------------------------
+// Rota do pedido: dois pontos numa mini-timeline vertical, cada um com
+// cor/ícone próprios (loja = verde/loja, cliente = vermelho/bandeira),
+// pra nunca dar pra confundir qual endereço é qual. `stage` diz qual dos
+// dois é o passo atual (o outro fica esmaecido ou marcado como concluído).
+// ---------------------------------------------------------------------
+function RouteStops({
+  restaurantAddress,
+  clientAddress,
+  stage,
+  onNavigateRestaurant,
+  onNavigateClient,
+}: {
+  restaurantAddress: string | null;
+  clientAddress: string | null;
+  stage: 'restaurant' | 'client';
+  onNavigateRestaurant: () => void;
+  onNavigateClient: () => void;
+}) {
+  const restaurantDone = stage === 'client';
+
+  return (
+    <View style={styles.stopsWrap}>
+      <View style={styles.stopRow}>
+        <View style={styles.stopTimelineCol}>
+          <View style={[styles.stopDot, { backgroundColor: colors.secondary }, restaurantDone && styles.stopDotDone]}>
+            <Ionicons name={restaurantDone ? 'checkmark' : 'storefront'} size={12} color={colors.white} />
+          </View>
+          <View style={[styles.stopLine, restaurantDone && { backgroundColor: colors.secondary }]} />
+        </View>
+        <View style={[styles.stopContent, restaurantDone && { opacity: 0.5 }]}>
+          <Text style={[styles.stopLabel, { color: colors.secondary }]}>RETIRAR NA LOJA</Text>
+          <Text style={styles.stopAddress} numberOfLines={2}>
+            {restaurantAddress || 'Endereço da loja não cadastrado'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.stopRouteBtn, { backgroundColor: colors.secondary }, restaurantDone && { opacity: 0.4 }]}
+          onPress={onNavigateRestaurant}
+        >
+          <Ionicons name="navigate" size={14} color={colors.white} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.stopRow}>
+        <View style={styles.stopTimelineCol}>
+          <View style={[styles.stopDot, { backgroundColor: colors.primary }, stage !== 'client' && styles.stopDotPending]}>
+            <Ionicons name="flag" size={12} color={colors.white} />
+          </View>
+        </View>
+        <View style={[styles.stopContent, stage !== 'client' && { opacity: 0.6 }]}>
+          <Text style={[styles.stopLabel, { color: colors.primary }]}>ENTREGAR AO CLIENTE</Text>
+          <Text style={styles.stopAddress} numberOfLines={2}>
+            {clientAddress || 'Endereço do cliente não informado'}
+          </Text>
+        </View>
+        <TouchableOpacity style={[styles.stopRouteBtn, { backgroundColor: colors.primary }]} onPress={onNavigateClient}>
+          <Ionicons name="navigate" size={14} color={colors.white} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function RestaurantAvatar({ uri, size = 44 }: { uri?: string | null; size?: number }) {
+  if (uri) {
+    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size * 0.28 }} contentFit="cover" cachePolicy="memory-disk" />;
+  }
+  return (
+    <View style={[styles.avatarPlaceholder, { width: size, height: size, borderRadius: size * 0.28 }]}>
+      <Ionicons name="storefront" size={size * 0.45} color={colors.primary} />
+    </View>
+  );
+}
+
 export default function DelivererHomeScreen() {
   const { user, signOut } = useAuth();
   const [available, setAvailable] = useState(false);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
 
   const [radar, setRadar] = useState<RadarOrder[]>([]);
-  // qual card do radar está mostrando a localização da loja expandida
-  // (não confundir com o endereço do cliente, que já fica visível sempre)
-  const [expandedRestaurantId, setExpandedRestaurantId] = useState<string | null>(null);
   const [loadingRadar, setLoadingRadar] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
-  // Agora suportamos várias entregas ativas ao mesmo tempo em vez de uma só.
+  // Suporta várias entregas ativas ao mesmo tempo.
   const [activeOrders, setActiveOrders] = useState<MyDeliveryOrder[]>([]);
   const [history, setHistory] = useState<MyDeliveryOrder[]>([]);
 
@@ -338,93 +417,101 @@ export default function DelivererHomeScreen() {
             </Text>
 
             {activeOrders.map((activeOrder) => {
-              // Antes de retirar, o destino é o restaurante; depois, é o cliente.
-              const goingToPickup = activeOrder.status === 'procurando_entregador';
-              const destination = goingToPickup ? pickupDestination(activeOrder) : activeOrder;
-              const destinationLine = goingToPickup ? restaurantAddressLine(activeOrder) : addressLine(activeOrder);
+              const stage: 'restaurant' | 'client' = activeOrder.status === 'procurando_entregador' ? 'restaurant' : 'client';
+              const restaurantAddress = addressLine(restaurantDestination(activeOrder));
+              const clientAddress = addressLine(clientDestination(activeOrder));
+
               return (
-              <View key={activeOrder.id} style={[styles.activeCard, { marginBottom: 14 }]}>
-                <View style={styles.activeHeaderRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.activeRestaurant}>{activeOrder.restaurantName}</Text>
-                    <Text style={styles.activeStopLabel}>{goingToPickup ? 'Retirar em' : 'Entregar em'}</Text>
-                    <Text style={styles.activeAddress}>{destinationLine}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.routeBtn} onPress={() => openNavigation(destination)}>
-                    <Ionicons name="navigate" size={16} color={colors.white} />
-                    <Text style={styles.routeBtnText}>Rota</Text>
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.activeTotal}>Pedido #{activeOrder.id.slice(-5)} · R$ {Number(activeOrder.total).toFixed(2)}</Text>
-
-                {activeOrder.status === 'procurando_entregador' && (
-                  <View style={styles.codeBox}>
-                    {pickupConfirmedId === activeOrder.id ? (
-                      <View style={styles.successBox}>
-                        <Animated.View style={{ transform: [{ scale: checkScale }] }}>
-                          <Ionicons name="checkmark-circle" size={44} color={colors.secondary} />
-                        </Animated.View>
-                        <Text style={styles.successText}>Retirada confirmada!</Text>
-                        <Text style={styles.successSub}>Agora siga até o cliente</Text>
-                      </View>
-                    ) : (
-                      <>
-                        <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
-                        <View style={styles.codeRow}>
-                          <TextInput
-                            style={styles.codeInput}
-                            value={pickupCodes[activeOrder.id] || ''}
-                            onChangeText={(text) => setPickupCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
-                            placeholder="0000"
-                            keyboardType="number-pad"
-                            maxLength={4}
-                            editable={confirmingId !== activeOrder.id}
-                          />
-                          <TouchableOpacity
-                            style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
-                            onPress={() => handleConfirmPickup(activeOrder)}
-                            disabled={confirmingId === activeOrder.id}
-                          >
-                            {confirmingId === activeOrder.id ? (
-                              <ActivityIndicator color={colors.white} />
-                            ) : (
-                              <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
-                            )}
-                          </TouchableOpacity>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                )}
-
-                {activeOrder.status === 'a_caminho' && (
-                  <View style={styles.codeBox}>
-                    <Text style={styles.codeLabel}>Peça ao cliente o código de entrega</Text>
-                    <View style={styles.codeRow}>
-                      <TextInput
-                        style={styles.codeInput}
-                        value={deliveryCodes[activeOrder.id] || ''}
-                        onChangeText={(text) => setDeliveryCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
-                        placeholder="0000"
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        editable={confirmingId !== activeOrder.id}
-                      />
-                      <TouchableOpacity
-                        style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
-                        onPress={() => handleConfirmDelivery(activeOrder)}
-                        disabled={confirmingId === activeOrder.id}
-                      >
-                        {confirmingId === activeOrder.id ? (
-                          <ActivityIndicator color={colors.white} />
-                        ) : (
-                          <Text style={styles.confirmBtnText}>Confirmar entrega</Text>
-                        )}
-                      </TouchableOpacity>
+                <View key={activeOrder.id} style={[styles.card, { marginBottom: 14 }]}>
+                  <View style={styles.cardHeaderRow}>
+                    <RestaurantAvatar uri={activeOrder.restaurantImage} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardRestaurantName} numberOfLines={1}>{activeOrder.restaurantName}</Text>
+                      <Text style={styles.cardOrderMeta}>Pedido #{activeOrder.id.slice(-5)}</Text>
+                    </View>
+                    <View style={styles.totalPill}>
+                      <Text style={styles.totalPillText}>R$ {Number(activeOrder.total).toFixed(2)}</Text>
                     </View>
                   </View>
-                )}
-              </View>
+
+                  <RouteStops
+                    restaurantAddress={restaurantAddress}
+                    clientAddress={clientAddress}
+                    stage={stage}
+                    onNavigateRestaurant={() => openNavigation(restaurantDestination(activeOrder))}
+                    onNavigateClient={() => openNavigation(clientDestination(activeOrder))}
+                  />
+
+                  {activeOrder.status === 'procurando_entregador' && (
+                    <View style={styles.codeBox}>
+                      {pickupConfirmedId === activeOrder.id ? (
+                        <View style={styles.successBox}>
+                          <Animated.View style={{ transform: [{ scale: checkScale }] }}>
+                            <Ionicons name="checkmark-circle" size={44} color={colors.secondary} />
+                          </Animated.View>
+                          <Text style={styles.successText}>Retirada confirmada!</Text>
+                          <Text style={styles.successSub}>Agora siga até o cliente</Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.codeLabel}>Peça ao restaurante o código de retirada</Text>
+                          <View style={styles.codeRow}>
+                            <TextInput
+                              style={styles.codeInput}
+                              value={pickupCodes[activeOrder.id] || ''}
+                              onChangeText={(text) => setPickupCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
+                              placeholder="0000"
+                              placeholderTextColor={colors.textMuted}
+                              keyboardType="number-pad"
+                              maxLength={4}
+                              editable={confirmingId !== activeOrder.id}
+                            />
+                            <TouchableOpacity
+                              style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
+                              onPress={() => handleConfirmPickup(activeOrder)}
+                              disabled={confirmingId === activeOrder.id}
+                            >
+                              {confirmingId === activeOrder.id ? (
+                                <ActivityIndicator color={colors.white} />
+                              ) : (
+                                <Text style={styles.confirmBtnText}>Confirmar retirada</Text>
+                              )}
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  )}
+
+                  {activeOrder.status === 'a_caminho' && (
+                    <View style={styles.codeBox}>
+                      <Text style={styles.codeLabel}>Peça ao cliente o código de entrega</Text>
+                      <View style={styles.codeRow}>
+                        <TextInput
+                          style={styles.codeInput}
+                          value={deliveryCodes[activeOrder.id] || ''}
+                          onChangeText={(text) => setDeliveryCodes((prev) => ({ ...prev, [activeOrder.id]: text }))}
+                          placeholder="0000"
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType="number-pad"
+                          maxLength={4}
+                          editable={confirmingId !== activeOrder.id}
+                        />
+                        <TouchableOpacity
+                          style={[styles.confirmBtn, confirmingId === activeOrder.id && { opacity: 0.6 }]}
+                          onPress={() => handleConfirmDelivery(activeOrder)}
+                          disabled={confirmingId === activeOrder.id}
+                        >
+                          {confirmingId === activeOrder.id ? (
+                            <ActivityIndicator color={colors.white} />
+                          ) : (
+                            <Text style={styles.confirmBtnText}>Confirmar entrega</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
               );
             })}
           </View>
@@ -450,53 +537,41 @@ export default function DelivererHomeScreen() {
             </View>
           ) : (
             radar.map((order) => {
-              const restaurantExpanded = expandedRestaurantId === order.id;
+              const restaurantAddress = addressLine(restaurantDestination(order));
+              const clientAddress = addressLine(clientDestination(order));
               return (
-              <View key={order.id} style={styles.radarCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.radarRestaurant}>{order.restaurantName}</Text>
-                  <Text style={styles.radarAddress}>{addressLine(order)}</Text>
-                  <Text style={styles.radarTotal}>Pedido #{order.id.slice(-5)} · R$ {Number(order.total).toFixed(2)}</Text>
+                <View key={order.id} style={styles.card}>
+                  <View style={styles.cardHeaderRow}>
+                    <RestaurantAvatar uri={order.restaurantImage} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.cardRestaurantName} numberOfLines={1}>{order.restaurantName}</Text>
+                      <Text style={styles.cardOrderMeta}>Pedido #{order.id.slice(-5)}</Text>
+                    </View>
+                    <View style={styles.totalPill}>
+                      <Text style={styles.totalPillText}>R$ {Number(order.total).toFixed(2)}</Text>
+                    </View>
+                  </View>
+
+                  <RouteStops
+                    restaurantAddress={restaurantAddress}
+                    clientAddress={clientAddress}
+                    stage="restaurant"
+                    onNavigateRestaurant={() => openNavigation(restaurantDestination(order))}
+                    onNavigateClient={() => openNavigation(clientDestination(order))}
+                  />
 
                   <TouchableOpacity
-                    style={styles.showRestaurantBtn}
-                    onPress={() => setExpandedRestaurantId(restaurantExpanded ? null : order.id)}
+                    style={[styles.acceptBtn, acceptingId === order.id && { opacity: 0.6 }]}
+                    onPress={() => handleAcceptOrder(order)}
+                    disabled={acceptingId === order.id}
                   >
-                    <Ionicons name="storefront-outline" size={12} color={colors.secondary} />
-                    <Text style={styles.showRestaurantBtnText}>
-                      {restaurantExpanded ? 'Ocultar' : 'Ver'} localização da loja
-                    </Text>
-                    <Ionicons name={restaurantExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.secondary} />
+                    {acceptingId === order.id ? (
+                      <ActivityIndicator color={colors.white} />
+                    ) : (
+                      <Text style={styles.acceptBtnText}>Aceitar corrida</Text>
+                    )}
                   </TouchableOpacity>
-
-                  {restaurantExpanded && (
-                    <View style={styles.restaurantLocationBox}>
-                      <Ionicons name="location-outline" size={13} color={colors.secondary} style={{ marginTop: 1 }} />
-                      <Text style={styles.restaurantLocationText}>{restaurantAddressLine(order)}</Text>
-                      <TouchableOpacity
-                        style={styles.restaurantLocationNavBtn}
-                        onPress={() => openNavigation(pickupDestination(order))}
-                      >
-                        <Ionicons name="navigate" size={12} color={colors.white} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
                 </View>
-                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(order)}>
-                  <Ionicons name="navigate-outline" size={18} color={colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.acceptBtn, acceptingId === order.id && { opacity: 0.6 }]}
-                  onPress={() => handleAcceptOrder(order)}
-                  disabled={acceptingId === order.id}
-                >
-                  {acceptingId === order.id ? (
-                    <ActivityIndicator color={colors.white} />
-                  ) : (
-                    <Text style={styles.acceptBtnText}>Aceitar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
               );
             })
           )}
@@ -507,13 +582,11 @@ export default function DelivererHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  successBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6, gap: 4 },
-  successText: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginTop: 6 },
-  successSub: { color: colors.textMuted, fontSize: 12.5 },
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   hello: { ...typography.h1, color: colors.text },
   sub: { color: colors.textMuted, marginTop: 2 },
+
   statusCard: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginTop: 20,
@@ -521,6 +594,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: { ...typography.bodyBold, color: colors.text },
   statusSub: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
+
   statsRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   statCard: {
     flex: 1, backgroundColor: colors.surface, borderRadius: 16, padding: 16, gap: 6,
@@ -528,6 +602,7 @@ const styles = StyleSheet.create({
   },
   statValue: { ...typography.h1, color: colors.text },
   statLabel: { color: colors.textMuted, fontSize: 12 },
+
   section: { marginTop: 26 },
   sectionTitle: { ...typography.h2, color: colors.text, marginBottom: 12 },
   emptyBox: {
@@ -537,53 +612,50 @@ const styles = StyleSheet.create({
   },
   emptyText: { ...typography.bodyBold, color: colors.text, marginTop: 4 },
   emptySub: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
-  radarCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
+
+  // Card de pedido (radar e entrega ativa compartilham o mesmo visual base)
+  card: {
+    backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1,
   },
-  radarRestaurant: { ...typography.bodyBold, color: colors.text },
-  radarAddress: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
-  radarTotal: { color: colors.text, fontSize: 12.5, marginTop: 4, fontWeight: '700' },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  avatarPlaceholder: { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  cardRestaurantName: { ...typography.bodyBold, color: colors.text, fontSize: 15 },
+  cardOrderMeta: { color: colors.textMuted, fontSize: 11.5, marginTop: 1 },
+  totalPill: { backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  totalPillText: { color: colors.text, fontWeight: '800', fontSize: 12.5 },
 
-  showRestaurantBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8,
+  // Mini-timeline com os dois pontos da rota (loja -> cliente), cada um
+  // com cor e ícone próprios pra nunca dar pra confundir.
+  stopsWrap: { backgroundColor: colors.background, borderRadius: 16, padding: 12, gap: 0 },
+  stopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  stopTimelineCol: { alignItems: 'center', width: 26 },
+  stopDot: {
+    width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center',
   },
-  showRestaurantBtnText: { color: colors.secondary, fontSize: 11.5, fontWeight: '700' },
-  restaurantLocationBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6,
-    backgroundColor: colors.secondaryLight, borderRadius: 10, padding: 8,
-  },
-  restaurantLocationText: { flex: 1, color: colors.text, fontSize: 11.5 },
-  restaurantLocationNavBtn: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: colors.secondary,
-    alignItems: 'center', justifyContent: 'center',
+  stopDotDone: { backgroundColor: colors.textMuted },
+  stopDotPending: { opacity: 0.45 },
+  stopLine: { width: 2, flex: 1, minHeight: 18, backgroundColor: colors.border, marginTop: 2 },
+  stopContent: { flex: 1, paddingTop: 2, paddingBottom: 14 },
+  stopLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.4 },
+  stopAddress: { color: colors.text, fontSize: 13, marginTop: 3, lineHeight: 17 },
+  stopRouteBtn: {
+    width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 1,
   },
 
-  radarRouteBtn: {
-    width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
-  },
   acceptBtn: {
-    backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10,
-    minWidth: 90, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13, marginTop: 12,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
-  acceptBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 },
-  activeCard: {
-    backgroundColor: colors.surface, borderRadius: 16, padding: 18,
-    borderWidth: 1, borderColor: colors.border, gap: 4,
-  },
-  activeHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  routeBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: colors.secondary, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-  },
-  routeBtnText: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
-  activeRestaurant: { ...typography.h2, color: colors.text },
-  activeStopLabel: { color: colors.secondary, fontSize: 10.5, fontWeight: '800', letterSpacing: 0.4, marginTop: 4, textTransform: 'uppercase' },
-  activeAddress: { color: colors.textMuted, fontSize: 13, marginTop: 1 },
-  activeTotal: { color: colors.text, fontWeight: '700', marginTop: 6 },
-  codeBox: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
+  acceptBtnText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+
+  successBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 6, gap: 4 },
+  successText: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginTop: 6 },
+  successSub: { color: colors.textMuted, fontSize: 12.5 },
+
+  codeBox: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: colors.border },
   codeLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginBottom: 8 },
   codeRow: { flexDirection: 'row', gap: 10 },
   codeInput: {
