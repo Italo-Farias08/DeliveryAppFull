@@ -76,3 +76,28 @@ export async function confirmDelivery(orderId: string, code: string): Promise<{ 
   const { data } = await api.patch(`/deliverer/orders/${orderId}/confirm-delivery`, { code });
   return data;
 }
+
+// Devolve a corrida pro radar -- só funciona enquanto o pedido ainda não
+// foi retirado na loja (status "procurando_entregador"). O backend recusa
+// (409) se já tiver sido retirado.
+export async function abandonDelivery(orderId: string): Promise<{ id: string; status: string }> {
+  const { data } = await api.patch(`/deliverer/orders/${orderId}/abandon`);
+  return data;
+}
+
+export interface DelivererOrderMessage {
+  id: string;
+  senderRole: 'client' | 'restaurant' | 'deliverer';
+  message: string;
+  createdAt: string;
+}
+
+export async function getDelivererOrderMessages(orderId: string): Promise<DelivererOrderMessage[]> {
+  const { data } = await api.get(`/deliverer/orders/${orderId}/messages`);
+  return data;
+}
+
+export async function sendDelivererOrderMessage(orderId: string, message: string): Promise<DelivererOrderMessage> {
+  const { data } = await api.post(`/deliverer/orders/${orderId}/messages`, { message });
+  return data;
+}

@@ -149,4 +149,58 @@ async function confirmDelivery(delivererId, orderId, code) {
   return result.rows[0];
 }
 
-module.exports = { setAvailability, listAvailable, listMine, acceptOrder, confirmPickup, confirmDelivery };
+// Entregador desiste da corrida ANTES de retirar o pedido na loja (ex:
+// pneu furou, trânsito impossível). Só funciona nessa janela porque depois
+// da retirada o pedido já está fisicamente com ele -- devolver pro radar
+// nesse ponto deixaria outro entregador "aceitando" uma comida que não
+// está mais no restaurante. Volta pro radar pra qualquer entregador pegar.
+async function abandonOrder(delivererId, orderId) {
+  const result = await pool.query(
+    `UPDATE orders SET deliverer_id = NULL
+     WHERE id = $1 AND deliverer_id = $2 AND status = 'procurando_entregador'
+     RETURNING id, status, tenant_id AS "tenantId", client_id AS "clientId"`,
+    [orderId, delivererId]
+  );
+  if (result.rowCount === 0) {
+    throw new AppError(
+      'Não foi possível devolver essa corrida — ela já pode ter sido retirada ou não pertence mais a você.',
+      409
+    );
+  }
+  const order = result.rows[0];
+
+  const radarResult = await pool.query(
+    `SELECT o.id, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt", o.ready_at AS "readyAt",
+            r.name AS "restaurantName", r.image AS "restaurantImage",
+            r.street AS "restaurantStreet", r.number AS "restaurantNumber",
+            r.neighborhood AS "restaurantNeighborhood", r.city AS "restaurantCity",
+            r.lat AS "restaurantLat", r.lng AS "restaurantLng",
+            a.street, a.number, a.neighborhood, a.city
+     FROM orders o
+     JOIN restaurants r ON r.id = o.restaurant_id
+     LEFT JOIN addresses a ON a.id = o.address_id
+     WHERE o.id = $1`,
+    [orderId]
+  );
+
+  toDeliverers('order:available', radarResult.rows[0]);
+  toTenant(order.tenantId, 'order:courierAssigned', { id: order.id, status: order.status, delivererId: null });
+  toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
+  sendPushToTenant(order.tenantId, {
+    title: 'Procurando novo entregador 🔄',
+    body: 'O entregador anterior não pôde seguir com a corrida. Já voltou pro radar de outros entregadores.',
+    data: { orderId: order.id, type: 'order:courierAssigned' },
+  });
+
+  return { id: order.id, status: order.status };
+}
+
+module.exports = {
+  setAvailability,
+  listAvailable,
+  listMine,
+  acceptOrder,
+  confirmPickup,
+  confirmDelivery,
+  abandonOrder,
+};

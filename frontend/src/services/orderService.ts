@@ -26,7 +26,7 @@ export async function cancelOrder(orderId: string, reason?: string): Promise<{ i
 
 export interface OrderMessage {
   id: string;
-  senderRole: 'client' | 'restaurant';
+  senderRole: 'client' | 'restaurant' | 'deliverer';
   message: string;
   createdAt: string;
 }

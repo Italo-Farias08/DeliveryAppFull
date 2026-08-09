@@ -19,7 +19,7 @@ import { typography } from '../theme/typography';
 
 export interface ChatMessage {
   id: string;
-  senderRole: 'client' | 'restaurant';
+  senderRole: 'client' | 'restaurant' | 'deliverer';
   message: string;
   createdAt: string;
 }
@@ -28,11 +28,20 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   orderId: string;
-  myRole: 'client' | 'restaurant';
+  myRole: 'client' | 'restaurant' | 'deliverer';
   title: string;
   loadMessages: (orderId: string) => Promise<ChatMessage[]>;
   sendMessage: (orderId: string, text: string) => Promise<ChatMessage>;
 }
+
+// Conversa em grupo por pedido: cliente, restaurante e entregador dividem
+// a mesma thread. Cada papel tem um rótulo/cor pra ficar claro quem
+// escreveu, já que "não é meu" agora pode ser qualquer um dos outros dois.
+const ROLE_LABEL: Record<ChatMessage['senderRole'], string> = {
+  client: 'Cliente',
+  restaurant: 'Restaurante',
+  deliverer: 'Entregador',
+};
 
 export default function OrderChatModal({ visible, onClose, orderId, myRole, title, loadMessages, sendMessage }: Props) {
   const insets = useSafeAreaInsets();
@@ -125,8 +134,11 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
                 const mine = item.senderRole === myRole;
                 return (
                   <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>
-                    <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                      <Text style={[styles.bubbleText, mine && { color: colors.white }]}>{item.message}</Text>
+                    <View style={{ maxWidth: '78%' }}>
+                      {!mine && <Text style={styles.bubbleRoleLabel}>{ROLE_LABEL[item.senderRole]}</Text>}
+                      <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+                        <Text style={[styles.bubbleText, mine && { color: colors.white }]}>{item.message}</Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -165,7 +177,8 @@ const styles = StyleSheet.create({
   bubbleRow: { flexDirection: 'row', marginBottom: 8 },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
-  bubble: { maxWidth: '78%', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleRoleLabel: { color: colors.textMuted, fontSize: 10.5, fontWeight: '700', marginBottom: 3, marginLeft: 4 },
+  bubble: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
   bubbleText: { color: colors.text, fontSize: 14 },

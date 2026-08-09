@@ -245,7 +245,7 @@ export async function markOrderReady(orderId: string): Promise<{ id: string; sta
 
 export interface TenantOrderMessage {
   id: string;
-  senderRole: 'client' | 'restaurant';
+  senderRole: 'client' | 'restaurant' | 'deliverer';
   message: string;
   createdAt: string;
 }

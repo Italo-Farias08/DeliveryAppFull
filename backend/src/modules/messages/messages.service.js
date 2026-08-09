@@ -1,11 +1,12 @@
 const { pool } = require('../../config/db');
 const AppError = require('../../utils/AppError');
-const { toClient, toTenant } = require('../../realtime/socket');
+const { toClient, toTenant, toDeliverer } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
 
 async function getOrderParties(orderId) {
   const result = await pool.query(
-    `SELECT id, client_id AS "clientId", tenant_id AS "tenantId" FROM orders WHERE id = $1`,
+    `SELECT id, client_id AS "clientId", tenant_id AS "tenantId", deliverer_id AS "delivererId"
+     FROM orders WHERE id = $1`,
     [orderId]
   );
   if (result.rowCount === 0) throw new AppError('Pedido não encontrado', 404);
@@ -33,25 +34,33 @@ async function sendMessage(orderId, senderRole, senderId, message) {
   );
   const saved = result.rows[0];
   const payload = { orderId, ...saved };
-  // manda para os dois lados — quem escreveu já atualiza pela resposta HTTP,
-  // mas o socket garante que o outro lado da conversa recebe na hora
+  // Conversa em grupo por pedido: cliente, restaurante e (quando já tem
+  // entregador designado) o entregador dividem a mesma thread. Manda pra
+  // todo mundo -- quem escreveu já atualiza pela resposta HTTP, mas o
+  // socket garante que os outros lados recebem na hora.
   toClient(order.clientId, 'order:message', payload);
   toTenant(order.tenantId, 'order:message', payload);
+  if (order.delivererId) {
+    toDeliverer(order.delivererId, 'order:message', payload);
+  }
 
   // push só pra quem não escreveu a mensagem -- quem enviou já vê na hora
   // pela própria tela de chat
-  if (senderRole === 'restaurant') {
-    sendPushToUser(order.clientId, {
-      title: 'Nova mensagem do restaurante 💬',
-      body: message,
-      data: { orderId, type: 'order:message' },
-    });
-  } else {
-    sendPushToTenant(order.tenantId, {
-      title: 'Nova mensagem do cliente 💬',
-      body: message,
-      data: { orderId, type: 'order:message' },
-    });
+  const senderLabel = { client: 'do cliente', restaurant: 'do restaurante', deliverer: 'do entregador' }[senderRole];
+  const pushPayload = {
+    title: `Nova mensagem ${senderLabel} 💬`,
+    body: message,
+    data: { orderId, type: 'order:message' },
+  };
+
+  if (senderRole !== 'client') {
+    sendPushToUser(order.clientId, pushPayload);
+  }
+  if (senderRole !== 'restaurant') {
+    sendPushToTenant(order.tenantId, pushPayload);
+  }
+  if (senderRole !== 'deliverer' && order.delivererId) {
+    sendPushToUser(order.delivererId, pushPayload);
   }
 
   return saved;

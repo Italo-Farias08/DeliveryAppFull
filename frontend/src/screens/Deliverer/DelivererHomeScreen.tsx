@@ -16,15 +16,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import OrderChatModal from '../../components/OrderChatModal';
 import { useAuth } from '../../context/AuthContext';
 import {
   MyDeliveryOrder,
   RadarOrder,
+  abandonDelivery,
   acceptDelivery,
   confirmDelivery,
   confirmPickup,
+  getDelivererOrderMessages,
   listAvailableOrders,
   listMyDeliveries,
+  sendDelivererOrderMessage,
   setAvailability,
 } from '../../services/delivererService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
@@ -192,6 +196,25 @@ function RestaurantAvatar({ uri, size = 44 }: { uri?: string | null; size?: numb
   );
 }
 
+// ---------------------------------------------------------------------
+// Coluna de valores no cabeçalho do card: total do pedido (neutro, em
+// cima) e o valor que o entregador ganha nessa corrida (destacado, com
+// ícone de bicicleta, embaixo).
+// ---------------------------------------------------------------------
+function OrderValues({ total, deliveryFee }: { total: number; deliveryFee?: number }) {
+  return (
+    <View style={styles.valuesCol}>
+      <View style={styles.totalPill}>
+        <Text style={styles.totalPillText}>R$ {Number(total).toFixed(2)}</Text>
+      </View>
+      <View style={styles.feePill}>
+        <Ionicons name="bicycle" size={11} color={colors.primary} />
+        <Text style={styles.feePillText}>+R$ {Number(deliveryFee || 0).toFixed(2)}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function DelivererHomeScreen() {
   const { user, signOut } = useAuth();
   const [available, setAvailable] = useState(false);
@@ -212,6 +235,9 @@ export default function DelivererHomeScreen() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [pickupConfirmedId, setPickupConfirmedId] = useState<string | null>(null);
   const checkScale = useRef(new Animated.Value(0)).current;
+
+  const [chatOrder, setChatOrder] = useState<MyDeliveryOrder | null>(null);
+  const [abandoningId, setAbandoningId] = useState<string | null>(null);
 
   const availableRef = useRef(available);
   availableRef.current = available;
@@ -299,6 +325,37 @@ export default function DelivererHomeScreen() {
     } finally {
       setAcceptingId(null);
     }
+  }
+
+  // Devolve a corrida pro radar -- só funciona antes de retirar o pedido
+  // na loja. Depois da retirada o pedido já está com o entregador, então
+  // não dá mais pra outro assumir do ponto em que ele parou.
+  function handleAbandonOrder(order: MyDeliveryOrder) {
+    Alert.alert(
+      'Devolver corrida?',
+      'O pedido volta pro radar pra outro entregador aceitar. Só faça isso se você realmente não puder concluir essa entrega.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Devolver corrida',
+          style: 'destructive',
+          onPress: async () => {
+            setAbandoningId(order.id);
+            try {
+              await abandonDelivery(order.id);
+              await loadMine();
+            } catch (err: any) {
+              const message =
+                err?.response?.data?.error || 'Não foi possível devolver essa corrida. Talvez você já tenha retirado o pedido.';
+              Alert.alert('Não foi possível devolver', message);
+              await loadMine();
+            } finally {
+              setAbandoningId(null);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function handleConfirmPickup(order: MyDeliveryOrder) {
@@ -429,9 +486,7 @@ export default function DelivererHomeScreen() {
                       <Text style={styles.cardRestaurantName} numberOfLines={1}>{activeOrder.restaurantName}</Text>
                       <Text style={styles.cardOrderMeta}>Pedido #{activeOrder.id.slice(-5)}</Text>
                     </View>
-                    <View style={styles.totalPill}>
-                      <Text style={styles.totalPillText}>R$ {Number(activeOrder.total).toFixed(2)}</Text>
-                    </View>
+                    <OrderValues total={activeOrder.total} deliveryFee={activeOrder.deliveryFee} />
                   </View>
 
                   <RouteStops
@@ -441,6 +496,30 @@ export default function DelivererHomeScreen() {
                     onNavigateRestaurant={() => openNavigation(restaurantDestination(activeOrder))}
                     onNavigateClient={() => openNavigation(clientDestination(activeOrder))}
                   />
+
+                  <View style={styles.actionsRow}>
+                    <TouchableOpacity style={styles.chatBtn} onPress={() => setChatOrder(activeOrder)}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} />
+                      <Text style={styles.chatBtnText}>Conversar</Text>
+                    </TouchableOpacity>
+
+                    {activeOrder.status === 'procurando_entregador' && (
+                      <TouchableOpacity
+                        style={[styles.abandonBtn, abandoningId === activeOrder.id && { opacity: 0.6 }]}
+                        onPress={() => handleAbandonOrder(activeOrder)}
+                        disabled={abandoningId === activeOrder.id}
+                      >
+                        {abandoningId === activeOrder.id ? (
+                          <ActivityIndicator color={colors.danger} size="small" />
+                        ) : (
+                          <>
+                            <Ionicons name="arrow-undo-outline" size={15} color={colors.danger} />
+                            <Text style={styles.abandonBtnText}>Devolver corrida</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
 
                   {activeOrder.status === 'procurando_entregador' && (
                     <View style={styles.codeBox}>
@@ -547,9 +626,7 @@ export default function DelivererHomeScreen() {
                       <Text style={styles.cardRestaurantName} numberOfLines={1}>{order.restaurantName}</Text>
                       <Text style={styles.cardOrderMeta}>Pedido #{order.id.slice(-5)}</Text>
                     </View>
-                    <View style={styles.totalPill}>
-                      <Text style={styles.totalPillText}>R$ {Number(order.total).toFixed(2)}</Text>
-                    </View>
+                    <OrderValues total={order.total} deliveryFee={order.deliveryFee} />
                   </View>
 
                   <RouteStops
@@ -577,6 +654,18 @@ export default function DelivererHomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {chatOrder && (
+        <OrderChatModal
+          visible={!!chatOrder}
+          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.id}
+          myRole="deliverer"
+          title={chatOrder.restaurantName}
+          loadMessages={getDelivererOrderMessages}
+          sendMessage={sendDelivererOrderMessage}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -623,8 +712,14 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   cardRestaurantName: { ...typography.bodyBold, color: colors.text, fontSize: 15 },
   cardOrderMeta: { color: colors.textMuted, fontSize: 11.5, marginTop: 1 },
+  valuesCol: { alignItems: 'flex-end', gap: 6 },
   totalPill: { backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   totalPillText: { color: colors.text, fontWeight: '800', fontSize: 12.5 },
+  feePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
+  },
+  feePillText: { color: colors.primary, fontWeight: '800', fontSize: 12 },
 
   // Mini-timeline com os dois pontos da rota (loja -> cliente), cada um
   // com cor e ícone próprios pra nunca dar pra confundir.
@@ -643,6 +738,20 @@ const styles = StyleSheet.create({
   stopRouteBtn: {
     width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 1,
   },
+
+  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  chatBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: colors.primaryLight, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9,
+  },
+  chatBtnText: { color: colors.primary, fontSize: 12.5, fontWeight: '700' },
+  abandonBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: colors.danger, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9,
+  },
+  abandonBtnText: { color: colors.danger, fontSize: 12.5, fontWeight: '700' },
 
   acceptBtn: {
     backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13, marginTop: 12,
