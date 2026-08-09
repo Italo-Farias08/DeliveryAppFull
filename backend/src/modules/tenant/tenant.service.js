@@ -20,7 +20,8 @@ const TENANT_ORDER_SELECT = `
 `;
 
 const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
-            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen"`;
+            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            street, number, complement, neighborhood, city, state, zip, lat, lng`;
 
 async function listRestaurants(db) {
   const result = await db.query(
@@ -53,6 +54,26 @@ async function updateRestaurant(db, restaurantId, data) {
      WHERE id = $9
      RETURNING ${RESTAURANT_SELECT_FIELDS}`,
     [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen, restaurantId]
+  );
+  if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+// Endereço/GPS da loja — rota própria (igual logo/banner), separada do
+// update geral do restaurante. Assim, trocar taxa de entrega ou abrir/
+// fechar a loja nunca apaga a localização já salva sem querer.
+async function updateRestaurantLocation(db, restaurantId, tenantId, data) {
+  const result = await db.query(
+    `UPDATE restaurants
+     SET street = $1, number = $2, complement = $3, neighborhood = $4,
+         city = $5, state = $6, zip = $7, lat = $8, lng = $9
+     WHERE id = $10 AND tenant_id = $11
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [
+      data.street, data.number || null, data.complement || null, data.neighborhood || null,
+      data.city, data.state, data.zip || null, data.lat ?? null, data.lng ?? null,
+      restaurantId, tenantId,
+    ]
   );
   if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
   return result.rows[0];
@@ -336,6 +357,7 @@ module.exports = {
   listRestaurants,
   createRestaurant,
   updateRestaurant,
+  updateRestaurantLocation,
   updateRestaurantLogo,
   updateRestaurantBanner,
   ensureRestaurantOwnedByTenant,

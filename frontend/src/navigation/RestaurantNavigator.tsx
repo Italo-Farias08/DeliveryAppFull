@@ -1,0 +1,50 @@
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { RestaurantProvider, useRestaurantPanel } from '../context/RestaurantContext';
+import RestaurantDashboardScreen from '../screens/Restaurant/RestaurantDashboardScreen';
+import RestaurantLocationScreen from '../screens/Restaurant/RestaurantLocationScreen';
+import RestaurantMenuScreen from '../screens/Restaurant/RestaurantMenuScreen';
+import RestaurantOnboardingScreen from '../screens/Restaurant/RestaurantOnboardingScreen';
+import RestaurantOrdersScreen from '../screens/Restaurant/RestaurantOrdersScreen';
+import RestaurantSettingsScreen from '../screens/Restaurant/RestaurantSettingsScreen';
+import { colors } from '../theme/colors';
+
+const Stack = createNativeStackNavigator();
+
+function RestaurantNavigatorInner() {
+  const { loadingInit, restaurant } = useRestaurantPanel();
+
+  if (loadingInit) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  // Sem restaurante cadastrado ainda: só o formulário de criação, sem o
+  // menu hambúrguer (não faz sentido navegar pra telas de um restaurante
+  // que ainda não existe).
+  if (!restaurant) {
+    return <RestaurantOnboardingScreen />;
+  }
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Dashboard" component={RestaurantDashboardScreen} />
+      <Stack.Screen name="Orders" component={RestaurantOrdersScreen} />
+      <Stack.Screen name="Menu" component={RestaurantMenuScreen} />
+      <Stack.Screen name="Location" component={RestaurantLocationScreen} />
+      <Stack.Screen name="Settings" component={RestaurantSettingsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+export default function RestaurantNavigator() {
+  return (
+    <RestaurantProvider>
+      <RestaurantNavigatorInner />
+    </RestaurantProvider>
+  );
+}

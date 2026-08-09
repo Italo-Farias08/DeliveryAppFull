@@ -3,10 +3,10 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import DelivererHomeScreen from '../screens/Deliverer/DelivererHomeScreen';
-import RestaurantHomeScreen from '../screens/Restaurant/RestaurantHomeScreen';
 import { colors } from '../theme/colors';
 import AuthNavigator from './AuthNavigator';
 import ClientNavigator from './ClientNavigator';
+import RestaurantNavigator from './RestaurantNavigator';
 
 export default function RootNavigator() {
   const { user, loading } = useAuth();
@@ -23,7 +23,7 @@ export default function RootNavigator() {
     <NavigationContainer>
       {!user && <AuthNavigator />}
       {user?.role === 'client' && <ClientNavigator />}
-      {user?.role === 'restaurant' && <RestaurantHomeScreen />}
+      {user?.role === 'restaurant' && <RestaurantNavigator />}
       {user?.role === 'deliverer' && <DelivererHomeScreen />}
     </NavigationContainer>
   );

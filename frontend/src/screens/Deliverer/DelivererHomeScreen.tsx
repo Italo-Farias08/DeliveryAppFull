@@ -43,6 +43,33 @@ function addressLine(o: { street?: string; number?: string; neighborhood?: strin
   return [parts, rest].filter(Boolean).join(' — ') || 'Endereço não informado';
 }
 
+// Endereço da loja (pra retirar o pedido) — separado do endereço do
+// cliente (pra entregar). Antes do "a_caminho" o entregador precisa ir
+// até o restaurante, não até o cliente.
+type WithRestaurantAddress = {
+  restaurantStreet?: string;
+  restaurantNumber?: string;
+  restaurantNeighborhood?: string;
+  restaurantCity?: string;
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+};
+
+function restaurantAddressLine(o: WithRestaurantAddress) {
+  return addressLine({ street: o.restaurantStreet, number: o.restaurantNumber, neighborhood: o.restaurantNeighborhood, city: o.restaurantCity });
+}
+
+function pickupDestination(o: WithRestaurantAddress): { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords {
+  return {
+    street: o.restaurantStreet,
+    number: o.restaurantNumber,
+    neighborhood: o.restaurantNeighborhood,
+    city: o.restaurantCity,
+    lat: o.restaurantLat ?? undefined,
+    lng: o.restaurantLng ?? undefined,
+  };
+}
+
 function openNavigation(order: { street?: string; number?: string; neighborhood?: string; city?: string } & WithCoords) {
   const hasCoords = typeof order.lat === 'number' && typeof order.lng === 'number';
   const query = encodeURIComponent(addressLine(order));
@@ -307,14 +334,20 @@ export default function DelivererHomeScreen() {
               Entregas em andamento {activeOrders.length > 1 ? `(${activeOrders.length})` : ''}
             </Text>
 
-            {activeOrders.map((activeOrder) => (
+            {activeOrders.map((activeOrder) => {
+              // Antes de retirar, o destino é o restaurante; depois, é o cliente.
+              const goingToPickup = activeOrder.status === 'procurando_entregador';
+              const destination = goingToPickup ? pickupDestination(activeOrder) : activeOrder;
+              const destinationLine = goingToPickup ? restaurantAddressLine(activeOrder) : addressLine(activeOrder);
+              return (
               <View key={activeOrder.id} style={[styles.activeCard, { marginBottom: 14 }]}>
                 <View style={styles.activeHeaderRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.activeRestaurant}>{activeOrder.restaurantName}</Text>
-                    <Text style={styles.activeAddress}>{addressLine(activeOrder)}</Text>
+                    <Text style={styles.activeStopLabel}>{goingToPickup ? 'Retirar em' : 'Entregar em'}</Text>
+                    <Text style={styles.activeAddress}>{destinationLine}</Text>
                   </View>
-                  <TouchableOpacity style={styles.routeBtn} onPress={() => openNavigation(activeOrder)}>
+                  <TouchableOpacity style={styles.routeBtn} onPress={() => openNavigation(destination)}>
                     <Ionicons name="navigate" size={16} color={colors.white} />
                     <Text style={styles.routeBtnText}>Rota</Text>
                   </TouchableOpacity>
@@ -389,7 +422,8 @@ export default function DelivererHomeScreen() {
                   </View>
                 )}
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -416,10 +450,10 @@ export default function DelivererHomeScreen() {
               <View key={order.id} style={styles.radarCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.radarRestaurant}>{order.restaurantName}</Text>
-                  <Text style={styles.radarAddress}>{addressLine(order)}</Text>
+                  <Text style={styles.radarAddress}>{restaurantAddressLine(order)}</Text>
                   <Text style={styles.radarTotal}>Pedido #{order.id.slice(-5)} · R$ {Number(order.total).toFixed(2)}</Text>
                 </View>
-                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(order)}>
+                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(pickupDestination(order))}>
                   <Ionicons name="navigate-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -501,7 +535,8 @@ const styles = StyleSheet.create({
   },
   routeBtnText: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
   activeRestaurant: { ...typography.h2, color: colors.text },
-  activeAddress: { color: colors.textMuted, fontSize: 13 },
+  activeStopLabel: { color: colors.secondary, fontSize: 10.5, fontWeight: '800', letterSpacing: 0.4, marginTop: 4, textTransform: 'uppercase' },
+  activeAddress: { color: colors.textMuted, fontSize: 13, marginTop: 1 },
   activeTotal: { color: colors.text, fontWeight: '700', marginTop: 6 },
   codeBox: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: colors.border },
   codeLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginBottom: 8 },

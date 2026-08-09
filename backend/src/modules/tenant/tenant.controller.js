@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema } = require('./tenant.schema');
+const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema } = require('./tenant.schema');
 const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
@@ -19,6 +19,13 @@ const createRestaurant = asyncHandler(async (req, res) => {
 const updateRestaurant = asyncHandler(async (req, res) => {
   const data = restaurantSchema.parse(req.body);
   const restaurant = await service.updateRestaurant(req.db, req.params.id, data);
+  res.json(restaurant);
+});
+
+// Endereço/GPS da loja — aba "Localização" do painel.
+const updateRestaurantLocation = asyncHandler(async (req, res) => {
+  const data = restaurantLocationSchema.parse(req.body);
+  const restaurant = await service.updateRestaurantLocation(req.db, req.params.id, req.tenantId, data);
   res.json(restaurant);
 });
 
@@ -146,6 +153,7 @@ module.exports = {
   listRestaurants,
   createRestaurant,
   updateRestaurant,
+  updateRestaurantLocation,
   uploadRestaurantLogo,
   uploadRestaurantBanner,
   uploadMenuItemImage,

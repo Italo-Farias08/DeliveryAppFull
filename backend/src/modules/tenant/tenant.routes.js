@@ -22,6 +22,7 @@ const menuItemUpload = buildUploader();
 router.get('/restaurants', controller.listRestaurants);
 router.post('/restaurants', controller.createRestaurant);
 router.put('/restaurants/:id', controller.updateRestaurant);
+router.put('/restaurants/:id/location', controller.updateRestaurantLocation);
 
 // Envio de imagens do restaurante: logo e banner são independentes, cada
 // rota recebe um único arquivo (multipart/form-data) e devolve o

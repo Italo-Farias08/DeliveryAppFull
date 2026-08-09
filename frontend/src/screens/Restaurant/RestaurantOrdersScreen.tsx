@@ -1,0 +1,344 @@
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import OrderChatModal from '../../components/OrderChatModal';
+import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
+import { useRestaurantPanel } from '../../context/RestaurantContext';
+import {
+  TenantOrder,
+  acceptOrder,
+  getTenantOrderMessages,
+  markOrderReady,
+  rejectOrder,
+  sendTenantOrderMessage,
+} from '../../services/tenantService';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { OrderStatus } from '../../types';
+
+const statusLabel: Record<OrderStatus, string> = {
+  pendente: 'Novo pedido',
+  preparando: 'Preparando',
+  procurando_entregador: 'Buscando entregador',
+  a_caminho: 'A caminho',
+  entregue: 'Entregue',
+  cancelado: 'Cancelado',
+};
+
+const statusColor: Record<OrderStatus, string> = {
+  pendente: colors.primary,
+  preparando: colors.star,
+  procurando_entregador: colors.secondary,
+  a_caminho: colors.secondary,
+  entregue: colors.textMuted,
+  cancelado: colors.danger,
+};
+
+// Ícone por status — reforça o significado da cor pra quem só olha rápido
+// (útil na correria da cozinha).
+const statusIcon: Record<OrderStatus, keyof typeof Ionicons.glyphMap> = {
+  pendente: 'alert-circle',
+  preparando: 'flame',
+  procurando_entregador: 'bicycle',
+  a_caminho: 'navigate',
+  entregue: 'checkmark-done-circle',
+  cancelado: 'close-circle',
+};
+
+export default function RestaurantOrdersScreen() {
+  const { orders, setOrders, refreshing, reload, pendingCount } = useRestaurantPanel();
+  const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
+  const [chatOrder, setChatOrder] = useState<TenantOrder | null>(null);
+
+  async function handleAcceptOrder(order: TenantOrder) {
+    setSavingOrderId(order.id);
+    try {
+      await acceptOrder(order.id);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'preparando' } : o)));
+    } catch {
+      Alert.alert('Erro', 'Não foi possível aceitar o pedido.');
+    } finally {
+      setSavingOrderId(null);
+    }
+  }
+
+  function handleRejectOrder(order: TenantOrder) {
+    Alert.alert('Recusar pedido', 'Tem certeza que deseja recusar este pedido?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Recusar',
+        style: 'destructive',
+        onPress: async () => {
+          setSavingOrderId(order.id);
+          try {
+            await rejectOrder(order.id);
+            setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'cancelado' } : o)));
+          } catch {
+            Alert.alert('Erro', 'Não foi possível recusar o pedido.');
+          } finally {
+            setSavingOrderId(null);
+          }
+        },
+      },
+    ]);
+  }
+
+  async function handleMarkReady(order: TenantOrder) {
+    setSavingOrderId(order.id);
+    try {
+      await markOrderReady(order.id);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'procurando_entregador' } : o)));
+    } catch {
+      Alert.alert('Erro', 'Não foi possível marcar o pedido como pronto.');
+    } finally {
+      setSavingOrderId(null);
+    }
+  }
+
+  return (
+    <RestaurantScreenLayout
+      title="Pedidos"
+      subtitle={pendingCount > 0 ? `${pendingCount} novo${pendingCount > 1 ? 's' : ''}` : 'Tudo em dia'}
+      active="Orders"
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingTop: 4, paddingBottom: 40 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => reload(true)} tintColor={colors.primary} />}
+      >
+        {orders.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="fast-food-outline" size={28} color={colors.primary} />
+            </View>
+            <Text style={styles.emptyText}>Nenhum pedido ainda</Text>
+            <Text style={styles.emptySub}>Os pedidos dos clientes vão aparecer aqui</Text>
+          </View>
+        ) : (
+          orders.map((order) => {
+            const saving = savingOrderId === order.id;
+            const addressLine = [order.street, order.number].filter(Boolean).join(', ');
+            const addressRest = [order.neighborhood, order.city].filter(Boolean).join(' · ');
+            const mapsUrl = order.lat && order.lng
+              ? `https://www.google.com/maps/search/?api=1&query=${order.lat},${order.lng}`
+              : addressLine
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${addressLine} ${addressRest}`)}`
+              : null;
+            const sColor = statusColor[order.status] ?? colors.textMuted;
+            return (
+              <View key={order.id} style={styles.orderCard}>
+                <View style={styles.orderCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
+                    <Text style={styles.orderTotal}>R$ {Number(order.total).toFixed(2)}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: `${sColor}1A`, borderColor: `${sColor}40` }]}>
+                    <Ionicons name={statusIcon[order.status] ?? 'ellipse'} size={12} color={sColor} />
+                    <Text style={[styles.statusBadgeText, { color: sColor }]}>{statusLabel[order.status] ?? order.status}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.clientInfoBox}>
+                  <View style={styles.clientAvatar}>
+                    <Ionicons name="person" size={15} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.clientName}>{order.clientName || 'Cliente'}</Text>
+                    {!!order.clientPhone && <Text style={styles.clientDetail}>{order.clientPhone}</Text>}
+                    {!!(addressLine || addressRest) && (
+                      <Text style={styles.clientDetail}>
+                        {[addressLine, addressRest].filter(Boolean).join(' — ')}
+                      </Text>
+                    )}
+                    {mapsUrl && (
+                      <TouchableOpacity onPress={() => Linking.openURL(mapsUrl)} style={styles.mapLinkRow}>
+                        <Ionicons name="location-outline" size={13} color={colors.secondary} />
+                        <Text style={styles.mapLinkText}>Ver localização no mapa</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity style={styles.chatBtn} onPress={() => setChatOrder(order)}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                {(order.items ?? []).length > 0 && (
+                  <View style={styles.orderItemsBox}>
+                    <Text style={styles.orderItemsText}>
+                      {order.items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
+                    </Text>
+                  </View>
+                )}
+
+                {order.status === 'pendente' && (
+                  <View style={styles.orderActionsRow}>
+                    <TouchableOpacity
+                      style={[styles.outlineSmallBtn, saving && { opacity: 0.6 }]}
+                      onPress={() => handleRejectOrder(order)}
+                      disabled={saving}
+                    >
+                      <Text style={styles.outlineSmallBtnText}>Recusar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.advanceBtn, { flex: 1 }, saving && { opacity: 0.6 }]}
+                      onPress={() => handleAcceptOrder(order)}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color={colors.white} />
+                      ) : (
+                        <Text style={styles.advanceBtnText}>Aceitar pedido</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {order.status === 'preparando' && (
+                  <TouchableOpacity
+                    style={[styles.advanceBtn, styles.advanceBtnFull, saving && { opacity: 0.6 }]}
+                    onPress={() => handleMarkReady(order)}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <ActivityIndicator color={colors.white} />
+                    ) : (
+                      <Text style={styles.advanceBtnText}>Pedido pronto — chamar entregador</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+
+                {order.status === 'procurando_entregador' && (
+                  <View style={styles.codeBanner}>
+                    <View style={styles.codeBannerIconWrap}>
+                      <Ionicons name="bicycle-outline" size={17} color={colors.secondary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.codeBannerLabel}>Buscando entregador</Text>
+                      <Text style={styles.codeBannerSub}>
+                        Quando ele chegar, confira este código antes de entregar o pedido
+                      </Text>
+                    </View>
+                    <Text style={styles.pickupCode}>{order.pickupCode}</Text>
+                  </View>
+                )}
+
+                {order.status === 'a_caminho' && (
+                  <View style={styles.codeBanner}>
+                    <View style={styles.codeBannerIconWrap}>
+                      <Ionicons name="checkmark-circle-outline" size={17} color={colors.secondary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.codeBannerLabel}>A caminho do cliente</Text>
+                      <Text style={styles.codeBannerSub}>
+                        {order.delivererName ? `Entregador: ${order.delivererName}` : 'Entregador a caminho'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+
+      {chatOrder && (
+        <OrderChatModal
+          visible={!!chatOrder}
+          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.id}
+          myRole="restaurant"
+          title={chatOrder.clientName || `Pedido #${chatOrder.id.slice(-5)}`}
+          loadMessages={getTenantOrderMessages}
+          sendMessage={sendTenantOrderMessage}
+        />
+      )}
+    </RestaurantScreenLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  emptyBox: {
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.surface, borderRadius: 20, padding: 32,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  emptyIconCircle: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  emptyText: { ...typography.bodyBold, color: colors.text, marginTop: 4 },
+  emptySub: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
+
+  advanceBtn: {
+    backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 12,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2,
+  },
+  advanceBtnFull: { marginTop: 10 },
+  advanceBtnText: { color: colors.white, fontSize: 13, fontWeight: '700' },
+
+  orderCard: {
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1,
+  },
+  orderCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  orderId: { ...typography.bodyBold, color: colors.text },
+  orderTotal: { color: colors.textMuted, fontSize: 12.5, marginTop: 2, fontWeight: '600' },
+
+  clientInfoBox: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12,
+    paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  clientAvatar: {
+    width: 30, height: 30, borderRadius: 15, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  clientName: { ...typography.bodyBold, color: colors.text, fontSize: 13.5 },
+  clientDetail: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  mapLinkRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  mapLinkText: { color: colors.secondary, fontSize: 12, fontWeight: '700' },
+  chatBtn: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 5,
+  },
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
+
+  orderItemsBox: {
+    marginTop: 10, backgroundColor: colors.background, borderRadius: 10, padding: 10,
+  },
+  orderItemsText: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
+
+  orderActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  outlineSmallBtn: {
+    borderWidth: 1.5, borderColor: colors.danger, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 10, alignItems: 'center', justifyContent: 'center',
+  },
+  outlineSmallBtnText: { color: colors.danger, fontWeight: '700', fontSize: 12.5 },
+
+  codeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12,
+    backgroundColor: colors.secondaryLight, borderRadius: 14, padding: 12,
+  },
+  codeBannerIconWrap: {
+    width: 32, height: 32, borderRadius: 10, backgroundColor: colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  codeBannerLabel: { ...typography.bodyBold, color: colors.text, fontSize: 13 },
+  codeBannerSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
+  pickupCode: { ...typography.h2, color: colors.secondary, letterSpacing: 3 },
+});

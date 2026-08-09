@@ -7,6 +7,14 @@ export interface RadarOrder {
   createdAt: string;
   readyAt?: string | null;
   restaurantName: string;
+  // endereço da loja — pra ir buscar o pedido
+  restaurantStreet?: string;
+  restaurantNumber?: string;
+  restaurantNeighborhood?: string;
+  restaurantCity?: string;
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  // endereço do cliente — pra ir entregar
   street?: string;
   number?: string;
   neighborhood?: string;
@@ -23,6 +31,14 @@ export interface MyDeliveryOrder {
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
   restaurantName: string;
+  // endereço da loja — pra ir buscar o pedido
+  restaurantStreet?: string;
+  restaurantNumber?: string;
+  restaurantNeighborhood?: string;
+  restaurantCity?: string;
+  restaurantLat?: number | null;
+  restaurantLng?: number | null;
+  // endereço do cliente — pra ir entregar
   street?: string;
   number?: string;
   neighborhood?: string;

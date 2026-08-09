@@ -10,7 +10,8 @@ async function listRestaurants(categoryId) {
   const result = await pool.query(
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating,
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
-            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen"
+            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            street, number, complement, neighborhood, city, state, zip, lat, lng
      FROM restaurants
      ${where}
      ORDER BY rating DESC`,
@@ -23,7 +24,8 @@ async function getRestaurantById(id) {
   const restaurantResult = await pool.query(
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating,
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
-            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen"
+            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            street, number, complement, neighborhood, city, state, zip, lat, lng
      FROM restaurants
      WHERE id = $1`,
     [id]

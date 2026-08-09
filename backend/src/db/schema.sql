@@ -45,6 +45,18 @@ CREATE TABLE restaurants (
   image TEXT,
   banner TEXT,
   is_open BOOLEAN NOT NULL DEFAULT true,
+  -- Endereço/GPS da loja em si (não confundir com endereço de entrega do
+  -- cliente): usado na aba "Localização" do painel e pra o entregador
+  -- achar a loja na hora de retirar o pedido.
+  street TEXT,
+  number TEXT,
+  complement TEXT,
+  neighborhood TEXT,
+  city TEXT,
+  state TEXT,
+  zip TEXT,
+  lat DOUBLE PRECISION,
+  lng DOUBLE PRECISION,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

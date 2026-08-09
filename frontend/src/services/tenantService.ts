@@ -64,6 +64,25 @@ export async function updateRestaurant(id: string, payload: RestaurantInput): Pr
   return data;
 }
 
+// Endereço/GPS da loja — aba "Localização" do painel, separada do resto
+// dos dados do restaurante (não some quando o dono só troca outra coisa).
+export interface RestaurantLocationInput {
+  street: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city: string;
+  state: string;
+  zip?: string;
+  lat?: number;
+  lng?: number;
+}
+
+export async function updateRestaurantLocation(id: string, payload: RestaurantLocationInput): Promise<Restaurant> {
+  const { data } = await api.put(`/tenant/restaurants/${id}/location`, payload);
+  return data;
+}
+
 // Foto escolhida no picker do celular (ImagePicker.launchImageLibraryAsync)
 // tem esse formato: uma URI local (file://...), sem nome/tipo garantidos.
 export interface PickedImage {

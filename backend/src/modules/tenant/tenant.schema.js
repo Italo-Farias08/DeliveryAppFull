@@ -15,6 +15,19 @@ const restaurantSchema = z.object({
   isOpen: z.boolean().optional(),
 });
 
+// Endereço/GPS da loja (aba "Localização" do painel do restaurante).
+const restaurantLocationSchema = z.object({
+  street: z.string().min(2),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().min(2),
+  state: z.string().min(2),
+  zip: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+});
+
 const menuItemSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
@@ -42,4 +55,4 @@ const addonSchema = z.object({
   isAvailable: z.boolean().optional(),
 });
 
-module.exports = { restaurantSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema };
+module.exports = { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema };

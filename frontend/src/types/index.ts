@@ -64,6 +64,17 @@ export interface Restaurant {
   // antigos ainda não tinham esse campo.
   banner?: string | null;
   isOpen: boolean;
+  // Endereço/GPS da loja em si — opcional porque restaurantes antigos
+  // ainda não tinham preenchido isso.
+  street?: string | null;
+  number?: string | null;
+  complement?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   // Opcional por compatibilidade com dados mockados antigos que ainda não
   // tinham categorias de cardápio.
   menuCategories?: MenuCategory[];
