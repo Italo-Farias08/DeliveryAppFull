@@ -116,6 +116,9 @@ export default function DelivererHomeScreen() {
   const [togglingAvailability, setTogglingAvailability] = useState(false);
 
   const [radar, setRadar] = useState<RadarOrder[]>([]);
+  // qual card do radar está mostrando a localização da loja expandida
+  // (não confundir com o endereço do cliente, que já fica visível sempre)
+  const [expandedRestaurantId, setExpandedRestaurantId] = useState<string | null>(null);
   const [loadingRadar, setLoadingRadar] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
@@ -446,14 +449,40 @@ export default function DelivererHomeScreen() {
               <Text style={styles.emptySub}>Assim que um restaurante marcar um pedido como pronto, ele aparece aqui na hora</Text>
             </View>
           ) : (
-            radar.map((order) => (
+            radar.map((order) => {
+              const restaurantExpanded = expandedRestaurantId === order.id;
+              return (
               <View key={order.id} style={styles.radarCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.radarRestaurant}>{order.restaurantName}</Text>
-                  <Text style={styles.radarAddress}>{restaurantAddressLine(order)}</Text>
+                  <Text style={styles.radarAddress}>{addressLine(order)}</Text>
                   <Text style={styles.radarTotal}>Pedido #{order.id.slice(-5)} · R$ {Number(order.total).toFixed(2)}</Text>
+
+                  <TouchableOpacity
+                    style={styles.showRestaurantBtn}
+                    onPress={() => setExpandedRestaurantId(restaurantExpanded ? null : order.id)}
+                  >
+                    <Ionicons name="storefront-outline" size={12} color={colors.secondary} />
+                    <Text style={styles.showRestaurantBtnText}>
+                      {restaurantExpanded ? 'Ocultar' : 'Ver'} localização da loja
+                    </Text>
+                    <Ionicons name={restaurantExpanded ? 'chevron-up' : 'chevron-down'} size={12} color={colors.secondary} />
+                  </TouchableOpacity>
+
+                  {restaurantExpanded && (
+                    <View style={styles.restaurantLocationBox}>
+                      <Ionicons name="location-outline" size={13} color={colors.secondary} style={{ marginTop: 1 }} />
+                      <Text style={styles.restaurantLocationText}>{restaurantAddressLine(order)}</Text>
+                      <TouchableOpacity
+                        style={styles.restaurantLocationNavBtn}
+                        onPress={() => openNavigation(pickupDestination(order))}
+                      >
+                        <Ionicons name="navigate" size={12} color={colors.white} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
-                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(pickupDestination(order))}>
+                <TouchableOpacity style={styles.radarRouteBtn} onPress={() => openNavigation(order)}>
                   <Ionicons name="navigate-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -468,7 +497,8 @@ export default function DelivererHomeScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -515,6 +545,21 @@ const styles = StyleSheet.create({
   radarRestaurant: { ...typography.bodyBold, color: colors.text },
   radarAddress: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
   radarTotal: { color: colors.text, fontSize: 12.5, marginTop: 4, fontWeight: '700' },
+
+  showRestaurantBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 8,
+  },
+  showRestaurantBtnText: { color: colors.secondary, fontSize: 11.5, fontWeight: '700' },
+  restaurantLocationBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6,
+    backgroundColor: colors.secondaryLight, borderRadius: 10, padding: 8,
+  },
+  restaurantLocationText: { flex: 1, color: colors.text, fontSize: 11.5 },
+  restaurantLocationNavBtn: {
+    width: 24, height: 24, borderRadius: 12, backgroundColor: colors.secondary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   radarRouteBtn: {
     width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
