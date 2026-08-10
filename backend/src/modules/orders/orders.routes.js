@@ -13,6 +13,10 @@ router.use(authenticate, authorize('client'));
 
 const messageSchema = z.object({ message: z.string().min(1).max(1000) });
 const cancelOrderSchema = z.object({ reason: z.string().min(1).max(300).optional() });
+const rateOrderSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(500).optional(),
+});
 
 router.post(
   '/',
@@ -45,6 +49,15 @@ router.patch(
     const { reason } = cancelOrderSchema.parse(req.body ?? {});
     const order = await service.cancelOrder(req.user.sub, req.params.id, reason);
     res.json(order);
+  })
+);
+
+router.post(
+  '/:id/rating',
+  asyncHandler(async (req, res) => {
+    const { rating, comment } = rateOrderSchema.parse(req.body);
+    const saved = await service.rateOrder(req.user.sub, req.params.id, rating, comment);
+    res.status(201).json(saved);
   })
 );
 

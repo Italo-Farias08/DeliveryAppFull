@@ -123,6 +123,9 @@ export default function RestaurantDetailScreen() {
           <View style={styles.metaRow}>
             <Ionicons name="star" size={14} color={colors.star} />
             <Text style={styles.metaText}>{restaurant.rating.toFixed(1)}</Text>
+            {!!restaurant.ratingCount && (
+              <Text style={styles.metaTextMuted}>({restaurant.ratingCount})</Text>
+            )}
             <Text style={styles.dot}>-</Text>
             <View style={styles.metaIconGroup}>
               <Ionicons name="time-outline" size={14} color={colors.textMuted} />
@@ -253,6 +256,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   metaIconGroup: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  metaTextMuted: { fontSize: 11.5, color: colors.textMuted, marginLeft: -4 },
   dot: { color: colors.textMuted },
   closedNotice: { backgroundColor: colors.primaryLight, padding: 10, borderRadius: 10, marginTop: 12 },
   closedNoticeText: { color: colors.primaryDark, fontSize: 12.5, fontWeight: '700', textAlign: 'center' },

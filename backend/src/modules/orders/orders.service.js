@@ -11,10 +11,12 @@ const ORDER_SELECT = `
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt", o.cancelled_at AS "cancelledAt",
          o.cancel_reason AS "cancelReason",
          r.id AS "restaurantId", r.name AS "restaurantName", r.image AS "restaurantImage",
-         d.name AS "delivererName", d.phone AS "delivererPhone"
+         d.name AS "delivererName", d.phone AS "delivererPhone",
+         orat.rating AS "myRating", orat.comment AS "myRatingComment"
   FROM orders o
   JOIN restaurants r ON r.id = o.restaurant_id
   LEFT JOIN users d ON d.id = o.deliverer_id
+  LEFT JOIN order_ratings orat ON orat.order_id = o.id
 `;
 
 async function createOrder(clientId, data) {
@@ -204,6 +206,36 @@ async function cancelOrder(clientId, orderId, reason) {
   return { id: order.id, status: order.status };
 }
 
+// Cliente avalia o pedido depois de entregue -- só uma vez por pedido
+// (o restaurante rating é recalculado automaticamente pelo trigger no
+// banco assim que essa avaliação é inserida).
+async function rateOrder(clientId, orderId, rating, comment) {
+  const orderResult = await pool.query(
+    `SELECT id, status, restaurant_id AS "restaurantId" FROM orders WHERE id = $1 AND client_id = $2`,
+    [orderId, clientId]
+  );
+  if (orderResult.rowCount === 0) throw new AppError('Pedido não encontrado', 404);
+  const order = orderResult.rows[0];
+  if (order.status !== 'entregue') {
+    throw new AppError('Só é possível avaliar pedidos já entregues', 409);
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO order_ratings (order_id, client_id, restaurant_id, rating, comment)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, rating, comment, created_at AS "createdAt"`,
+      [orderId, clientId, order.restaurantId, rating, comment || null]
+    );
+    return result.rows[0];
+  } catch (err) {
+    if (err.code === '23505') {
+      throw new AppError('Você já avaliou esse pedido', 409);
+    }
+    throw err;
+  }
+}
+
 async function getOrderById(orderId, clientId) {
   const orderResult = await pool.query(
     `${ORDER_SELECT}
@@ -222,4 +254,4 @@ async function getOrderById(orderId, clientId) {
   return order;
 }
 
-module.exports = { createOrder, listOrdersByClient, getOrderById, cancelOrder };
+module.exports = { createOrder, listOrdersByClient, getOrderById, cancelOrder, rateOrder };

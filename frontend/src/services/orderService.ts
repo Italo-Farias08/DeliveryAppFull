@@ -40,3 +40,17 @@ export async function sendOrderMessage(orderId: string, message: string): Promis
   const { data } = await api.post(`/orders/${orderId}/messages`, { message });
   return data;
 }
+
+export interface OrderRating {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+// Só funciona pra pedidos com status "entregue", e uma única vez por
+// pedido -- o backend recusa (409) numa segunda tentativa.
+export async function rateOrder(orderId: string, rating: number, comment?: string): Promise<OrderRating> {
+  const { data } = await api.post(`/orders/${orderId}/rating`, comment ? { rating, comment } : { rating });
+  return data;
+}

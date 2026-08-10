@@ -8,7 +8,7 @@ async function listRestaurants(categoryId) {
     where = 'WHERE category_id = $1';
   }
   const result = await pool.query(
-    `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating,
+    `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
             delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
             street, number, complement, neighborhood, city, state, zip, lat, lng
@@ -22,7 +22,7 @@ async function listRestaurants(categoryId) {
 
 async function getRestaurantById(id) {
   const restaurantResult = await pool.query(
-    `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating,
+    `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
             delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
             street, number, complement, neighborhood, city, state, zip, lat, lng
@@ -71,7 +71,7 @@ async function getRestaurantById(id) {
 async function search(query) {
   const q = `%${query.toLowerCase()}%`;
   const result = await pool.query(
-    `SELECT DISTINCT r.id, r.tenant_id AS "tenantId", r.category_id AS "categoryId", r.name, r.rating,
+    `SELECT DISTINCT r.id, r.tenant_id AS "tenantId", r.category_id AS "categoryId", r.name, r.rating, r.rating_count AS "ratingCount",
             r.delivery_time_min AS "deliveryTimeMin", r.delivery_time_max AS "deliveryTimeMax",
             r.delivery_fee AS "deliveryFee", r.image, r.banner, r.is_open AS "isOpen"
      FROM restaurants r

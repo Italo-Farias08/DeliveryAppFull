@@ -56,6 +56,9 @@ export interface Restaurant {
   name: string;
   categoryId: string;
   rating: number;
+  // quantas avaliações formam essa média -- útil pra mostrar "4.8 (132)"
+  // em vez de uma nota "seca" sem contexto de quantas pessoas avaliaram
+  ratingCount?: number;
   deliveryTimeMin: number;
   deliveryTimeMax: number;
   deliveryFee: number;
@@ -118,5 +121,8 @@ export interface Order {
   deliveryCode?: string;
   delivererName?: string | null;
   delivererPhone?: string | null;
+  // avaliação que o próprio cliente deu pra esse pedido (null se ainda não avaliou)
+  myRating?: number | null;
+  myRatingComment?: string | null;
   items: { id: string; name: string; price: number; qty: number }[];
 }

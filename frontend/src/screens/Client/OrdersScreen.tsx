@@ -5,8 +5,9 @@ import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, T
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import OrderChatModal from '../../components/OrderChatModal';
+import RatingModal from '../../components/RatingModal';
 import { useCart } from '../../context/CartContext';
-import { cancelOrder, getOrderMessages, listMyOrders, sendOrderMessage } from '../../services/orderService';
+import { cancelOrder, getOrderMessages, listMyOrders, rateOrder, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -59,6 +60,7 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
 
   const load = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
@@ -142,6 +144,20 @@ export default function OrdersScreen() {
       },
     ]);
   }, []);
+
+  // Só funciona pra pedidos já entregues, e uma vez só -- o backend recusa
+  // (409) numa segunda tentativa, o que o próprio RatingModal já trata.
+  const handleSubmitRating = useCallback(
+    async (rating: number, comment?: string) => {
+      if (!ratingOrder) return;
+      const saved = await rateOrder(ratingOrder.id, rating, comment);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === ratingOrder.id ? { ...o, myRating: saved.rating, myRatingComment: saved.comment } : o))
+      );
+      setRatingOrder(null);
+    },
+    [ratingOrder]
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -250,6 +266,33 @@ export default function OrdersScreen() {
                   </TouchableOpacity>
                 )}
 
+                {isDelivered && (
+                  item.myRating ? (
+                    <View style={styles.ratingDoneBanner}>
+                      <View style={{ flexDirection: 'row', gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Ionicons
+                            key={n}
+                            name={n <= item.myRating! ? 'star' : 'star-outline'}
+                            size={13}
+                            color="#F5A623"
+                          />
+                        ))}
+                      </View>
+                      <Text style={styles.ratingDoneText}>Você avaliou esse pedido</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.rateBtn}
+                      activeOpacity={0.8}
+                      onPress={() => setRatingOrder(item)}
+                    >
+                      <Ionicons name="star-outline" size={15} color="#F5A623" />
+                      <Text style={styles.rateBtnText}>Avaliar pedido</Text>
+                    </TouchableOpacity>
+                  )
+                )}
+
                 {/* ---- Rodapé: ação (conversar OU pedir de novo) + total ----
                     Enquanto o pedido está em andamento, faz sentido falar
                     com o restaurante. Depois de entregue, essa conversa já
@@ -292,6 +335,15 @@ export default function OrdersScreen() {
           title={chatOrder.restaurantName}
           loadMessages={getOrderMessages}
           sendMessage={sendOrderMessage}
+        />
+      )}
+
+      {ratingOrder && (
+        <RatingModal
+          visible={!!ratingOrder}
+          onClose={() => setRatingOrder(null)}
+          restaurantName={ratingOrder.restaurantName}
+          onSubmit={handleSubmitRating}
         />
       )}
     </SafeAreaView>
@@ -417,4 +469,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cancelOrderBtnText: { color: colors.danger, fontSize: 12.5, fontWeight: '700' },
+
+  rateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: '#F5A62355', backgroundColor: '#F5A62314',
+    borderRadius: 12, paddingVertical: 9, marginTop: 4, marginBottom: 4,
+  },
+  rateBtnText: { color: '#B5760A', fontSize: 12.5, fontWeight: '700' },
+  ratingDoneBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 4, marginBottom: 4,
+  },
+  ratingDoneText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
 });
