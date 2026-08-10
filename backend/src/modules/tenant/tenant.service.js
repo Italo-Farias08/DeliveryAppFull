@@ -21,6 +21,7 @@ const TENANT_ORDER_SELECT = `
 
 const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
             delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            is_published AS "isPublished",
             street, number, complement, neighborhood, city, state, zip, lat, lng`;
 
 async function listRestaurants(db) {
@@ -54,6 +55,25 @@ async function updateRestaurant(db, restaurantId, data) {
      WHERE id = $9
      RETURNING ${RESTAURANT_SELECT_FIELDS}`,
     [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen, restaurantId]
+  );
+  if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
+// Só publica (fica visível pros clientes) se já tiver pelo menos um item
+// no cardápio -- assim ninguém acaba mostrando uma loja vazia como opção.
+async function publishRestaurant(db, restaurantId, tenantId) {
+  const menuCountResult = await db.query(
+    `SELECT COUNT(*)::int AS count FROM menu_items WHERE restaurant_id = $1`,
+    [restaurantId]
+  );
+  if (menuCountResult.rows[0].count === 0) {
+    throw new AppError('Adicione pelo menos um item ao cardápio antes de publicar sua loja.', 400);
+  }
+  const result = await db.query(
+    `UPDATE restaurants SET is_published = true WHERE id = $1 AND tenant_id = $2
+     RETURNING ${RESTAURANT_SELECT_FIELDS}`,
+    [restaurantId, tenantId]
   );
   if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
   return result.rows[0];
@@ -357,6 +377,7 @@ module.exports = {
   listRestaurants,
   createRestaurant,
   updateRestaurant,
+  publishRestaurant,
   updateRestaurantLocation,
   updateRestaurantLogo,
   updateRestaurantBanner,

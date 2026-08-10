@@ -67,6 +67,11 @@ export interface Restaurant {
   // antigos ainda não tinham esse campo.
   banner?: string | null;
   isOpen: boolean;
+  // false até o dono terminar o cardápio e clicar em "Publicar loja" --
+  // enquanto isso a loja não aparece pra nenhum cliente. Só vem preenchido
+  // nas respostas do painel do restaurante (o cliente nunca vê loja não
+  // publicada, então esse campo nem chega no app dele).
+  isPublished?: boolean;
   // Endereço/GPS da loja em si — opcional porque restaurantes antigos
   // ainda não tinham preenchido isso.
   street?: string | null;

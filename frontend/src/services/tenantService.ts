@@ -64,6 +64,13 @@ export async function updateRestaurant(id: string, payload: RestaurantInput): Pr
   return data;
 }
 
+// "Estou pronto" -- só funciona com pelo menos 1 item no cardápio, o
+// backend recusa (400) e devolve uma mensagem explicando isso.
+export async function publishRestaurant(id: string): Promise<Restaurant> {
+  const { data } = await api.patch(`/tenant/restaurants/${id}/publish`);
+  return data;
+}
+
 // Endereço/GPS da loja — aba "Localização" do painel, separada do resto
 // dos dados do restaurante (não some quando o dono só troca outra coisa).
 export interface RestaurantLocationInput {

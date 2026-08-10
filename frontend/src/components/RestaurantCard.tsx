@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Restaurant } from '../types';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { formatRating } from '../utils/rating';
 
 interface Props {
   restaurant: Restaurant;
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export function RestaurantCard({ restaurant, onPress }: Props) {
+  const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <View>
@@ -31,8 +34,14 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
         <View style={styles.row}>
-          <Ionicons name="star" size={13} color={colors.star} />
-          <Text style={styles.meta}>{restaurant.rating.toFixed(1)}</Text>
+          {ratingDisplay ? (
+            <>
+              <Ionicons name="star" size={13} color={colors.star} />
+              <Text style={styles.meta}>{ratingDisplay}</Text>
+            </>
+          ) : (
+            <Text style={styles.meta}>Novo por aqui</Text>
+          )}
           <Text style={styles.dot}>·</Text>
           <Text style={styles.meta}>{restaurant.deliveryTimeMin}-{restaurant.deliveryTimeMax} min</Text>
         </View>

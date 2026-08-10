@@ -23,6 +23,7 @@ import { getCategories, getRestaurants } from '../../services/restaurantService'
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Category, Restaurant } from '../../types';
+import { formatRating } from '../../utils/rating';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 20;
@@ -218,6 +219,7 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; o
   const imageSource = hasImage ? { uri: restaurant.image } : getFallbackImage(restaurant.id);
   const isFree = (restaurant.deliveryFee ?? 0) === 0;
   const closed = restaurant.isOpen === false;
+  const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
@@ -231,10 +233,17 @@ function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; o
           onError={() => setImgError(true)}
         />
 
-        {/* nota em badge sobre a foto, como nos apps de referência do setor */}
+        {/* nota em badge sobre a foto -- "Novo" pra restaurante que ainda
+            não recebeu nenhuma avaliação real, em vez de "0.0" */}
         <View style={styles.ratingBadge}>
-          <Ionicons name="star" size={10} color={colors.star} />
-          <Text style={styles.ratingBadgeText}>{restaurant.rating?.toFixed(1) ?? '—'}</Text>
+          {ratingDisplay ? (
+            <>
+              <Ionicons name="star" size={10} color={colors.star} />
+              <Text style={styles.ratingBadgeText}>{ratingDisplay}</Text>
+            </>
+          ) : (
+            <Text style={styles.ratingBadgeText}>Novo</Text>
+          )}
         </View>
 
         <TouchableOpacity
@@ -523,7 +532,7 @@ export default function HomeScreen() {
   const displayedRestaurants = useMemo(() => {
     if (!topRatedOnly) return restaurants;
     return [...restaurants]
-      .filter((r) => r.rating >= 4.5)
+      .filter((r) => r.rating >= 4.0)
       .sort((a, b) => b.rating - a.rating);
   }, [restaurants, topRatedOnly]);
 

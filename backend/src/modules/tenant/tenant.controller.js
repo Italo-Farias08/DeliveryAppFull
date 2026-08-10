@@ -22,6 +22,12 @@ const updateRestaurant = asyncHandler(async (req, res) => {
   res.json(restaurant);
 });
 
+// "Estou pronto" -- fica visível pros clientes assim que tiver cardápio
+const publishRestaurant = asyncHandler(async (req, res) => {
+  const restaurant = await service.publishRestaurant(req.db, req.params.id, req.tenantId);
+  res.json(restaurant);
+});
+
 // Endereço/GPS da loja — aba "Localização" do painel.
 const updateRestaurantLocation = asyncHandler(async (req, res) => {
   const data = restaurantLocationSchema.parse(req.body);
@@ -153,6 +159,7 @@ module.exports = {
   listRestaurants,
   createRestaurant,
   updateRestaurant,
+  publishRestaurant,
   updateRestaurantLocation,
   uploadRestaurantLogo,
   uploadRestaurantBanner,

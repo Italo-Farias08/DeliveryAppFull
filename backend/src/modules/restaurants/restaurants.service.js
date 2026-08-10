@@ -2,10 +2,10 @@ const { pool } = require('../../config/db');
 
 async function listRestaurants(categoryId) {
   const params = [];
-  let where = '';
+  let where = 'WHERE is_published = true';
   if (categoryId) {
     params.push(categoryId);
-    where = 'WHERE category_id = $1';
+    where += ` AND category_id = $${params.length}`;
   }
   const result = await pool.query(
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
@@ -27,7 +27,7 @@ async function getRestaurantById(id) {
             delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
             street, number, complement, neighborhood, city, state, zip, lat, lng
      FROM restaurants
-     WHERE id = $1`,
+     WHERE id = $1 AND is_published = true`,
     [id]
   );
   if (restaurantResult.rowCount === 0) return null;
@@ -76,7 +76,7 @@ async function search(query) {
             r.delivery_fee AS "deliveryFee", r.image, r.banner, r.is_open AS "isOpen"
      FROM restaurants r
      LEFT JOIN menu_items m ON m.restaurant_id = r.id
-     WHERE LOWER(r.name) LIKE $1 OR LOWER(m.name) LIKE $1
+     WHERE r.is_published = true AND (LOWER(r.name) LIKE $1 OR LOWER(m.name) LIKE $1)
      ORDER BY r.name`,
     [q]
   );

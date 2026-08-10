@@ -21,6 +21,7 @@ import { getRestaurantById } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Addon, MenuItem, Restaurant } from '../../types';
+import { formatRating } from '../../utils/rating';
 
 // altura do banner calculada a partir da largura da tela (proporção 4:3),
 // assim o enquadramento da foto fica sempre consistente, em qualquer
@@ -121,11 +122,18 @@ export default function RestaurantDetailScreen() {
         <View style={[styles.infoBlock, !!restaurant.image && { marginTop: 46 }]}>
           <Text style={styles.name}>{restaurant.name}</Text>
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={14} color={colors.star} />
-            <Text style={styles.metaText}>{restaurant.rating.toFixed(1)}</Text>
-            {!!restaurant.ratingCount && (
-              <Text style={styles.metaTextMuted}>({restaurant.ratingCount})</Text>
-            )}
+            {(() => {
+              const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
+              return ratingDisplay ? (
+                <>
+                  <Ionicons name="star" size={14} color={colors.star} />
+                  <Text style={styles.metaText}>{ratingDisplay}</Text>
+                  <Text style={styles.metaTextMuted}>({restaurant.ratingCount})</Text>
+                </>
+              ) : (
+                <Text style={styles.metaText}>Novo por aqui</Text>
+              );
+            })()}
             <Text style={styles.dot}>-</Text>
             <View style={styles.metaIconGroup}>
               <Ionicons name="time-outline" size={14} color={colors.textMuted} />
