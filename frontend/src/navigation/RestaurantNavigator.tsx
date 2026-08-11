@@ -3,6 +3,7 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { RestaurantProvider, useRestaurantPanel } from '../context/RestaurantContext';
 import RestaurantDashboardScreen from '../screens/Restaurant/RestaurantDashboardScreen';
+import RestaurantHoursScreen from '../screens/Restaurant/RestaurantHoursScreen';
 import RestaurantLocationScreen from '../screens/Restaurant/RestaurantLocationScreen';
 import RestaurantMenuScreen from '../screens/Restaurant/RestaurantMenuScreen';
 import RestaurantOnboardingScreen from '../screens/Restaurant/RestaurantOnboardingScreen';
@@ -36,6 +37,7 @@ function RestaurantNavigatorInner() {
       <Stack.Screen name="Orders" component={RestaurantOrdersScreen} />
       <Stack.Screen name="Menu" component={RestaurantMenuScreen} />
       <Stack.Screen name="Location" component={RestaurantLocationScreen} />
+      <Stack.Screen name="Hours" component={RestaurantHoursScreen} />
       <Stack.Screen name="Settings" component={RestaurantSettingsScreen} />
     </Stack.Navigator>
   );

@@ -67,6 +67,13 @@ export interface Restaurant {
   // antigos ainda não tinham esse campo.
   banner?: string | null;
   isOpen: boolean;
+  // status calculado (botão manual + horário programado do dia) -- só vem
+  // preenchido nas respostas do painel do restaurante, pra mostrar "Aberta
+  // agora"/"Fechada" com precisão mesmo quando o botão manual está ligado
+  // mas o horário de hoje ainda não abriu ou já fechou. O cliente nunca
+  // precisa disso à parte porque o campo `isOpen` que ele recebe JÁ é esse
+  // valor calculado.
+  isOpenNow?: boolean;
   // false até o dono terminar o cardápio e clicar em "Publicar loja" --
   // enquanto isso a loja não aparece pra nenhum cliente. Só vem preenchido
   // nas respostas do painel do restaurante (o cliente nunca vê loja não
@@ -130,4 +137,14 @@ export interface Order {
   myRating?: number | null;
   myRatingComment?: string | null;
   items: { id: string; name: string; price: number; qty: number }[];
+}
+
+// Horário de funcionamento de UM dia da semana. 0=domingo ... 6=sábado,
+// igual ao que o Postgres devolve em EXTRACT(DOW). O painel do restaurante
+// sempre lê/salva os 7 dias juntos, nunca um dia isolado.
+export interface RestaurantHours {
+  dayOfWeek: number;
+  closed: boolean;
+  openTime: string | null; // "HH:MM"
+  closeTime: string | null; // "HH:MM"
 }

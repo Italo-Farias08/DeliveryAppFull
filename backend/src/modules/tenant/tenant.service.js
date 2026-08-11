@@ -21,6 +21,7 @@ const TENANT_ORDER_SELECT = `
 
 const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
             delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            restaurant_open_now(id) AS "isOpenNow",
             is_published AS "isPublished",
             street, number, complement, neighborhood, city, state, zip, lat, lng`;
 
@@ -77,6 +78,43 @@ async function publishRestaurant(db, restaurantId, tenantId) {
   );
   if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
   return result.rows[0];
+}
+
+async function getRestaurantHours(db, restaurantId) {
+  const result = await db.query(
+    `SELECT day_of_week AS "dayOfWeek", closed,
+            to_char(open_time, 'HH24:MI') AS "openTime",
+            to_char(close_time, 'HH24:MI') AS "closeTime"
+     FROM restaurant_hours
+     WHERE restaurant_id = $1
+     ORDER BY day_of_week`,
+    [restaurantId]
+  );
+  return result.rows;
+}
+
+// Substitui a agenda inteira de uma vez (o formulário do painel sempre
+// manda os 7 dias juntos) -- mais simples e seguro do que tentar casar
+// diffs. Roda dentro da mesma transação de req.db, então se algo falhar no
+// meio, nada fica salvo pela metade.
+async function setRestaurantHours(db, restaurantId, tenantId, days) {
+  const ownedResult = await db.query(`SELECT id FROM restaurants WHERE id = $1 AND tenant_id = $2`, [
+    restaurantId,
+    tenantId,
+  ]);
+  if (ownedResult.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
+
+  await db.query(`DELETE FROM restaurant_hours WHERE restaurant_id = $1`, [restaurantId]);
+
+  for (const day of days) {
+    await db.query(
+      `INSERT INTO restaurant_hours (tenant_id, restaurant_id, day_of_week, closed, open_time, close_time)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [tenantId, restaurantId, day.dayOfWeek, day.closed, day.closed ? null : day.openTime, day.closed ? null : day.closeTime]
+    );
+  }
+
+  return getRestaurantHours(db, restaurantId);
 }
 
 // Endereço/GPS da loja — rota própria (igual logo/banner), separada do
@@ -378,6 +416,8 @@ module.exports = {
   createRestaurant,
   updateRestaurant,
   publishRestaurant,
+  getRestaurantHours,
+  setRestaurantHours,
   updateRestaurantLocation,
   updateRestaurantLogo,
   updateRestaurantBanner,

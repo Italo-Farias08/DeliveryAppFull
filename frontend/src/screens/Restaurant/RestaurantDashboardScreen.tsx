@@ -120,11 +120,20 @@ export default function RestaurantDashboardScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.heroEyebrow}>STATUS DA LOJA</Text>
               <View style={styles.heroStatusRow}>
-                <PulseDot color={restaurant.isOpen ? colors.secondary : 'rgba(255,255,255,0.55)'} active={restaurant.isOpen} />
-                <Text style={styles.heroStatusTitle}>{restaurant.isOpen ? 'Aberta agora' : 'Fechada'}</Text>
+                <PulseDot
+                  color={(restaurant.isOpenNow ?? restaurant.isOpen) ? colors.secondary : 'rgba(255,255,255,0.55)'}
+                  active={restaurant.isOpenNow ?? restaurant.isOpen}
+                />
+                <Text style={styles.heroStatusTitle}>
+                  {(restaurant.isOpenNow ?? restaurant.isOpen) ? 'Aberta agora' : 'Fechada'}
+                </Text>
               </View>
               <Text style={styles.heroStatusSub}>
-                {restaurant.isOpen ? 'Você está recebendo pedidos' : 'Clientes não podem pedir agora'}
+                {!restaurant.isOpen
+                  ? 'Clientes não podem pedir agora'
+                  : restaurant.isOpenNow === false
+                  ? 'Fora do horário programado de hoje'
+                  : 'Você está recebendo pedidos'}
               </Text>
             </View>
             <Switch
@@ -190,6 +199,14 @@ export default function RestaurantDashboardScreen() {
             </View>
             <Text style={styles.shortcutTitle}>Localização</Text>
             <Text style={styles.shortcutSub}>{restaurant.street ? 'Endereço salvo' : 'Adicionar endereço'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Hours')} activeOpacity={0.85}>
+            <View style={styles.shortcutIconWrap}>
+              <Ionicons name="time-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.shortcutTitle}>Horário</Text>
+            <Text style={styles.shortcutSub}>Funcionamento por dia</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Settings')} activeOpacity={0.85}>

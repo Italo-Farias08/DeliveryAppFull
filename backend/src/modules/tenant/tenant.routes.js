@@ -23,6 +23,8 @@ router.get('/restaurants', controller.listRestaurants);
 router.post('/restaurants', controller.createRestaurant);
 router.put('/restaurants/:id', controller.updateRestaurant);
 router.patch('/restaurants/:id/publish', controller.publishRestaurant);
+router.get('/restaurants/:id/hours', controller.getRestaurantHours);
+router.put('/restaurants/:id/hours', controller.setRestaurantHours);
 router.put('/restaurants/:id/location', controller.updateRestaurantLocation);
 
 // Envio de imagens do restaurante: logo e banner são independentes, cada

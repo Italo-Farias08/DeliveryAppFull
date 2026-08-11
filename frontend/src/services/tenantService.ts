@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Addon, Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../types';
+import { Addon, Category, MenuCategory, MenuItem, OrderStatus, Restaurant, RestaurantHours } from '../types';
 
 // Painel do restaurante — sempre fala com o backend de verdade (não tem mock aqui,
 // já que é uma área autenticada específica do dono do restaurante).
@@ -68,6 +68,17 @@ export async function updateRestaurant(id: string, payload: RestaurantInput): Pr
 // backend recusa (400) e devolve uma mensagem explicando isso.
 export async function publishRestaurant(id: string): Promise<Restaurant> {
   const { data } = await api.patch(`/tenant/restaurants/${id}/publish`);
+  return data;
+}
+
+// Horário de funcionamento -- sempre lê/salva os 7 dias da semana juntos.
+export async function getRestaurantHours(id: string): Promise<RestaurantHours[]> {
+  const { data } = await api.get(`/tenant/restaurants/${id}/hours`);
+  return data;
+}
+
+export async function setRestaurantHours(id: string, days: RestaurantHours[]): Promise<RestaurantHours[]> {
+  const { data } = await api.put(`/tenant/restaurants/${id}/hours`, { days });
   return data;
 }
 

@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema } = require('./tenant.schema');
+const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema, restaurantHoursSchema } = require('./tenant.schema');
 const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
@@ -26,6 +26,17 @@ const updateRestaurant = asyncHandler(async (req, res) => {
 const publishRestaurant = asyncHandler(async (req, res) => {
   const restaurant = await service.publishRestaurant(req.db, req.params.id, req.tenantId);
   res.json(restaurant);
+});
+
+const getRestaurantHours = asyncHandler(async (req, res) => {
+  const hours = await service.getRestaurantHours(req.db, req.params.id);
+  res.json(hours);
+});
+
+const setRestaurantHours = asyncHandler(async (req, res) => {
+  const days = restaurantHoursSchema.parse(req.body.days ?? req.body);
+  const hours = await service.setRestaurantHours(req.db, req.params.id, req.tenantId, days);
+  res.json(hours);
 });
 
 // Endereço/GPS da loja — aba "Localização" do painel.
@@ -160,6 +171,8 @@ module.exports = {
   createRestaurant,
   updateRestaurant,
   publishRestaurant,
+  getRestaurantHours,
+  setRestaurantHours,
   updateRestaurantLocation,
   uploadRestaurantLogo,
   uploadRestaurantBanner,

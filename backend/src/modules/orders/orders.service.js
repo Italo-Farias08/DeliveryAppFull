@@ -24,12 +24,12 @@ async function createOrder(clientId, data) {
   try {
     await client.query('BEGIN');
     const restaurantResult = await client.query(
-      'SELECT id, tenant_id, delivery_fee, is_open FROM restaurants WHERE id = $1',
+      'SELECT id, tenant_id, delivery_fee, restaurant_open_now(id) AS is_open_now FROM restaurants WHERE id = $1',
       [data.restaurantId]
     );
     if (restaurantResult.rowCount === 0) throw new AppError('Restaurante não encontrado', 404);
     const restaurant = restaurantResult.rows[0];
-    if (!restaurant.is_open) throw new AppError('Restaurante fechado no momento', 400);
+    if (!restaurant.is_open_now) throw new AppError('Restaurante fechado no momento', 400);
 
     const menuItemIds = data.items.map((i) => i.menuItemId);
     const menuItemsResult = await client.query(

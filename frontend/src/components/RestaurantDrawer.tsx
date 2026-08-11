@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
-export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Menu' | 'Location' | 'Settings';
+export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Menu' | 'Location' | 'Hours' | 'Settings';
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
@@ -14,6 +14,7 @@ const ITEMS: { route: RestaurantRoute; label: string; icon: keyof typeof Ionicon
   { route: 'Orders', label: 'Pedidos', icon: 'receipt-outline' },
   { route: 'Menu', label: 'Cardápio', icon: 'restaurant-outline' },
   { route: 'Location', label: 'Localização', icon: 'location-outline' },
+  { route: 'Hours', label: 'Horário', icon: 'time-outline' },
   { route: 'Settings', label: 'Configuração', icon: 'settings-outline' },
 ];
 

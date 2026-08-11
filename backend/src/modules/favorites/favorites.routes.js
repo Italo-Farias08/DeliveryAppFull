@@ -21,7 +21,7 @@ router.get(
     const result = await pool.query(
       `SELECT r.id, r.tenant_id AS "tenantId", r.category_id AS "categoryId", r.name, r.rating,
               r.delivery_time_min AS "deliveryTimeMin", r.delivery_time_max AS "deliveryTimeMax",
-              r.delivery_fee AS "deliveryFee", r.image, r.banner, r.is_open AS "isOpen"
+              r.delivery_fee AS "deliveryFee", r.image, r.banner, restaurant_open_now(r.id) AS "isOpen"
        FROM favorites f
        JOIN restaurants r ON r.id = f.restaurant_id
        WHERE f.user_id = $1

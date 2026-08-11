@@ -10,7 +10,7 @@ async function listRestaurants(categoryId) {
   const result = await pool.query(
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
-            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            delivery_fee AS "deliveryFee", image, banner, restaurant_open_now(id) AS "isOpen",
             street, number, complement, neighborhood, city, state, zip, lat, lng
      FROM restaurants
      ${where}
@@ -24,7 +24,7 @@ async function getRestaurantById(id) {
   const restaurantResult = await pool.query(
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
-            delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            delivery_fee AS "deliveryFee", image, banner, restaurant_open_now(id) AS "isOpen",
             street, number, complement, neighborhood, city, state, zip, lat, lng
      FROM restaurants
      WHERE id = $1 AND is_published = true`,
@@ -73,7 +73,7 @@ async function search(query) {
   const result = await pool.query(
     `SELECT DISTINCT r.id, r.tenant_id AS "tenantId", r.category_id AS "categoryId", r.name, r.rating, r.rating_count AS "ratingCount",
             r.delivery_time_min AS "deliveryTimeMin", r.delivery_time_max AS "deliveryTimeMax",
-            r.delivery_fee AS "deliveryFee", r.image, r.banner, r.is_open AS "isOpen"
+            r.delivery_fee AS "deliveryFee", r.image, r.banner, restaurant_open_now(r.id) AS "isOpen"
      FROM restaurants r
      LEFT JOIN menu_items m ON m.restaurant_id = r.id
      WHERE r.is_published = true AND (LOWER(r.name) LIKE $1 OR LOWER(m.name) LIKE $1)

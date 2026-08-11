@@ -47,6 +47,28 @@ const rejectOrderSchema = z.object({
   reason: z.string().max(300).optional(),
 });
 
+// HH:MM, 00:00 a 23:59
+const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido, use HH:MM');
+
+// Uma entrada por dia da semana (0=domingo .. 6=sábado). Quando `closed` é
+// true, openTime/closeTime são ignorados; quando false, os dois são
+// obrigatórios -- não faz sentido ter só um dos dois.
+const restaurantHoursSchema = z
+  .array(
+    z.object({
+      dayOfWeek: z.number().int().min(0).max(6),
+      closed: z.boolean(),
+      openTime: timeString.nullable().optional(),
+      closeTime: timeString.nullable().optional(),
+    })
+  )
+  .refine((days) => days.every((d) => d.closed || (d.openTime && d.closeTime)), {
+    message: 'Informe o horário de abertura e fechamento (ou marque como fechado) em todos os dias.',
+  })
+  .refine((days) => days.every((d) => d.closed || !d.openTime || !d.closeTime || d.openTime < d.closeTime), {
+    message: 'O horário de fechamento precisa ser depois do horário de abertura.',
+  });
+
 // Adicional de um item do cardápio (ex: "Bacon extra", "Borda recheada").
 // price pode ser 0 (adicional sem custo), mas nunca negativo.
 const addonSchema = z.object({
@@ -55,4 +77,12 @@ const addonSchema = z.object({
   isAvailable: z.boolean().optional(),
 });
 
-module.exports = { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema };
+module.exports = {
+  restaurantSchema,
+  restaurantLocationSchema,
+  menuItemSchema,
+  menuCategorySchema,
+  rejectOrderSchema,
+  addonSchema,
+  restaurantHoursSchema,
+};
