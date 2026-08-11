@@ -8,6 +8,7 @@ import RestaurantLocationScreen from '../screens/Restaurant/RestaurantLocationSc
 import RestaurantMenuScreen from '../screens/Restaurant/RestaurantMenuScreen';
 import RestaurantOnboardingScreen from '../screens/Restaurant/RestaurantOnboardingScreen';
 import RestaurantOrdersScreen from '../screens/Restaurant/RestaurantOrdersScreen';
+import RestaurantSalesScreen from '../screens/Restaurant/RestaurantSalesScreen';
 import RestaurantSettingsScreen from '../screens/Restaurant/RestaurantSettingsScreen';
 import { colors } from '../theme/colors';
 
@@ -35,6 +36,7 @@ function RestaurantNavigatorInner() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Dashboard" component={RestaurantDashboardScreen} />
       <Stack.Screen name="Orders" component={RestaurantOrdersScreen} />
+      <Stack.Screen name="Sales" component={RestaurantSalesScreen} />
       <Stack.Screen name="Menu" component={RestaurantMenuScreen} />
       <Stack.Screen name="Location" component={RestaurantLocationScreen} />
       <Stack.Screen name="Hours" component={RestaurantHoursScreen} />

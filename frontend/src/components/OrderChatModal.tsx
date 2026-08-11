@@ -130,7 +130,7 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
                   <Text style={styles.emptyText}>Nenhuma mensagem ainda</Text>
                 </View>
               }
-              renderItem={({ item }) => {
+              renderItem={({ item }: { item: ChatMessage }) => {
                 const mine = item.senderRole === myRole;
                 return (
                   <View style={[styles.bubbleRow, mine ? styles.bubbleRowMine : styles.bubbleRowTheirs]}>

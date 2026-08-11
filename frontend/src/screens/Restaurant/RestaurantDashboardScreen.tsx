@@ -185,6 +185,14 @@ export default function RestaurantDashboardScreen() {
             <Text style={styles.shortcutSub}>{pendingCount > 0 ? `${pendingCount} novo${pendingCount > 1 ? 's' : ''}` : 'Ver tudo'}</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Sales')} activeOpacity={0.85}>
+            <View style={styles.shortcutIconWrap}>
+              <Ionicons name="bar-chart-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.shortcutTitle}>Vendas</Text>
+            <Text style={styles.shortcutSub}>Faturamento e histórico</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Menu')} activeOpacity={0.85}>
             <View style={styles.shortcutIconWrap}>
               <Ionicons name="restaurant-outline" size={18} color={colors.primary} />

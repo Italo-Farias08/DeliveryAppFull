@@ -5,13 +5,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
-export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Menu' | 'Location' | 'Hours' | 'Settings';
+export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Sales' | 'Menu' | 'Location' | 'Hours' | 'Settings';
 
 const DRAWER_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
 const ITEMS: { route: RestaurantRoute; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { route: 'Dashboard', label: 'Início', icon: 'home-outline' },
   { route: 'Orders', label: 'Pedidos', icon: 'receipt-outline' },
+  { route: 'Sales', label: 'Vendas', icon: 'bar-chart-outline' },
   { route: 'Menu', label: 'Cardápio', icon: 'restaurant-outline' },
   { route: 'Location', label: 'Localização', icon: 'location-outline' },
   { route: 'Hours', label: 'Horário', icon: 'time-outline' },

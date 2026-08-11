@@ -3,7 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3333/api';
 
-export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK !== 'false';
+// Por padrão usa a API REAL. Só cai em mock se alguém pedir isso
+// explicitamente (EXPO_PUBLIC_USE_MOCK=true) -- assim, se o .env sumir
+// (ele é gitignored) ou não for carregado por algum motivo, o app nunca
+// volta sozinho pra dados falsos sem avisar.
+export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
 
 const TOKEN_KEY = '@deliveryapp:token';
 
