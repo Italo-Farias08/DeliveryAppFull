@@ -195,6 +195,49 @@ async function abandonOrder(delivererId, orderId) {
   return { id: order.id, status: order.status };
 }
 
+// Perfil de vínculo do entregador (usado pra mostrar na tela se ele já
+// está vinculado a algum restaurante, e a qual).
+async function getProfile(userId) {
+  const result = await pool.query(
+    `SELECT dp.tenant_id AS "tenantId", t.name AS "tenantName"
+     FROM deliverer_profiles dp
+     LEFT JOIN tenants t ON t.id = dp.tenant_id
+     WHERE dp.user_id = $1`,
+    [userId]
+  );
+  if (result.rowCount === 0) throw new AppError('Perfil de entregador não encontrado', 404);
+  return result.rows[0];
+}
+
+// Vincula (ou troca) o restaurante do entregador usando o código de
+// convite -- igual à validação que já existia no cadastro, só que agora
+// pode ser chamada a qualquer momento, não só na criação da conta.
+async function linkToRestaurant(userId, inviteCode) {
+  const tenantResult = await pool.query('SELECT id, name FROM tenants WHERE deliverer_invite_code = $1', [
+    inviteCode.toUpperCase(),
+  ]);
+  if (tenantResult.rowCount === 0) {
+    throw new AppError('Código do restaurante inválido — confira com o restaurante e tente de novo', 400);
+  }
+  const tenant = tenantResult.rows[0];
+  const result = await pool.query(
+    `UPDATE deliverer_profiles SET tenant_id = $1 WHERE user_id = $2 RETURNING tenant_id AS "tenantId"`,
+    [tenant.id, userId]
+  );
+  if (result.rowCount === 0) throw new AppError('Perfil de entregador não encontrado', 404);
+  return { tenantId: tenant.id, tenantName: tenant.name };
+}
+
+// Desvincula, voltando o entregador a ser autônomo (radar público).
+async function unlinkFromRestaurant(userId) {
+  const result = await pool.query(
+    `UPDATE deliverer_profiles SET tenant_id = NULL WHERE user_id = $1 RETURNING tenant_id AS "tenantId"`,
+    [userId]
+  );
+  if (result.rowCount === 0) throw new AppError('Perfil de entregador não encontrado', 404);
+  return { tenantId: null };
+}
+
 module.exports = {
   setAvailability,
   listAvailable,
@@ -203,4 +246,7 @@ module.exports = {
   confirmPickup,
   confirmDelivery,
   abandonOrder,
+  getProfile,
+  linkToRestaurant,
+  unlinkFromRestaurant,
 };

@@ -10,6 +10,37 @@ const router = Router();
 
 router.use(authenticate, authorize('deliverer'));
 
+// Perfil de vínculo: mostra se o entregador já está vinculado a algum
+// restaurante (e a qual), pra tela decidir o que exibir.
+router.get(
+  '/profile',
+  asyncHandler(async (req, res) => {
+    const profile = await service.getProfile(req.user.sub);
+    res.json(profile);
+  })
+);
+
+const linkSchema = z.object({ inviteCode: z.string().min(4).max(20) });
+
+// Vincula (ou troca) o restaurante a qualquer momento -- não só no cadastro.
+router.post(
+  '/link-restaurant',
+  asyncHandler(async (req, res) => {
+    const { inviteCode } = linkSchema.parse(req.body);
+    const result = await service.linkToRestaurant(req.user.sub, inviteCode);
+    res.json(result);
+  })
+);
+
+// Desvincula, voltando a ser entregador autônomo.
+router.delete(
+  '/link-restaurant',
+  asyncHandler(async (req, res) => {
+    const result = await service.unlinkFromRestaurant(req.user.sub);
+    res.json(result);
+  })
+);
+
 const availabilitySchema = z.object({ isAvailable: z.boolean() });
 
 router.patch(

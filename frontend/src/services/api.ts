@@ -3,6 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3333/api';
 
+// DEBUG TEMPORÁRIO — remova depois de resolver o problema de conexão.
+// Isso mostra no terminal do Expo (e no console do celular) qual URL
+// o app está de fato usando, pra confirmarmos se o .env foi carregado.
+console.log('>>> API_BASE_URL em uso:', API_BASE_URL);
+
 // Por padrão usa a API REAL. Só cai em mock se alguém pedir isso
 // explicitamente (EXPO_PUBLIC_USE_MOCK=true) -- assim, se o .env sumir
 // (ele é gitignored) ou não for carregado por algum motivo, o app nunca

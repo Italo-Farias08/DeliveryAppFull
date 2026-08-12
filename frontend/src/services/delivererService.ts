@@ -101,3 +101,23 @@ export async function sendDelivererOrderMessage(orderId: string, message: string
   const { data } = await api.post(`/deliverer/orders/${orderId}/messages`, { message });
   return data;
 }
+
+export interface DelivererProfile {
+  tenantId: string | null;
+  tenantName?: string | null;
+}
+
+export async function getDelivererProfile(): Promise<DelivererProfile> {
+  const { data } = await api.get('/deliverer/profile');
+  return data;
+}
+
+export async function linkToRestaurant(inviteCode: string): Promise<{ tenantId: string; tenantName: string }> {
+  const { data } = await api.post('/deliverer/link-restaurant', { inviteCode: inviteCode.trim() });
+  return data;
+}
+
+export async function unlinkFromRestaurant(): Promise<{ tenantId: null }> {
+  const { data } = await api.delete('/deliverer/link-restaurant');
+  return data;
+}

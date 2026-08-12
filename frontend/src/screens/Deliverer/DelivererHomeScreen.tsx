@@ -26,10 +26,14 @@ import {
   confirmDelivery,
   confirmPickup,
   getDelivererOrderMessages,
+  DelivererProfile,
+  getDelivererProfile,
+  linkToRestaurant,
   listAvailableOrders,
   listMyDeliveries,
   sendDelivererOrderMessage,
   setAvailability,
+  unlinkFromRestaurant,
 } from '../../services/delivererService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { colors } from '../../theme/colors';
@@ -238,6 +242,67 @@ export default function DelivererHomeScreen() {
 
   const [chatOrder, setChatOrder] = useState<MyDeliveryOrder | null>(null);
   const [abandoningId, setAbandoningId] = useState<string | null>(null);
+
+  // Vínculo com restaurante -- agora pode ser feito/desfeito a qualquer
+  // momento pelo app, não só no cadastro.
+  const [delivererProfile, setDelivererProfile] = useState<DelivererProfile | null>(null);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
+  const [linking, setLinking] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const profile = await getDelivererProfile();
+      setDelivererProfile(profile);
+    } catch {
+      // silencioso
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  async function handleLinkRestaurant() {
+    if (!inviteCodeInput.trim()) return;
+    setLinking(true);
+    try {
+      await linkToRestaurant(inviteCodeInput);
+      setInviteCodeInput('');
+      await loadProfile();
+      Alert.alert('Pronto!', 'Você agora está vinculado a esse restaurante.');
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Não foi possível vincular. Confira o código e tente de novo.';
+      Alert.alert('Erro', message);
+    } finally {
+      setLinking(false);
+    }
+  }
+
+  function handleUnlinkRestaurant() {
+    Alert.alert(
+      'Desvincular restaurante',
+      'Você vai voltar a ser um entregador autônomo e sair do radar exclusivo desse restaurante. Continuar?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desvincular',
+          style: 'destructive',
+          onPress: async () => {
+            setUnlinking(true);
+            try {
+              await unlinkFromRestaurant();
+              await loadProfile();
+            } catch {
+              Alert.alert('Erro', 'Não foi possível desvincular agora. Tente de novo.');
+            } finally {
+              setUnlinking(false);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   const availableRef = useRef(available);
   availableRef.current = available;
@@ -459,6 +524,62 @@ export default function DelivererHomeScreen() {
             trackColor={{ true: colors.secondary, false: colors.border }}
             thumbColor={colors.white}
           />
+        </View>
+
+        <View style={styles.statusCard}>
+          {delivererProfile?.tenantId ? (
+            <>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statusTitle}>Vinculado a {delivererProfile.tenantName}</Text>
+                <Text style={styles.statusSub}>Você recebe as corridas exclusivas desse restaurante</Text>
+              </View>
+              <TouchableOpacity onPress={handleUnlinkRestaurant} disabled={unlinking}>
+                {unlinking ? (
+                  <ActivityIndicator color={colors.danger} />
+                ) : (
+                  <Text style={{ color: colors.danger, fontWeight: '600' }}>Desvincular</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={{ flex: 1 }}>
+              <Text style={styles.statusTitle}>Entregador autônomo</Text>
+              <Text style={styles.statusSub}>Tem o código de um restaurante? Vincule-se pra receber corridas exclusivas</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                <TextInput
+                  value={inviteCodeInput}
+                  onChangeText={setInviteCodeInput}
+                  placeholder="Código do restaurante"
+                  autoCapitalize="characters"
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={handleLinkRestaurant}
+                  disabled={linking || !inviteCodeInput.trim()}
+                  style={{
+                    backgroundColor: colors.primary,
+                    borderRadius: 8,
+                    paddingHorizontal: 16,
+                    justifyContent: 'center',
+                    opacity: linking || !inviteCodeInput.trim() ? 0.6 : 1,
+                  }}
+                >
+                  {linking ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text style={{ color: colors.white, fontWeight: '600' }}>Vincular</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.statsRow}>
