@@ -8,12 +8,27 @@ function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 dígitos
 }
 
-async function registerClientOrDeliverer({ name, email, password, role, phone, cpf }) {
+async function registerClientOrDeliverer({ name, email, password, role, phone, cpf, inviteCode }) {
   console.log('DEBUG REGISTER >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (existing.rowCount > 0) {
     throw new AppError('E-mail já cadastrado', 409);
   }
+
+  // Se o entregador informou o código do restaurante, valida ANTES de criar
+  // a conta -- assim ele fica sabendo na hora se digitou errado, em vez de
+  // criar a conta e só depois descobrir que não vinculou com ninguém.
+  let ownerTenantId = null;
+  if (role === 'deliverer' && inviteCode) {
+    const tenantResult = await pool.query('SELECT id FROM tenants WHERE deliverer_invite_code = $1', [
+      inviteCode.toUpperCase(),
+    ]);
+    if (tenantResult.rowCount === 0) {
+      throw new AppError('Código do restaurante inválido — confira com o restaurante e tente de novo', 400);
+    }
+    ownerTenantId = tenantResult.rows[0].id;
+  }
+
   const passwordHash = await hashPassword(password);
   const result = await pool.query(
     `INSERT INTO users (name, email, password_hash, role, phone, cpf)
@@ -23,7 +38,10 @@ async function registerClientOrDeliverer({ name, email, password, role, phone, c
   );
   const user = result.rows[0];
   if (role === 'deliverer') {
-    await pool.query('INSERT INTO deliverer_profiles (user_id) VALUES ($1)', [user.id]);
+    await pool.query('INSERT INTO deliverer_profiles (user_id, tenant_id) VALUES ($1, $2)', [
+      user.id,
+      ownerTenantId,
+    ]);
   }
   return buildAuthResponse(user);
 }

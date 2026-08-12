@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -56,7 +57,8 @@ const statusIcon: Record<OrderStatus, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function RestaurantOrdersScreen() {
-  const { orders, setOrders, refreshing, reload, pendingCount } = useRestaurantPanel();
+  const { orders, setOrders, refreshing, reload, pendingCount, ownDeliverers } = useRestaurantPanel();
+  const [delivererPickerOrder, setDelivererPickerOrder] = useState<TenantOrder | null>(null);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
   const [chatOrder, setChatOrder] = useState<TenantOrder | null>(null);
 
@@ -93,16 +95,35 @@ export default function RestaurantOrdersScreen() {
     ]);
   }
 
-  async function handleMarkReady(order: TenantOrder) {
+  async function handleMarkReady(order: TenantOrder, delivererId?: string) {
     setSavingOrderId(order.id);
     try {
-      await markOrderReady(order.id);
+      await markOrderReady(order.id, delivererId);
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'procurando_entregador' } : o)));
-    } catch {
-      Alert.alert('Erro', 'Não foi possível marcar o pedido como pronto.');
+    } catch (err: any) {
+      Alert.alert('Erro', err?.response?.data?.error || 'Não foi possível marcar o pedido como pronto.');
     } finally {
       setSavingOrderId(null);
     }
+  }
+
+  // "Usar meu entregador": se só tem um da casa disponível, atribui direto
+  // (menos toque, mais rápido no correria da cozinha). Com mais de um,
+  // abre a lista pra escolher qual vai buscar esse pedido.
+  function handlePickOwnDeliverer(order: TenantOrder) {
+    const available = ownDeliverers.filter((d) => d.isAvailable);
+    if (available.length === 0) {
+      Alert.alert(
+        'Nenhum entregador disponível',
+        'Seus entregadores da casa estão todos indisponíveis agora. Chame um entregador pelo radar, ou tente de novo em instantes.'
+      );
+      return;
+    }
+    if (available.length === 1) {
+      handleMarkReady(order, available[0].id);
+      return;
+    }
+    setDelivererPickerOrder(order);
   }
 
   return (
@@ -203,17 +224,44 @@ export default function RestaurantOrdersScreen() {
                 )}
 
                 {order.status === 'preparando' && (
-                  <TouchableOpacity
-                    style={[styles.advanceBtn, styles.advanceBtnFull, saving && { opacity: 0.6 }]}
-                    onPress={() => handleMarkReady(order)}
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <ActivityIndicator color={colors.white} />
-                    ) : (
-                      <Text style={styles.advanceBtnText}>Pedido pronto — chamar entregador</Text>
-                    )}
-                  </TouchableOpacity>
+                  ownDeliverers.length === 0 ? (
+                    <TouchableOpacity
+                      style={[styles.advanceBtn, styles.advanceBtnFull, saving && { opacity: 0.6 }]}
+                      onPress={() => handleMarkReady(order)}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator color={colors.white} />
+                      ) : (
+                        <Text style={styles.advanceBtnText}>Pedido pronto — chamar entregador</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.readyChoiceRow}>
+                      <TouchableOpacity
+                        style={[styles.readyChoiceBtn, saving && { opacity: 0.6 }]}
+                        onPress={() => handleMarkReady(order)}
+                        disabled={saving}
+                      >
+                        <Ionicons name="radio-outline" size={15} color={colors.primary} />
+                        <Text style={styles.readyChoiceBtnText}>Chamar entregador</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.readyChoiceBtn, styles.readyChoiceBtnFilled, saving && { opacity: 0.6 }]}
+                        onPress={() => handlePickOwnDeliverer(order)}
+                        disabled={saving}
+                      >
+                        {saving ? (
+                          <ActivityIndicator color={colors.white} />
+                        ) : (
+                          <>
+                            <Ionicons name="bicycle" size={15} color={colors.white} />
+                            <Text style={styles.readyChoiceBtnTextFilled}>Usar meu entregador</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )
                 )}
 
                 {order.status === 'procurando_entregador' && (
@@ -261,6 +309,46 @@ export default function RestaurantOrdersScreen() {
           sendMessage={sendTenantOrderMessage}
         />
       )}
+
+      <Modal
+        visible={!!delivererPickerOrder}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDelivererPickerOrder(null)}
+      >
+        <View style={styles.pickerBackdrop}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setDelivererPickerOrder(null)}
+          />
+          <View style={styles.pickerCard}>
+            <Text style={styles.pickerTitle}>Qual entregador vai buscar?</Text>
+            {ownDeliverers
+              .filter((d) => d.isAvailable)
+              .map((d) => (
+                <TouchableOpacity
+                  key={d.id}
+                  style={styles.pickerRow}
+                  onPress={() => {
+                    const order = delivererPickerOrder;
+                    setDelivererPickerOrder(null);
+                    if (order) handleMarkReady(order, d.id);
+                  }}
+                >
+                  <View style={styles.pickerAvatar}>
+                    <Ionicons name="bicycle" size={16} color={colors.primary} />
+                  </View>
+                  <Text style={styles.pickerRowText}>{d.name}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setDelivererPickerOrder(null)}>
+              <Text style={styles.pickerCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </RestaurantScreenLayout>
   );
 }
@@ -284,6 +372,30 @@ const styles = StyleSheet.create({
     shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2,
   },
   advanceBtnFull: { marginTop: 10 },
+
+  readyChoiceRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  readyChoiceBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: colors.primary, borderRadius: 12, paddingVertical: 11,
+  },
+  readyChoiceBtnText: { color: colors.primary, fontWeight: '700', fontSize: 12.5 },
+  readyChoiceBtnFilled: { backgroundColor: colors.primary, borderColor: colors.primary },
+  readyChoiceBtnTextFilled: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
+
+  pickerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  pickerCard: { width: '100%', maxWidth: 360, backgroundColor: colors.surface, borderRadius: 18, padding: 16 },
+  pickerTitle: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginBottom: 10 },
+  pickerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
+  },
+  pickerAvatar: {
+    width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pickerRowText: { flex: 1, color: colors.text, fontWeight: '600', fontSize: 14 },
+  pickerCancel: { alignItems: 'center', paddingVertical: 12, marginTop: 4 },
+  pickerCancelText: { color: colors.textMuted, fontWeight: '700' },
   advanceBtnText: { color: colors.white, fontSize: 13, fontWeight: '700' },
 
   orderCard: {

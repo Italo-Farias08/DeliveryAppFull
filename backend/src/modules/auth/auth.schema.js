@@ -35,6 +35,9 @@ const registerSchema = z
       cpf: cpfField,
       vehicleType: z.enum(['moto', 'bike', 'carro']).default('moto'),
       vehiclePlate: plateField.optional(),
+      // Código que o restaurante compartilha pra vincular esse entregador
+      // como "da casa" (exclusivo), em vez de autônomo/marketplace.
+      inviteCode: z.string().trim().min(1).optional(),
     }),
     z.object({
       role: z.literal('restaurant'),

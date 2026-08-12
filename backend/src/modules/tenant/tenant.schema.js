@@ -47,6 +47,12 @@ const rejectOrderSchema = z.object({
   reason: z.string().max(300).optional(),
 });
 
+// Ao marcar como pronto, o restaurante pode indicar um entregador da casa
+// (delivererId). Sem isso, o pedido segue pro radar de entregadores autônomos.
+const markReadySchema = z.object({
+  delivererId: z.string().uuid().optional(),
+});
+
 // HH:MM, 00:00 a 23:59
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido, use HH:MM');
 
@@ -85,4 +91,5 @@ module.exports = {
   rejectOrderSchema,
   addonSchema,
   restaurantHoursSchema,
+  markReadySchema,
 };

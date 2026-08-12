@@ -55,6 +55,9 @@ export interface RegisterDelivererPayload {
   vehicleType: 'moto' | 'bike' | 'carro';
   vehiclePlate?: string;
   phone?: string;
+  // Código do restaurante — vincula esse entregador como "da casa"
+  // (exclusivo), em vez de autônomo/marketplace.
+  inviteCode?: string;
 }
 
 export interface RegisterRestaurantPayload {

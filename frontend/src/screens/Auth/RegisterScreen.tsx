@@ -77,6 +77,9 @@ export default function RegisterScreen({ navigation }: any) {
   // Entregador
   const [vehicleType, setVehicleType] = useState<VehicleType>('moto');
   const [vehiclePlate, setVehiclePlate] = useState('');
+  // Código do restaurante (opcional) — vincula como entregador "da casa"
+  // em vez de autônomo. Quem não tiver, deixa em branco e vira autônomo.
+  const [inviteCode, setInviteCode] = useState('');
 
   const [loading, setLoading] = useState(false);
 
@@ -149,6 +152,7 @@ export default function RegisterScreen({ navigation }: any) {
         cpf: cpf.replace(/\D/g, ''),
         vehicleType,
         vehiclePlate: vehicleType === 'bike' ? undefined : vehiclePlate.replace(/[^A-Za-z0-9]/g, ''),
+        inviteCode: inviteCode.trim() ? inviteCode.trim().toUpperCase() : undefined,
       };
     }
 
@@ -285,6 +289,23 @@ export default function RegisterScreen({ navigation }: any) {
                   />
                 </View>
               )}
+
+              <View style={styles.inputWrap}>
+                <Ionicons name="business-outline" size={20} color={colors.textMuted} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Código do restaurante (opcional)"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
+                  maxLength={6}
+                  value={inviteCode}
+                  onChangeText={(v) => setInviteCode(v.toUpperCase())}
+                />
+              </View>
+              <Text style={styles.inviteHint}>
+                Vai trabalhar fixo pra um restaurante? Peça o código pra ele e cole aqui. Sem código, você entra como
+                entregador autônomo e pega corridas de qualquer loja.
+              </Text>
             </>
           )}
 
@@ -372,6 +393,7 @@ const styles = StyleSheet.create({
   vehicleCardActive: { backgroundColor: colors.primary },
   vehicleLabel: { fontSize: 12.5, fontWeight: '700', color: colors.primaryDark },
   vehicleLabelActive: { color: colors.white },
+  inviteHint: { color: colors.textMuted, fontSize: 11.5, lineHeight: 16, marginTop: -6, marginBottom: 12 },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',

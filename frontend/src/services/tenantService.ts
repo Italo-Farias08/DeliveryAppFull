@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Addon, Category, MenuCategory, MenuItem, OrderStatus, Restaurant, RestaurantHours } from '../types';
+import { Addon, Category, MenuCategory, MenuItem, OrderStatus, OwnDeliverer, Restaurant, RestaurantHours } from '../types';
 
 // Painel do restaurante — sempre fala com o backend de verdade (não tem mock aqui,
 // já que é uma área autenticada específica do dono do restaurante).
@@ -256,9 +256,28 @@ export async function rejectOrder(orderId: string, reason?: string): Promise<{ i
   return data;
 }
 
-export async function markOrderReady(orderId: string): Promise<{ id: string; status: OrderStatus }> {
-  const { data } = await api.patch(`/tenant/orders/${orderId}/ready`);
+export async function markOrderReady(
+  orderId: string,
+  delivererId?: string
+): Promise<{ id: string; status: OrderStatus; delivererId?: string | null }> {
+  const { data } = await api.patch(`/tenant/orders/${orderId}/ready`, delivererId ? { delivererId } : {});
   return data;
+}
+
+// Entregadores "da casa" — vinculados só a este restaurante, escolhíveis
+// na hora de marcar um pedido como pronto ("usar meu entregador").
+export async function listOwnDeliverers(): Promise<OwnDeliverer[]> {
+  const { data } = await api.get('/tenant/deliverers');
+  return data;
+}
+
+export async function removeOwnDeliverer(delivererId: string): Promise<void> {
+  await api.delete(`/tenant/deliverers/${delivererId}`);
+}
+
+export async function getDelivererInviteCode(): Promise<string> {
+  const { data } = await api.get('/tenant/deliverer-invite-code');
+  return data.code;
 }
 
 export interface TenantOrderMessage {

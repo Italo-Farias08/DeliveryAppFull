@@ -54,6 +54,11 @@ router.patch('/orders/:orderId/accept', controller.acceptOrder);
 router.patch('/orders/:orderId/reject', controller.rejectOrder);
 router.patch('/orders/:orderId/ready', controller.markOrderReady);
 
+// Entregadores da casa (vinculados a este restaurante)
+router.get('/deliverers', controller.listOwnDeliverers);
+router.delete('/deliverers/:delivererId', controller.removeOwnDeliverer);
+router.get('/deliverer-invite-code', controller.getDelivererInviteCode);
+
 const messageSchema = z.object({ message: z.string().min(1).max(1000) });
 
 router.get(

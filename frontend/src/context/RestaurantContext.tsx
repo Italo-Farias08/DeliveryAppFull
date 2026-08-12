@@ -9,13 +9,14 @@ import {
   listMenuCategories,
   listMenuItems,
   listMyRestaurants,
+  listOwnDeliverers,
   listTenantOrders,
   updateRestaurant,
   uploadRestaurantBanner,
   uploadRestaurantLogo,
 } from '../services/tenantService';
 import { connectSocket, disconnectSocket } from '../services/socket';
-import { Category, MenuCategory, MenuItem, OrderStatus, Restaurant } from '../types';
+import { Category, MenuCategory, MenuItem, OrderStatus, OwnDeliverer, Restaurant } from '../types';
 
 // Estado e ações compartilhadas entre as telas do painel do restaurante
 // (Início, Pedidos, Cardápio, Localização, Configurações) — cada tela lê
@@ -36,6 +37,12 @@ interface RestaurantContextData {
   setOrders: React.Dispatch<React.SetStateAction<TenantOrder[]>>;
   pendingCount: number;
   reload: (isRefresh?: boolean) => Promise<void>;
+
+  // Entregadores da casa — vinculados só a este restaurante, pra usar na
+  // hora de marcar um pedido como pronto ("usar meu entregador").
+  ownDeliverers: OwnDeliverer[];
+  setOwnDeliverers: React.Dispatch<React.SetStateAction<OwnDeliverer[]>>;
+  reloadOwnDeliverers: () => Promise<void>;
 
   onboardingSaving: boolean;
   handleCreateRestaurant: (payload: RestaurantInput) => Promise<void>;
@@ -59,6 +66,7 @@ export function RestaurantProvider({ children }: { children: React.ReactNode }) 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   const [orders, setOrders] = useState<TenantOrder[]>([]);
+  const [ownDeliverers, setOwnDeliverers] = useState<OwnDeliverer[]>([]);
 
   const [onboardingSaving, setOnboardingSaving] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -81,11 +89,23 @@ export function RestaurantProvider({ children }: { children: React.ReactNode }) 
         setMenuItems(items);
         setOrders(tenantOrders);
         setMenuCategories(menuCats);
+        // não bloqueia o carregamento principal se essa parte falhar --
+        // o painel de pedidos/cardápio continua funcionando normalmente
+        listOwnDeliverers().then(setOwnDeliverers).catch(() => {});
       }
     } catch (err) {
       Alert.alert('Erro', 'Não foi possível carregar os dados do painel.');
     } finally {
       isRefresh ? setRefreshing(false) : setLoadingInit(false);
+    }
+  }, []);
+
+  const reloadOwnDeliverers = useCallback(async () => {
+    try {
+      setOwnDeliverers(await listOwnDeliverers());
+    } catch {
+      // silencioso -- essa lista só afeta a opção "usar meu entregador",
+      // não trava o resto do painel se falhar
     }
   }, []);
 
@@ -195,6 +215,9 @@ export function RestaurantProvider({ children }: { children: React.ReactNode }) 
         setOrders,
         pendingCount,
         reload,
+        ownDeliverers,
+        setOwnDeliverers,
+        reloadOwnDeliverers,
         onboardingSaving,
         handleCreateRestaurant,
         savingStatus,

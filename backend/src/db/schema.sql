@@ -7,6 +7,9 @@ CREATE TABLE tenants (
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  -- Código curto que o restaurante compartilha com o próprio entregador
+  -- pra ele se vincular no cadastro (em vez de virar autônomo/marketplace).
+  deliverer_invite_code TEXT UNIQUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -134,8 +137,14 @@ CREATE TABLE deliverer_profiles (
   vehicle_type TEXT,
   document TEXT,
   is_available BOOLEAN NOT NULL DEFAULT true,
+  -- Entregador "da casa": vinculado a um restaurante específico, só
+  -- recebe corridas desse restaurante (nunca aparece no radar público de
+  -- entregadores autônomos). NULL = entregador autônomo normal.
+  tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX idx_deliverer_profiles_tenant_id ON deliverer_profiles(tenant_id);
 
 CREATE TABLE orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

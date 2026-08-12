@@ -1,6 +1,6 @@
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/db');
-const { toClient, toDeliverers } = require('../../realtime/socket');
+const { toClient, toTenant, toDeliverers, toDeliverer } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToDeliverers } = require('../../utils/push');
 
 const TENANT_ORDER_SELECT = `
@@ -365,50 +365,143 @@ async function rejectOrder(db, tenantId, orderId, reason) {
 }
 
 // Restaurante marca como pronto: preparando -> procurando_entregador
-// Nesse momento o pedido entra no radar dos entregadores.
-async function markOrderReady(db, tenantId, orderId) {
+// Se vier delivererId, o pedido já nasce atribuído ao entregador DA CASA
+// (nunca passa pelo radar público). Sem delivererId, segue o fluxo normal:
+// entra no radar pra qualquer entregador autônomo aceitar.
+async function markOrderReady(db, tenantId, orderId, delivererId) {
+  let ownDeliverer = null;
+  if (delivererId) {
+    const check = await pool.query(
+      `SELECT u.id, u.name FROM deliverer_profiles dp
+       JOIN users u ON u.id = dp.user_id
+       WHERE dp.user_id = $1 AND dp.tenant_id = $2`,
+      [delivererId, tenantId]
+    );
+    if (check.rowCount === 0) {
+      throw new AppError('Esse entregador não pertence a este restaurante', 403);
+    }
+    ownDeliverer = check.rows[0];
+  }
+
   const result = await db.query(
-    `UPDATE orders SET status = 'procurando_entregador', ready_at = now()
+    `UPDATE orders SET status = 'procurando_entregador', ready_at = now(), deliverer_id = $3
      WHERE id = $1 AND tenant_id = $2 AND status = 'preparando'
      RETURNING id, status, client_id AS "clientId", restaurant_id AS "restaurantId", total,
                delivery_fee AS "deliveryFee", pickup_code AS "pickupCode",
                created_at AS "createdAt", ready_at AS "readyAt", address_id AS "addressId"`,
-    [orderId, tenantId]
+    [orderId, tenantId, ownDeliverer?.id || null]
   );
   if (result.rowCount === 0) {
     throw new AppError('Pedido não encontrado ou ainda não está em preparo', 409);
   }
   const order = result.rows[0];
-  const restaurantResult = await db.query('SELECT name FROM restaurants WHERE id = $1', [order.restaurantId]);
+  const restaurantResult = await db.query(
+    `SELECT name, street AS "restaurantStreet", number AS "restaurantNumber",
+            neighborhood AS "restaurantNeighborhood", city AS "restaurantCity",
+            lat AS "restaurantLat", lng AS "restaurantLng"
+     FROM restaurants WHERE id = $1`,
+    [order.restaurantId]
+  );
+  const restaurant = restaurantResult.rows[0] || {};
   const addressResult = await db.query(
     'SELECT street, number, neighborhood, city FROM addresses WHERE id = $1',
     [order.addressId]
   );
   const address = addressResult.rows[0] || {};
   toClient(order.clientId, 'order:status', { id: order.id, status: order.status });
-  toDeliverers('order:available', {
+  sendPushToUser(order.clientId, {
+    title: 'Pedido pronto! 📦',
+    body: ownDeliverer
+      ? 'Seu pedido está pronto e o entregador já está indo buscar.'
+      : 'Seu pedido está pronto e já estamos buscando um entregador.',
+    data: { orderId: order.id, type: 'order:status', status: order.status },
+  });
+
+  const courierPayload = {
     id: order.id,
     total: order.total,
     deliveryFee: order.deliveryFee,
     createdAt: order.createdAt,
     readyAt: order.readyAt,
-    restaurantName: restaurantResult.rows[0]?.name || '',
+    restaurantName: restaurant.name || '',
+    restaurantStreet: restaurant.restaurantStreet,
+    restaurantNumber: restaurant.restaurantNumber,
+    restaurantNeighborhood: restaurant.restaurantNeighborhood,
+    restaurantCity: restaurant.restaurantCity,
+    restaurantLat: restaurant.restaurantLat,
+    restaurantLng: restaurant.restaurantLng,
     street: address.street,
     number: address.number,
     neighborhood: address.neighborhood,
     city: address.city,
-  });
-  sendPushToUser(order.clientId, {
-    title: 'Pedido pronto! 📦',
-    body: 'Seu pedido está pronto e já estamos buscando um entregador.',
-    data: { orderId: order.id, type: 'order:status', status: order.status },
-  });
-  sendPushToDeliverers({
-    title: 'Nova corrida disponível 🛵',
-    body: `${restaurantResult.rows[0]?.name || 'Um restaurante'} tem uma entrega esperando.`,
-    data: { orderId: order.id, type: 'order:available' },
-  });
-  return { id: order.id, status: order.status };
+  };
+
+  if (ownDeliverer) {
+    // Vai direto pro entregador da casa -- não aparece no radar de ninguém.
+    toDeliverer(ownDeliverer.id, 'order:assigned', courierPayload);
+    toTenant(tenantId, 'order:courierAssigned', { id: order.id, delivererId: ownDeliverer.id });
+    sendPushToUser(ownDeliverer.id, {
+      title: 'Nova entrega pra você 🛵',
+      body: `${restaurant.name || 'Seu restaurante'} tem um pedido pronto pra retirada.`,
+      data: { orderId: order.id, type: 'order:assigned' },
+    });
+  } else {
+    toDeliverers('order:available', courierPayload);
+    sendPushToDeliverers({
+      title: 'Nova corrida disponível 🛵',
+      body: `${restaurant.name || 'Um restaurante'} tem uma entrega esperando.`,
+      data: { orderId: order.id, type: 'order:available' },
+    });
+  }
+
+  return { id: order.id, status: order.status, delivererId: ownDeliverer?.id || null };
+}
+
+// Entregadores vinculados a este restaurante (\"da casa\") -- não incluem
+// entregadores autônomos do radar público.
+async function listOwnDeliverers(tenantId) {
+  const result = await pool.query(
+    `SELECT u.id, u.name, u.phone, dp.vehicle_type AS "vehicleType", dp.is_available AS "isAvailable"
+     FROM deliverer_profiles dp
+     JOIN users u ON u.id = dp.user_id
+     WHERE dp.tenant_id = $1
+     ORDER BY u.name ASC`,
+    [tenantId]
+  );
+  return result.rows;
+}
+
+// Desvincula um entregador da casa (ele volta a ser autônomo/marketplace).
+async function removeOwnDeliverer(tenantId, delivererId) {
+  const result = await pool.query(
+    `UPDATE deliverer_profiles SET tenant_id = NULL WHERE user_id = $1 AND tenant_id = $2 RETURNING user_id`,
+    [delivererId, tenantId]
+  );
+  if (result.rowCount === 0) throw new AppError('Entregador não encontrado nesta conta', 404);
+}
+
+// Código de convite que o restaurante compartilha com o próprio entregador
+// pra ele se vincular no cadastro. Gerado uma única vez (fica fixo depois).
+async function getOrCreateDelivererInviteCode(tenantId) {
+  const existing = await pool.query('SELECT deliverer_invite_code AS code FROM tenants WHERE id = $1', [tenantId]);
+  if (existing.rows[0]?.code) return existing.rows[0].code;
+
+  // Gera um código curto e único (6 caracteres, sem letras ambíguas tipo O/0, I/1).
+  const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let attempt = 0; attempt < 10; attempt++) {
+    let code = '';
+    for (let i = 0; i < 6; i++) code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+    try {
+      const updated = await pool.query(
+        'UPDATE tenants SET deliverer_invite_code = $1 WHERE id = $2 RETURNING deliverer_invite_code AS code',
+        [code, tenantId]
+      );
+      return updated.rows[0].code;
+    } catch (err) {
+      if (err.code !== '23505') throw err; // colisão de código único -- tenta outro
+    }
+  }
+  throw new AppError('Não foi possível gerar o código de convite, tente novamente', 500);
 }
 
 module.exports = {
@@ -440,4 +533,7 @@ module.exports = {
   createAddon,
   updateAddon,
   deleteAddon,
+  listOwnDeliverers,
+  removeOwnDeliverer,
+  getOrCreateDelivererInviteCode,
 };

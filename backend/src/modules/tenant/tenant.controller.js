@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema, restaurantHoursSchema } = require('./tenant.schema');
+const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema, restaurantHoursSchema, markReadySchema } = require('./tenant.schema');
 const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
@@ -162,8 +162,25 @@ const rejectOrder = asyncHandler(async (req, res) => {
 });
 
 const markOrderReady = asyncHandler(async (req, res) => {
-  const order = await service.markOrderReady(req.db, req.tenantId, req.params.orderId);
+  const { delivererId } = markReadySchema.parse(req.body || {});
+  const order = await service.markOrderReady(req.db, req.tenantId, req.params.orderId, delivererId);
   res.json(order);
+});
+
+// Entregadores "da casa" (vinculados a este restaurante)
+const listOwnDeliverers = asyncHandler(async (req, res) => {
+  const deliverers = await service.listOwnDeliverers(req.tenantId);
+  res.json(deliverers);
+});
+
+const removeOwnDeliverer = asyncHandler(async (req, res) => {
+  await service.removeOwnDeliverer(req.tenantId, req.params.delivererId);
+  res.status(204).send();
+});
+
+const getDelivererInviteCode = asyncHandler(async (req, res) => {
+  const code = await service.getOrCreateDelivererInviteCode(req.tenantId);
+  res.json({ code });
 });
 
 module.exports = {
@@ -193,4 +210,7 @@ module.exports = {
   createAddon,
   updateAddon,
   deleteAddon,
+  listOwnDeliverers,
+  removeOwnDeliverer,
+  getDelivererInviteCode,
 };

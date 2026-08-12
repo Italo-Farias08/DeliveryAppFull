@@ -286,6 +286,13 @@ export default function DelivererHomeScreen() {
       s.on('order:taken', ({ id }: { id: string }) => {
         setRadar((prev) => prev.filter((o) => o.id !== id));
       });
+
+      // Entregador da casa: o restaurante atribuiu esse pedido direto a
+      // mim, sem passar pelo radar. Recarrega "minhas entregas" pra ele
+      // aparecer na hora, com todos os campos já formatados certinho.
+      s.on('order:assigned', () => {
+        loadMine();
+      });
     });
 
     return () => {

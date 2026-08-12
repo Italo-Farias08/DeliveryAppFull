@@ -51,6 +51,16 @@ export interface MenuItem {
   addons?: Addon[];
 }
 
+// Entregador "da casa" -- vinculado só a este restaurante (não é
+// autônomo/marketplace). É o que aparece na opção "usar meu entregador".
+export interface OwnDeliverer {
+  id: string;
+  name: string;
+  phone?: string | null;
+  vehicleType?: string | null;
+  isAvailable: boolean;
+}
+
 export interface Restaurant {
   id: string;
   name: string;
