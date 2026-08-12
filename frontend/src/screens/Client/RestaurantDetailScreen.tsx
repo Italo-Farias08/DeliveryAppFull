@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FoodCard } from '../../components/FoodCard';
 import { AddonsModal } from '../../components/AddonsModal';
+import SwitchRestaurantModal from '../../components/SwitchRestaurantModal';
 import { useCart } from '../../context/CartContext';
 import { getRestaurantById } from '../../services/restaurantService';
 import { colors } from '../../theme/colors';
@@ -37,18 +38,36 @@ export default function RestaurantDetailScreen() {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [addonsItem, setAddonsItem] = useState<MenuItem | null>(null);
+  const [pendingSwitchItem, setPendingSwitchItem] = useState<MenuItem | null>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getRestaurantById(restaurantId).then((r) => setRestaurant(r ?? null));
   }, [restaurantId]);
 
-  function handleAdd(item: MenuItem) {
+  function openItemFlow(item: MenuItem) {
     if (item.addons && item.addons.length > 0) {
       setAddonsItem(item);
       return;
     }
     addItem(item);
+  }
+
+  // Carrinho é de um restaurante por vez -- se já tem itens de outro
+  // lugar, avisa ANTES de trocar (em vez de apagar sem o cliente saber).
+  function handleAdd(item: MenuItem) {
+    if (!restaurant) return;
+    if (cartRestaurantId && cartRestaurantId !== restaurant.id) {
+      setPendingSwitchItem(item);
+      return;
+    }
+    openItemFlow(item);
+  }
+
+  function handleConfirmSwitch() {
+    const item = pendingSwitchItem;
+    setPendingSwitchItem(null);
+    if (item) openItemFlow(item);
   }
 
   function handleConfirmAddons(selectedAddons: Addon[], qty: number) {
@@ -210,6 +229,12 @@ export default function RestaurantDetailScreen() {
         item={addonsItem}
         onClose={() => setAddonsItem(null)}
         onConfirm={handleConfirmAddons}
+      />
+
+      <SwitchRestaurantModal
+        visible={!!pendingSwitchItem}
+        onCancel={() => setPendingSwitchItem(null)}
+        onConfirm={handleConfirmSwitch}
       />
     </SafeAreaView>
   );

@@ -43,6 +43,12 @@ const menuCategorySchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
+// Toggle rápido de "esgotado" -- só o booleano, sem precisar reenviar
+// nome/preço/descrição do item inteiro.
+const menuItemAvailabilitySchema = z.object({
+  isAvailable: z.boolean(),
+});
+
 const rejectOrderSchema = z.object({
   reason: z.string().max(300).optional(),
 });
@@ -87,6 +93,7 @@ module.exports = {
   restaurantSchema,
   restaurantLocationSchema,
   menuItemSchema,
+  menuItemAvailabilitySchema,
   menuCategorySchema,
   rejectOrderSchema,
   addonSchema,

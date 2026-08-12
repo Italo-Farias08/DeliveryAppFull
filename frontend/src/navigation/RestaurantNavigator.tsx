@@ -7,6 +7,7 @@ import RestaurantDeliverersScreen from '../screens/Restaurant/RestaurantDelivere
 import RestaurantHoursScreen from '../screens/Restaurant/RestaurantHoursScreen';
 import RestaurantLocationScreen from '../screens/Restaurant/RestaurantLocationScreen';
 import RestaurantMenuScreen from '../screens/Restaurant/RestaurantMenuScreen';
+import RestaurantOutOfStockScreen from '../screens/Restaurant/RestaurantOutOfStockScreen';
 import RestaurantOnboardingScreen from '../screens/Restaurant/RestaurantOnboardingScreen';
 import RestaurantOrdersScreen from '../screens/Restaurant/RestaurantOrdersScreen';
 import RestaurantSalesScreen from '../screens/Restaurant/RestaurantSalesScreen';
@@ -39,6 +40,7 @@ function RestaurantNavigatorInner() {
       <Stack.Screen name="Orders" component={RestaurantOrdersScreen} />
       <Stack.Screen name="Sales" component={RestaurantSalesScreen} />
       <Stack.Screen name="Menu" component={RestaurantMenuScreen} />
+      <Stack.Screen name="OutOfStock" component={RestaurantOutOfStockScreen} />
       <Stack.Screen name="Location" component={RestaurantLocationScreen} />
       <Stack.Screen name="Hours" component={RestaurantHoursScreen} />
       <Stack.Screen name="Deliverers" component={RestaurantDeliverersScreen} />

@@ -13,29 +13,40 @@ interface FoodCardProps {
 }
 
 export function FoodCard({ item, onAdd }: FoodCardProps) {
-  return (
-    <View style={styles.card}>
-      <Image
-        source={{ uri: item.image }}
-        style={styles.image}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        transition={150}
-      />
+  const soldOut = item.isAvailable === false;
 
-      <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.description} numberOfLines={3}>
-          {item.description}
-        </Text>
-        <Text style={styles.price}>R$ {item.price.toFixed(2)}</Text>
+  return (
+    <View style={[styles.card, soldOut && styles.cardSoldOut]}>
+      <View>
+        <Image
+          source={{ uri: item.image }}
+          style={styles.image}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
+        {soldOut && (
+          <View style={styles.soldOutOverlay}>
+            <Text style={styles.soldOutBadgeText}>Esgotado</Text>
+          </View>
+        )}
       </View>
 
-      <TouchableOpacity style={styles.addBtn} onPress={onAdd} activeOpacity={0.8}>
-        <Ionicons name="add" size={22} color={colors.white} />
-      </TouchableOpacity>
+      <View style={styles.content}>
+        <Text style={[styles.name, soldOut && styles.textMuted]} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={[styles.description, soldOut && styles.textMuted]} numberOfLines={3}>
+          {item.description}
+        </Text>
+        <Text style={[styles.price, soldOut && styles.textMuted]}>R$ {item.price.toFixed(2)}</Text>
+      </View>
+
+      {!soldOut && (
+        <TouchableOpacity style={styles.addBtn} onPress={onAdd} activeOpacity={0.8}>
+          <Ionicons name="add" size={22} color={colors.white} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -53,12 +64,24 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
+  cardSoldOut: { opacity: 0.65 },
   image: {
     width: 96,
     height: 96,
     borderRadius: 14,
     backgroundColor: colors.border,
   },
+  soldOutOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    right: 6,
+    backgroundColor: 'rgba(28,27,26,0.75)',
+    borderRadius: 8,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  soldOutBadgeText: { color: colors.white, fontSize: 10.5, fontWeight: '800', letterSpacing: 0.3 },
   content: {
     flex: 1,
     marginLeft: 12,
@@ -81,6 +104,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
   },
+  textMuted: { color: colors.textMuted },
   addBtn: {
     position: 'absolute',
     bottom: 12,

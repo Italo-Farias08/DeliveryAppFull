@@ -1,7 +1,7 @@
 const asyncHandler = require('../../utils/asyncHandler');
 const AppError = require('../../utils/AppError');
 const service = require('./tenant.service');
-const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuCategorySchema, rejectOrderSchema, addonSchema, restaurantHoursSchema, markReadySchema } = require('./tenant.schema');
+const { restaurantSchema, restaurantLocationSchema, menuItemSchema, menuItemAvailabilitySchema, menuCategorySchema, rejectOrderSchema, addonSchema, restaurantHoursSchema, markReadySchema } = require('./tenant.schema');
 const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
@@ -89,6 +89,13 @@ const createMenuItem = asyncHandler(async (req, res) => {
 const updateMenuItem = asyncHandler(async (req, res) => {
   const data = menuItemSchema.parse(req.body);
   const item = await service.updateMenuItem(req.db, req.params.menuItemId, data);
+  res.json(item);
+});
+
+// Toggle rápido de "esgotado" -- usado na área de esgotados do painel.
+const setMenuItemAvailability = asyncHandler(async (req, res) => {
+  const { isAvailable } = menuItemAvailabilitySchema.parse(req.body);
+  const item = await service.setMenuItemAvailability(req.db, req.params.menuItemId, isAvailable);
   res.json(item);
 });
 
@@ -197,6 +204,7 @@ module.exports = {
   listMenuItems,
   createMenuItem,
   updateMenuItem,
+  setMenuItemAvailability,
   deleteMenuItem,
   listMenuCategories,
   createMenuCategory,

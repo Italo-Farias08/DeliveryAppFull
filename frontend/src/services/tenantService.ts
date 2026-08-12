@@ -184,6 +184,13 @@ export async function updateMenuItem(menuItemId: string, payload: MenuItemInput)
   return data;
 }
 
+// Toggle rápido de "esgotado" -- usado na área de esgotados, sem precisar
+// reenviar o item inteiro (nome/preço/descrição).
+export async function setMenuItemAvailability(menuItemId: string, isAvailable: boolean): Promise<MenuItem> {
+  const { data } = await api.patch(`/tenant/menu-items/${menuItemId}/availability`, { isAvailable });
+  return data;
+}
+
 export async function deleteMenuItem(menuItemId: string): Promise<void> {
   await api.delete(`/tenant/menu-items/${menuItemId}`);
 }

@@ -203,6 +203,19 @@ async function updateMenuItem(db, menuItemId, data) {
   return result.rows[0];
 }
 
+// Toggle rápido de "esgotado" -- usado na área de esgotados do painel,
+// pra marcar/desmarcar sem reenviar o item inteiro.
+async function setMenuItemAvailability(db, menuItemId, isAvailable) {
+  const result = await db.query(
+    `UPDATE menu_items SET is_available = $1 WHERE id = $2
+     RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
+               name, description, price, image, is_available AS "isAvailable"`,
+    [isAvailable, menuItemId]
+  );
+  if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
+  return result.rows[0];
+}
+
 async function listMenuCategories(db, restaurantId) {
   const result = await db.query(
     `SELECT id, restaurant_id AS "restaurantId", name, sort_order AS "sortOrder"
@@ -518,6 +531,7 @@ module.exports = {
   listMenuItems,
   createMenuItem,
   updateMenuItem,
+  setMenuItemAvailability,
   updateMenuItemImage,
   deleteMenuItem,
   listMenuCategories,

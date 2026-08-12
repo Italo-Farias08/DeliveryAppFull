@@ -36,6 +36,7 @@ router.post('/restaurants/:id/banner', bannerUpload.single('banner'), controller
 router.get('/restaurants/:restaurantId/menu-items', controller.listMenuItems);
 router.post('/restaurants/:restaurantId/menu-items', controller.createMenuItem);
 router.put('/menu-items/:menuItemId', controller.updateMenuItem);
+router.patch('/menu-items/:menuItemId/availability', controller.setMenuItemAvailability);
 router.post('/menu-items/:menuItemId/image', menuItemUpload.single('image'), controller.uploadMenuItemImage);
 router.delete('/menu-items/:menuItemId', controller.deleteMenuItem);
 
