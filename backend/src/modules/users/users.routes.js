@@ -1,8 +1,10 @@
 const { Router } = require('express');
+const crypto = require('crypto');
 const { z } = require('zod');
 const { pool } = require('../../config/db');
 const asyncHandler = require('../../utils/asyncHandler');
 const { authenticate } = require('../../middlewares/auth');
+const { hashPassword, comparePassword } = require('../../utils/password');
 const AppError = require('../../utils/AppError');
 
 const router = Router();
@@ -139,6 +141,93 @@ router.delete(
       token,
       req.user.sub,
     ]);
+    res.status(204).send();
+  })
+);
+
+// Exclusão de conta. Exige a senha atual (mesmo já autenticado com token)
+// como segunda confirmação, pra reduzir o risco de alguém apagar a conta
+// por engano ou de um token roubado apagar a conta sozinho.
+const deleteMeSchema = z.object({
+  password: z.string().min(1, 'Informe sua senha para confirmar'),
+});
+
+router.delete(
+  '/me',
+  asyncHandler(async (req, res) => {
+    const { password } = deleteMeSchema.parse(req.body);
+
+    const result = await pool.query(
+      `SELECT id, email, role, tenant_id, password_hash, deleted_at FROM users WHERE id = $1`,
+      [req.user.sub]
+    );
+    if (result.rowCount === 0) {
+      throw new AppError('Usuário não encontrado', 404);
+    }
+    const user = result.rows[0];
+    if (user.deleted_at) {
+      throw new AppError('Esta conta já foi excluída', 410);
+    }
+
+    const valid = await comparePassword(password, user.password_hash);
+    if (!valid) {
+      throw new AppError('Senha incorreta', 401);
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Anonimiza os dados pessoais (mantendo a linha por causa do
+      // histórico de pedidos) e libera o e-mail original pra um novo
+      // cadastro futuro. A senha vira um hash aleatório inutilizável --
+      // ninguém consegue mais fazer login nessa conta.
+      const placeholderEmail = `conta-excluida-${user.id}@removido.local`;
+      const unusablePasswordHash = await hashPassword(crypto.randomBytes(32).toString('hex'));
+      await client.query(
+        `UPDATE users
+         SET name = 'Usuário removido', email = $1, phone = NULL, cpf = NULL,
+             password_hash = $2, notifications_enabled = false, deleted_at = now()
+         WHERE id = $3`,
+        [placeholderEmail, unusablePasswordHash, user.id]
+      );
+
+      // Remove dados que só fazem sentido pra uma conta ativa.
+      await client.query('DELETE FROM addresses WHERE user_id = $1', [user.id]);
+      await client.query('DELETE FROM favorites WHERE user_id = $1', [user.id]);
+      await client.query('DELETE FROM push_tokens WHERE user_id = $1', [user.id]);
+
+      // Invalida qualquer código de login/recuperação de senha pendente
+      // pro e-mail antigo.
+      await client.query('DELETE FROM login_verification_codes WHERE email = $1', [user.email]);
+      await client.query('DELETE FROM password_reset_codes WHERE email = $1', [user.email]);
+
+      if (user.role === 'deliverer') {
+        // Tira do radar de corridas na hora -- não pode continuar
+        // recebendo pedidos com a conta excluída.
+        await client.query('UPDATE deliverer_profiles SET is_available = false WHERE user_id = $1', [
+          user.id,
+        ]);
+      }
+
+      if (user.role === 'restaurant' && user.tenant_id) {
+        // Fecha a loja: some da home/busca do cliente e para de aceitar
+        // pedidos novos. Cardápio e pedidos antigos ficam intactos.
+        await client.query(`UPDATE tenants SET status = 'closed' WHERE id = $1`, [user.tenant_id]);
+        await client.query(
+          `UPDATE restaurants SET is_published = false, is_open = false WHERE tenant_id = $1`,
+          [user.tenant_id]
+        );
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
     res.status(204).send();
   })
 );

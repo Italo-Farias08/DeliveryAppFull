@@ -25,6 +25,16 @@ router.get(
 );
 
 router.get(
+  '/search-items',
+  asyncHandler(async (req, res) => {
+    const q = req.query.q || '';
+    if (!q.trim()) return res.json([]);
+    const items = await service.searchItems(q);
+    res.json(items);
+  })
+);
+
+router.get(
   '/:id',
   asyncHandler(async (req, res) => {
     const restaurant = await service.getRestaurantById(req.params.id);

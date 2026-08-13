@@ -83,4 +83,26 @@ async function search(query) {
   return result.rows;
 }
 
-module.exports = { listRestaurants, getRestaurantById, search };
+// Busca por ITEM de cardápio (não por restaurante/categoria): quem digita
+// "carne", por exemplo, quer ver todos os pratos com "carne" no nome/desc,
+// vindos de restaurantes diferentes -- cada item já vem com o nome e a
+// logo do restaurante de origem, pra ficar claro de onde vem o pedido.
+async function searchItems(query) {
+  const q = `%${query.toLowerCase()}%`;
+  const result = await pool.query(
+    `SELECT mi.id, mi.restaurant_id AS "restaurantId", mi.category_id AS "categoryId",
+            mi.name, mi.description, mi.price, mi.image, mi.is_available AS "isAvailable",
+            r.name AS "restaurantName", r.image AS "restaurantImage",
+            restaurant_open_now(r.id) AS "restaurantIsOpen"
+     FROM menu_items mi
+     JOIN restaurants r ON r.id = mi.restaurant_id
+     WHERE r.is_published = true
+       AND (LOWER(mi.name) LIKE $1 OR LOWER(mi.description) LIKE $1)
+     ORDER BY (LOWER(mi.name) LIKE $1) DESC, mi.name
+     LIMIT 60`,
+    [q]
+  );
+  return result.rows;
+}
+
+module.exports = { listRestaurants, getRestaurantById, search, searchItems };

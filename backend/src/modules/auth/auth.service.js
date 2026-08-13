@@ -82,7 +82,7 @@ async function registerRestaurantAccount({ name, email, password, phone, cpf, bu
 async function requestLoginCode({ email, password }) {
   console.log('DEBUG LOGIN >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const result = await pool.query(
-    'SELECT id, name, email, password_hash, role, tenant_id FROM users WHERE email = $1',
+    'SELECT id, name, email, password_hash, role, tenant_id, deleted_at FROM users WHERE email = $1',
     [email]
   );
   if (result.rowCount === 0) {
@@ -90,6 +90,13 @@ async function requestLoginCode({ email, password }) {
     throw new AppError('Credenciais inválidas', 401);
   }
   const user = result.rows[0];
+  // Conta excluída: a senha foi trocada por um hash inutilizável na hora
+  // da exclusão, então isso já bloquearia o login sozinho -- mas checamos
+  // deleted_at explicitamente pra dar o mesmo erro genérico sem vazar
+  // detalhe nenhum sobre o estado da conta.
+  if (user.deleted_at) {
+    throw new AppError('Credenciais inválidas', 401);
+  }
   const valid = await comparePassword(password, user.password_hash);
   if (!valid) {
     console.log('DEBUG LOGIN >>> e-mail encontrado, mas senha não bateu com o hash salvo');

@@ -106,6 +106,23 @@ export interface Restaurant {
   menu: MenuItem[];
 }
 
+// Resultado da busca por ITEM (não por restaurante): cada prato encontrado
+// já vem com nome/logo do restaurante de origem, pra mostrar de onde vem
+// o pedido direto no resultado da busca.
+export interface FoodSearchResult {
+  id: string;
+  restaurantId: string;
+  categoryId?: string | null;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  isAvailable?: boolean;
+  restaurantName: string;
+  restaurantImage?: string | null;
+  restaurantIsOpen?: boolean;
+}
+
 export interface CartItem {
   // chave única da linha do carrinho: mesmo item com adicionais diferentes
   // vira uma linha separada (ex: "X-Burger + bacon" e "X-Burger" puro)

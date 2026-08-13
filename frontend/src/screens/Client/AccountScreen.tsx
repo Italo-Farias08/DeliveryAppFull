@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DeleteAccountModal from '../../components/DeleteAccountModal';
 import { useAuth } from '../../context/AuthContext';
+import { deleteAccount } from '../../services/userService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
@@ -19,6 +21,12 @@ export default function AccountScreen() {
   const { user, signOut } = useAuth();
   const navigation = useNavigation<any>();
   const initials = (user?.name ?? '?').charAt(0).toUpperCase();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  async function handleConfirmDelete(password: string) {
+    await deleteAccount(password);
+    await signOut();
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -61,7 +69,29 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.dangerZone}>
+        <TouchableOpacity
+          style={styles.deleteRow}
+          activeOpacity={0.7}
+          onPress={() => setDeleteModalVisible(true)}
+        >
+          <Ionicons name="trash-outline" size={18} color={colors.danger} />
+          <Text style={styles.deleteLabel}>Excluir minha conta</Text>
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.version}>versão 1.0.0 · demonstração</Text>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        consequences={[
+          'Seus dados pessoais, endereços e favoritos serão apagados.',
+          'Você perde o acesso à sua conta e ao histórico de pedidos.',
+          'Não será possível desfazer essa ação depois de confirmada.',
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -92,5 +122,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   optionLabel: { flex: 1, fontSize: 15, color: colors.text, fontWeight: '600' },
-  version: { textAlign: 'center', color: colors.textMuted, fontSize: 11.5, marginTop: 24 },
+  dangerZone: { marginTop: 28, marginHorizontal: 20, alignItems: 'center' },
+  deleteRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  deleteLabel: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
+  version: { textAlign: 'center', color: colors.textMuted, fontSize: 11.5, marginTop: 10 },
 });

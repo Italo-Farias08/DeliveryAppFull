@@ -31,3 +31,9 @@ export async function savePushToken(token: string, platform: 'ios' | 'android'):
 export async function removePushToken(token: string): Promise<void> {
   await api.delete('/users/me/push-token', { data: { token } });
 }
+
+// Exclusão de conta. Pede a senha de novo como segunda confirmação --
+// o backend valida e, se estiver certa, anonimiza os dados e fecha a conta.
+export async function deleteAccount(password: string): Promise<void> {
+  await api.delete('/users/me', { data: { password } });
+}

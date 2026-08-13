@@ -24,7 +24,11 @@ function HomeStack() {
   return (
     <HomeStackNav.Navigator screenOptions={{ headerShown: false }}>
       <HomeStackNav.Screen name="HomeMain" component={HomeScreen} />
-      <HomeStackNav.Screen name="Search" component={SearchScreen} />
+      <HomeStackNav.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
       <HomeStackNav.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
       <HomeStackNav.Screen name="Cart" component={CartScreen} />
     </HomeStackNav.Navigator>

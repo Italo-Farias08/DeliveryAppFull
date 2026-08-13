@@ -27,9 +27,6 @@ function RestaurantNavigatorInner() {
     );
   }
 
-  // Sem restaurante cadastrado ainda: só o formulário de criação, sem o
-  // menu hambúrguer (não faz sentido navegar pra telas de um restaurante
-  // que ainda não existe).
   if (!restaurant) {
     return <RestaurantOnboardingScreen />;
   }

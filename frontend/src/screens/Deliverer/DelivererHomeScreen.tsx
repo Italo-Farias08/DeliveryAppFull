@@ -16,8 +16,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import DeleteAccountModal from '../../components/DeleteAccountModal';
 import OrderChatModal from '../../components/OrderChatModal';
 import { useAuth } from '../../context/AuthContext';
+import { deleteAccount } from '../../services/userService';
 import {
   MyDeliveryOrder,
   RadarOrder,
@@ -223,6 +225,12 @@ export default function DelivererHomeScreen() {
   const { user, signOut } = useAuth();
   const [available, setAvailable] = useState(false);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  async function handleConfirmDelete(password: string) {
+    await deleteAccount(password);
+    await signOut();
+  }
 
   const [radar, setRadar] = useState<RadarOrder[]>([]);
   const [loadingRadar, setLoadingRadar] = useState(false);
@@ -507,6 +515,15 @@ export default function DelivererHomeScreen() {
             <Ionicons name="log-out-outline" size={24} color={colors.danger} />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.deleteAccountLink}
+          onPress={() => setDeleteModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.deleteAccountLinkText}>Excluir minha conta</Text>
+        </TouchableOpacity>
 
         <View style={styles.statusCard}>
           <View style={{ flex: 1 }}>
@@ -794,6 +811,17 @@ export default function DelivererHomeScreen() {
           sendMessage={sendDelivererOrderMessage}
         />
       )}
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        consequences={[
+          'Você sai do radar de corridas e perde o acesso à conta na hora.',
+          'Seus dados pessoais serão apagados; o histórico de entregas fica preservado para o restaurante e o cliente.',
+          'Não será possível desfazer essa ação depois de confirmada.',
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -803,6 +831,8 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   hello: { ...typography.h1, color: colors.text },
   sub: { color: colors.textMuted, marginTop: 2 },
+  deleteAccountLink: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 10, marginBottom: 4 },
+  deleteAccountLinkText: { color: colors.textMuted, fontSize: 11.5, fontWeight: '600' },
 
   statusCard: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

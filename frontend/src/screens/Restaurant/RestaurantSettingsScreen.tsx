@@ -12,9 +12,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import DeleteAccountModal from '../../components/DeleteAccountModal';
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
+import { deleteAccount } from '../../services/userService';
 import { RestaurantInput, updateRestaurant } from '../../services/tenantService';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -36,6 +38,12 @@ export default function RestaurantSettingsScreen() {
 
   const [editingData, setEditingData] = useState(false);
   const [savingData, setSavingData] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+
+  async function handleConfirmDelete(password: string) {
+    await deleteAccount(password);
+    await signOut();
+  }
   const [name, setName] = useState(restaurant?.name || '');
   const [categoryId, setCategoryId] = useState<string | null>(restaurant?.categoryId || null);
   const [fee, setFee] = useState(restaurant ? String(restaurant.deliveryFee) : '');
@@ -259,8 +267,24 @@ export default function RestaurantSettingsScreen() {
             <Ionicons name="log-out-outline" size={18} color={colors.danger} />
             <Text style={styles.signOutText}>Sair da conta</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.deleteRow} onPress={() => setDeleteModalVisible(true)}>
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+            <Text style={styles.deleteText}>Excluir conta do restaurante</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        consequences={[
+          'Sua loja sai do ar e some da busca do cliente na hora.',
+          'Novos pedidos deixam de ser aceitos, mas o histórico de vendas é preservado.',
+          'Seus dados pessoais de acesso serão apagados e não será possível desfazer.',
+        ]}
+      />
     </RestaurantScreenLayout>
   );
 }
@@ -333,4 +357,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   signOutText: { color: colors.danger, fontWeight: '700', fontSize: 13.5 },
+  deleteRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12,
+  },
+  deleteText: { color: colors.danger, fontWeight: '600', fontSize: 12 },
 });

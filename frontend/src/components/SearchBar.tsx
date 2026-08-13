@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 
@@ -10,9 +10,16 @@ interface Props {
   editable?: boolean;
   onPress?: () => void;
   autoFocus?: boolean;
+  onSubmitEditing?: () => void;
 }
 
-export function SearchBar({ placeholder = 'Buscar restaurantes ou comidas', value, onChangeText, editable = true, onPress, autoFocus }: Props) {
+// Recebe ref pra permitir focar o campo de forma imperativa (ex: só depois
+// que a animação de navegação terminar, em vez de autoFocus na hora do
+// mount, que briga com a transição da tela e trava a animação).
+export const SearchBar = forwardRef<TextInput, Props>(function SearchBar(
+  { placeholder = 'Buscar restaurantes ou comidas', value, onChangeText, editable = true, onPress, autoFocus, onSubmitEditing },
+  ref
+) {
   if (!editable && onPress) {
     return (
       <TouchableOpacity style={styles.wrapper} onPress={onPress} activeOpacity={0.8}>
@@ -25,6 +32,7 @@ export function SearchBar({ placeholder = 'Buscar restaurantes ou comidas', valu
     <View style={styles.wrapper}>
       <Ionicons name="search" size={18} color={colors.textMuted} />
       <TextInput
+        ref={ref}
         style={styles.input}
         placeholder={placeholder}
         placeholderTextColor={colors.textMuted}
@@ -32,10 +40,11 @@ export function SearchBar({ placeholder = 'Buscar restaurantes ou comidas', valu
         onChangeText={onChangeText}
         autoFocus={autoFocus}
         returnKeyType="search"
+        onSubmitEditing={onSubmitEditing}
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {
