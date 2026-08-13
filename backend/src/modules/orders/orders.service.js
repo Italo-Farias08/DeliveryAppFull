@@ -108,16 +108,16 @@ async function createOrder(clientId, data) {
     for (const item of data.items) {
       const menuItem = menuItemsById[item.menuItemId];
       const chosenAddons = (item.addonIds || []).map((id) => addonsById[id]);
-      // Nome do adicional entra no "recibo" do item (name_snapshot), já que
-      // o pedido não tem uma tabela própria pra isso — só guarda o retrato
-      // do que foi pedido, do jeito que o restaurante e o cliente veem.
-      const nameSnapshot = chosenAddons.length
-        ? `${menuItem.name} (+ ${chosenAddons.map((a) => a.name).join(', ')})`
-        : menuItem.name;
+      // Adicionais e observação ficam em colunas próprias (em vez de
+      // grudados no nome do item), pra dar pra mostrar cada informação
+      // separada na tela do restaurante.
+      const addonsSnapshot = JSON.stringify(
+        chosenAddons.map((a) => ({ name: a.name, price: Number(a.price) }))
+      );
       await client.query(
-        `INSERT INTO order_items (order_id, menu_item_id, name_snapshot, price_snapshot, qty)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [orderId, menuItem.id, nameSnapshot, unitPrice(item), item.qty]
+        `INSERT INTO order_items (order_id, menu_item_id, name_snapshot, price_snapshot, qty, notes, addons_snapshot)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [orderId, menuItem.id, menuItem.name, unitPrice(item), item.qty, item.notes || null, addonsSnapshot]
       );
     }
 
@@ -164,7 +164,8 @@ async function listOrdersByClient(clientId) {
   const orders = result.rows;
   if (orders.length === 0) return orders;
   const itemsResult = await pool.query(
-    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty
+    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty,
+            notes, addons_snapshot AS addons
      FROM order_items
      WHERE order_id = ANY($1::uuid[])`,
     [orders.map((o) => o.id)]
@@ -245,7 +246,8 @@ async function getOrderById(orderId, clientId) {
   if (orderResult.rowCount === 0) throw new AppError('Pedido não encontrado', 404);
   const order = orderResult.rows[0];
   const itemsResult = await pool.query(
-    `SELECT id, name_snapshot AS name, price_snapshot AS price, qty
+    `SELECT id, name_snapshot AS name, price_snapshot AS price, qty,
+            notes, addons_snapshot AS addons
      FROM order_items
      WHERE order_id = $1`,
     [orderId]

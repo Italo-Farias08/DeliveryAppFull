@@ -30,7 +30,14 @@ export interface TenantOrder {
   delivererName?: string | null;
   delivererPhone?: string | null;
   cancelReason?: string | null;
-  items: { id: string; name: string; price: number; qty: number }[];
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    qty: number;
+    notes?: string | null;
+    addons?: { name: string; price: number }[];
+  }[];
 }
 
 export async function getCategories(): Promise<Category[]> {

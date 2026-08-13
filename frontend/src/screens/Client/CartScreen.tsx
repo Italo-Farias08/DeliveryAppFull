@@ -9,6 +9,7 @@ import {
   Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -31,7 +32,7 @@ function addressLabel(a: Address) {
 export default function CartScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { items, increaseItem, decreaseItem, subtotal, clear, restaurantId } = useCart();
+  const { items, increaseItem, decreaseItem, updateItemNotes, subtotal, clear, restaurantId } = useCart();
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [loadingFee, setLoadingFee] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -139,6 +140,7 @@ export default function CartScreen() {
           menuItemId: ci.item.id,
           qty: ci.qty,
           addonIds: ci.selectedAddons.map((a) => a.id),
+          notes: ci.notes?.trim() || undefined,
         })),
       });
       clear();
@@ -190,25 +192,42 @@ export default function CartScreen() {
         renderItem={({ item: ci }) => {
           const unitPrice = ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
           return (
-            <View style={styles.row}>
-              <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.name}>{ci.item.name}</Text>
-                {ci.selectedAddons.length > 0 && (
-                  <Text style={styles.addonsText}>
-                    {ci.selectedAddons.map((a) => a.name).join(', ')}
-                  </Text>
-                )}
-                <Text style={styles.price}>R$ {unitPrice.toFixed(2)}</Text>
+            <View style={styles.cartItemCard}>
+              <View style={styles.row}>
+                <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.name}>{ci.item.name}</Text>
+                  {ci.selectedAddons.length > 0 && (
+                    <Text style={styles.addonsText}>
+                      + {ci.selectedAddons.map((a) => a.name).join(', ')}
+                    </Text>
+                  )}
+                  <Text style={styles.price}>R$ {unitPrice.toFixed(2)}</Text>
+                </View>
+                <View style={styles.qtyRow}>
+                  <TouchableOpacity onPress={() => decreaseItem(ci.key)} style={styles.qtyBtn}>
+                    <Ionicons name="remove" size={16} color={colors.secondary} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyText}>{ci.qty}</Text>
+                  <TouchableOpacity onPress={() => increaseItem(ci.key)} style={styles.qtyBtn}>
+                    <Ionicons name="add" size={16} color={colors.secondary} />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.qtyRow}>
-                <TouchableOpacity onPress={() => decreaseItem(ci.key)} style={styles.qtyBtn}>
-                  <Ionicons name="remove" size={16} color={colors.secondary} />
-                </TouchableOpacity>
-                <Text style={styles.qtyText}>{ci.qty}</Text>
-                <TouchableOpacity onPress={() => increaseItem(ci.key)} style={styles.qtyBtn}>
-                  <Ionicons name="add" size={16} color={colors.secondary} />
-                </TouchableOpacity>
+
+              {/* campo de observação, separado visualmente do item e dos
+                  adicionais por uma linha divisória */}
+              <View style={styles.notesRow}>
+                <Ionicons name="create-outline" size={15} color={colors.textMuted} />
+                <TextInput
+                  style={styles.notesInput}
+                  placeholder="Adicionar observação (ex: sem cebola)"
+                  placeholderTextColor={colors.textMuted}
+                  value={ci.notes}
+                  onChangeText={(text) => updateItemNotes(ci.key, text)}
+                  multiline
+                  maxLength={300}
+                />
               </View>
             </View>
           );
@@ -301,11 +320,20 @@ const styles = StyleSheet.create({
   addressLabel: { color: colors.textMuted, fontSize: 11.5, fontWeight: '700' },
   addressValue: { color: colors.text, fontSize: 13.5, marginTop: 2, fontWeight: '600' },
   addressMissing: { color: colors.danger, fontSize: 13, marginTop: 2, fontWeight: '600' },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  cartItemCard: {
+    backgroundColor: colors.surface, borderRadius: 14, padding: 12, marginBottom: 14,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
   image: { width: 60, height: 60, borderRadius: 10, backgroundColor: colors.border },
   name: { ...typography.bodyBold, color: colors.text },
-  addonsText: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
+  addonsText: { color: colors.secondary, fontSize: 11.5, marginTop: 2, fontWeight: '600' },
   price: { color: colors.textMuted, marginTop: 2, fontSize: 13 },
+  notesRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 10,
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  notesInput: { flex: 1, fontSize: 12.5, color: colors.text, padding: 0, minHeight: 18 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   qtyBtn: {
     width: 26, height: 26, borderRadius: 13, backgroundColor: colors.secondaryLight,

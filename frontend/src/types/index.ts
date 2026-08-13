@@ -130,6 +130,15 @@ export interface CartItem {
   item: MenuItem;
   qty: number;
   selectedAddons: Addon[];
+  // observação do cliente pra essa linha (ex: "sem cebola", "bem passado")
+  notes: string;
+}
+
+// Adicional já "congelado" dentro de um item de pedido -- separado do
+// nome do item pra dar pra mostrar cada informação de forma independente.
+export interface OrderItemAddonSnapshot {
+  name: string;
+  price: number;
 }
 
 export type OrderStatus =
@@ -163,7 +172,14 @@ export interface Order {
   // avaliação que o próprio cliente deu pra esse pedido (null se ainda não avaliou)
   myRating?: number | null;
   myRatingComment?: string | null;
-  items: { id: string; name: string; price: number; qty: number }[];
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    qty: number;
+    notes?: string | null;
+    addons?: OrderItemAddonSnapshot[];
+  }[];
 }
 
 // Horário de funcionamento de UM dia da semana. 0=domingo ... 6=sábado,

@@ -183,7 +183,11 @@ CREATE TABLE order_items (
   menu_item_id UUID REFERENCES menu_items(id),
   name_snapshot TEXT NOT NULL,
   price_snapshot NUMERIC(10,2) NOT NULL,
-  qty INT NOT NULL CHECK (qty > 0)
+  qty INT NOT NULL CHECK (qty > 0),
+  -- observação do cliente pra esse item específico (ex: "sem cebola")
+  notes TEXT,
+  -- adicionais escolhidos, separados do nome do item (ex: [{"name":"Bacon extra","price":4}])
+  addons_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);

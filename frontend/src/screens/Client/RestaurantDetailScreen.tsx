@@ -45,12 +45,11 @@ export default function RestaurantDetailScreen() {
     getRestaurantById(restaurantId).then((r) => setRestaurant(r ?? null));
   }, [restaurantId]);
 
+  // Sempre abre o modal ao tocar em "+" -- mesmo pra itens sem adicionais
+  // cadastrados -- porque é nele que o cliente também pode escrever uma
+  // observação pro item (ex: "sem cebola").
   function openItemFlow(item: MenuItem) {
-    if (item.addons && item.addons.length > 0) {
-      setAddonsItem(item);
-      return;
-    }
-    addItem(item);
+    setAddonsItem(item);
   }
 
   // Carrinho é de um restaurante por vez -- se já tem itens de outro
@@ -70,9 +69,9 @@ export default function RestaurantDetailScreen() {
     if (item) openItemFlow(item);
   }
 
-  function handleConfirmAddons(selectedAddons: Addon[], qty: number) {
+  function handleConfirmAddons(selectedAddons: Addon[], qty: number, notes: string) {
     if (!addonsItem) return;
-    for (let i = 0; i < qty; i++) addItem(addonsItem, selectedAddons);
+    for (let i = 0; i < qty; i++) addItem(addonsItem, selectedAddons, notes);
     setAddonsItem(null);
   }
 

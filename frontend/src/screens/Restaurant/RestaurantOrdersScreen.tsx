@@ -194,9 +194,35 @@ export default function RestaurantOrdersScreen() {
 
                 {(order.items ?? []).length > 0 && (
                   <View style={styles.orderItemsBox}>
-                    <Text style={styles.orderItemsText}>
-                      {order.items.map((it) => `${it.qty}x ${it.name}`).join(', ')}
-                    </Text>
+                    {order.items.map((it, idx) => (
+                      <View
+                        key={it.id}
+                        style={[styles.itemRow, idx > 0 && styles.itemRowDivider]}
+                      >
+                        <View style={styles.itemQtyBadge}>
+                          <Text style={styles.itemQtyBadgeText}>{it.qty}x</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.itemName}>{it.name}</Text>
+
+                          {!!it.addons && it.addons.length > 0 && (
+                            <View style={styles.itemDetailRow}>
+                              <Ionicons name="add-circle-outline" size={13} color={colors.secondary} />
+                              <Text style={styles.itemAddonsText}>
+                                {it.addons.map((a) => a.name).join(', ')}
+                              </Text>
+                            </View>
+                          )}
+
+                          {!!it.notes && (
+                            <View style={[styles.itemDetailRow, styles.itemNotesBox]}>
+                              <Ionicons name="chatbox-ellipses-outline" size={13} color={colors.star} />
+                              <Text style={styles.itemNotesText}>{it.notes}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 )}
 
@@ -399,7 +425,7 @@ const styles = StyleSheet.create({
   advanceBtnText: { color: colors.white, fontSize: 13, fontWeight: '700' },
 
   orderCard: {
-    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 18,
     borderWidth: 1, borderColor: colors.border,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1,
   },
@@ -433,7 +459,25 @@ const styles = StyleSheet.create({
   orderItemsBox: {
     marginTop: 10, backgroundColor: colors.background, borderRadius: 10, padding: 10,
   },
-  orderItemsText: { color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
+  // cada item do pedido vira sua própria "linha", com um separador fino
+  // entre um item e o próximo -- é isso que resolve o pedido ficar tudo
+  // colado numa frase só.
+  itemRow: { flexDirection: 'row', gap: 8, paddingVertical: 8 },
+  itemRowDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  itemQtyBadge: {
+    minWidth: 28, height: 22, borderRadius: 7, backgroundColor: colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  itemQtyBadgeText: { color: colors.primary, fontSize: 11.5, fontWeight: '800' },
+  itemName: { color: colors.text, fontSize: 13.5, fontWeight: '700' },
+  // linha própria pra cada tipo de detalhe (adicional / observação), com
+  // ícone diferente, pra ficar óbvio o que é o quê num relance
+  itemDetailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 4 },
+  itemAddonsText: { flex: 1, color: colors.secondary, fontSize: 12, fontWeight: '600', lineHeight: 16 },
+  itemNotesBox: {
+    backgroundColor: colors.primaryLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+  },
+  itemNotesText: { flex: 1, color: colors.primaryDark, fontSize: 12, fontWeight: '600', lineHeight: 16 },
 
   orderActionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   outlineSmallBtn: {

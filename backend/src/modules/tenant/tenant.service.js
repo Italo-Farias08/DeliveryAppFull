@@ -323,7 +323,8 @@ async function listOrders(db, tenantId) {
   const orders = ordersResult.rows;
   if (orders.length === 0) return orders;
   const itemsResult = await db.query(
-    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty
+    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty,
+            notes, addons_snapshot AS addons
      FROM order_items
      WHERE order_id = ANY($1::uuid[])`,
     [orders.map((o) => o.id)]

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
@@ -11,7 +11,7 @@ interface Props {
   visible: boolean;
   item: MenuItem | null;
   onClose: () => void;
-  onConfirm: (selectedAddons: Addon[], qty: number) => void;
+  onConfirm: (selectedAddons: Addon[], qty: number, notes: string) => void;
 }
 
 // Modal que o cliente vê ao tocar em "+" num item que tem adicionais
@@ -20,11 +20,13 @@ interface Props {
 export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [qty, setQty] = useState(1);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     if (visible) {
       setSelectedIds(new Set());
       setQty(1);
+      setNotes('');
     }
   }, [visible, item?.id]);
 
@@ -46,7 +48,7 @@ export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
   const total = unitPrice * qty;
 
   function handleConfirm() {
-    onConfirm(selectedAddons, qty);
+    onConfirm(selectedAddons, qty, notes.trim());
   }
 
   return (
@@ -56,7 +58,9 @@ export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.subtitle}>Escolha os adicionais</Text>
+              <Text style={styles.subtitle}>
+                {addons.length > 0 ? 'Escolha os adicionais' : 'Confirme os detalhes do item'}
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color={colors.text} />
@@ -79,6 +83,19 @@ export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
               );
             })}
           </ScrollView>
+
+          <View style={styles.notesBlock}>
+            <Text style={styles.qtyLabel}>Observação (opcional)</Text>
+            <TextInput
+              style={styles.notesInput}
+              placeholder="Ex: sem cebola, ponto da carne bem passado..."
+              placeholderTextColor={colors.textMuted}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              maxLength={300}
+            />
+          </View>
 
           <View style={styles.qtyBlock}>
             <Text style={styles.qtyLabel}>Quantidade</Text>
@@ -118,6 +135,12 @@ const styles = StyleSheet.create({
   },
   addonName: { flex: 1, color: colors.text, fontSize: 14.5, fontWeight: '600' },
   addonPrice: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  notesBlock: { marginTop: 16 },
+  notesInput: {
+    marginTop: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    padding: 12, fontSize: 13.5, color: colors.text, minHeight: 60, textAlignVertical: 'top',
+    backgroundColor: colors.background,
+  },
   qtyBlock: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginTop: 16,
