@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function Button({ label, onPress, loading, disabled, variant = 'primary', style }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const isOutline = variant === 'outline';
   return (
     <TouchableOpacity
@@ -35,7 +38,8 @@ export function Button({ label, onPress, loading, disabled, variant = 'primary',
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   base: {
     height: 52,
     borderRadius: 14,
@@ -46,3 +50,4 @@ const styles = StyleSheet.create({
   outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
   label: { ...typography.button, color: colors.white },
 });
+};

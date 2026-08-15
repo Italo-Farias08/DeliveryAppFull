@@ -45,7 +45,7 @@ CREATE TABLE restaurants (
   delivery_time_min INT NOT NULL DEFAULT 20,
   delivery_time_max INT NOT NULL DEFAULT 40,
   delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
-  image TEXT,
+  min_order_value NUMERIC(10,2) NOT NULL DEFAULT 0,
   banner TEXT,
   is_open BOOLEAN NOT NULL DEFAULT true,
   -- Endereço/GPS da loja em si (não confundir com endereço de entrega do
@@ -126,10 +126,13 @@ CREATE TABLE addresses (
   zip TEXT,
   lat NUMERIC(9,6),
   lng NUMERIC(9,6),
+  is_default BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_addresses_user_id ON addresses(user_id);
+-- garante no máximo 1 endereço principal por cliente
+CREATE UNIQUE INDEX idx_addresses_one_default_per_user ON addresses(user_id) WHERE is_default;
 
 CREATE TABLE deliverer_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

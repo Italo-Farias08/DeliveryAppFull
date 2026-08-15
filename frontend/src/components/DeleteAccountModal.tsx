@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 const CONFIRM_WORD = 'EXCLUIR';
@@ -36,6 +37,8 @@ interface Props {
 // duas coisas acima estão certas, e (4) ainda mostra um Alert nativo de
 // "tem certeza?" antes de chamar o backend.
 export default function DeleteAccountModal({ visible, onClose, onConfirm, consequences }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [confirmText, setConfirmText] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -150,7 +153,8 @@ export default function DeleteAccountModal({ visible, onClose, onConfirm, conseq
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: colors.overlay,
@@ -232,3 +236,4 @@ const styles = StyleSheet.create({
   confirmBtnDisabled: { backgroundColor: colors.border },
   confirmText: { color: colors.white, fontWeight: '700', fontSize: 13.5 },
 });
+};

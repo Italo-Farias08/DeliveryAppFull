@@ -8,6 +8,7 @@ import { CartProvider } from './src/context/CartContext';
 import { OrderProvider } from './src/context/OrderContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
 import { NotificationsProvider } from './src/context/NotificationsContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { USE_MOCK, API_BASE_URL } from './src/services/api';
 
@@ -26,27 +27,42 @@ function MockModeBanner() {
   );
 }
 
+// Fica dentro do ThemeProvider só pra poder ler isDark e trocar a cor dos
+// ícones da status bar (relógio, bateria, wifi) junto com o tema do app.
+function AppContent() {
+  const { isDark, colors } = useTheme();
+  return (
+    <>
+      {/* translucent + backgroundColor transparent: a área de status
+          (bateria, wifi, relógio) deixa de ter aquela faixa branca
+          genérica e passa a herdar a cor de fundo de cada tela, que
+          já é pintada por baixo pelo SafeAreaView de cada uma. */}
+      <StatusBar style={isDark ? 'light' : 'dark'} translucent backgroundColor="transparent" />
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <MockModeBanner />
+        <RootNavigator />
+      </View>
+    </>
+  );
+}
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <CartProvider>
-            <OrderProvider>
-              <FavoritesProvider>
-                <NotificationsProvider>
-                  {/* translucent + backgroundColor transparent: a área de status
-                      (bateria, wifi, relógio) deixa de ter aquela faixa branca
-                      genérica e passa a herdar a cor de fundo de cada tela, que
-                      já é pintada por baixo pelo SafeAreaView de cada uma. */}
-                  <StatusBar style="dark" translucent backgroundColor="transparent" />
-                  <MockModeBanner />
-                  <RootNavigator />
-                </NotificationsProvider>
-              </FavoritesProvider>
-            </OrderProvider>
-          </CartProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <OrderProvider>
+                <FavoritesProvider>
+                  <NotificationsProvider>
+                    <AppContent />
+                  </NotificationsProvider>
+                </FavoritesProvider>
+              </OrderProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

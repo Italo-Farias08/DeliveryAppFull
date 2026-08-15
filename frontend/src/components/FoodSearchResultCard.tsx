@@ -7,7 +7,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { FoodSearchResult } from '../types';
 
@@ -17,6 +18,8 @@ interface Props {
 }
 
 export function FoodSearchResultCard({ item, onPress }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const soldOut = item.isAvailable === false;
   const closed = item.restaurantIsOpen === false;
 
@@ -67,7 +70,8 @@ export function FoodSearchResultCard({ item, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: 18,
@@ -110,3 +114,4 @@ const styles = StyleSheet.create({
   restaurantName: { fontSize: 12.5, fontWeight: '700', color: colors.textMuted, flexShrink: 1 },
   closedText: { fontSize: 12, color: colors.danger, fontWeight: '600' },
 });
+};

@@ -9,21 +9,26 @@ import RatingModal from '../../components/RatingModal';
 import { useCart } from '../../context/CartContext';
 import { cancelOrder, getOrderMessages, listMyOrders, rateOrder, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Order, OrderStatus } from '../../types';
 
 // Status com cor + ícone próprios — usados tanto no badge (fundo suave,
 // texto colorido) quanto pra decidir se ainda vale mostrar o código de
 // entrega, etc.
-const statusMap: Record<OrderStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
-  pendente: { label: 'Aguardando restaurante', color: colors.primary, icon: 'hourglass-outline' },
-  preparando: { label: 'Preparando', color: '#B8860B', icon: 'restaurant-outline' },
-  procurando_entregador: { label: 'Buscando entregador', color: colors.secondary, icon: 'search-outline' },
-  a_caminho: { label: 'A caminho', color: colors.secondary, icon: 'bicycle-outline' },
-  entregue: { label: 'Entregue', color: '#4A9B6E', icon: 'checkmark-circle-outline' },
-  cancelado: { label: 'Cancelado', color: colors.danger, icon: 'close-circle-outline' },
-};
+function getStatusMap(
+  colors: ThemeColors
+): Record<OrderStatus, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> {
+  return {
+    pendente: { label: 'Aguardando restaurante', color: colors.primary, icon: 'hourglass-outline' },
+    preparando: { label: 'Preparando', color: '#B8860B', icon: 'restaurant-outline' },
+    procurando_entregador: { label: 'Buscando entregador', color: colors.secondary, icon: 'search-outline' },
+    a_caminho: { label: 'A caminho', color: colors.secondary, icon: 'bicycle-outline' },
+    entregue: { label: 'Entregue', color: '#4A9B6E', icon: 'checkmark-circle-outline' },
+    cancelado: { label: 'Cancelado', color: colors.danger, icon: 'close-circle-outline' },
+  };
+}
 
 // Fundo suave pro badge de status: pega a cor do status e aplica bem clara,
 // em vez do badge sólido "gritando" a cor — fica mais elegante e ainda
@@ -53,26 +58,53 @@ function formatOrderDate(dateStr: string) {
 }
 
 export default function OrdersScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const statusMap = getStatusMap(colors);
   const navigation = useNavigation<any>();
   const { addItem } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
 
+  // Página fixa de 20 pedidos por vez -- igual ao padrão do backend
+  // (ver orders.service.js). A tela pede a próxima página sozinha quando
+  // o usuário chega perto do fim da lista (onEndReached).
+  const PAGE_SIZE = 20;
+
   const load = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
     try {
-      const data = await listMyOrders();
+      const data = await listMyOrders({ limit: PAGE_SIZE, offset: 0 });
       setOrders(data);
+      setHasMore(data.length >= PAGE_SIZE);
     } catch {
       // silencioso: mantém a última lista carregada
     } finally {
       isRefresh ? setRefreshing(false) : setLoading(false);
     }
   }, []);
+
+  // Busca a próxima página e concatena no final da lista já carregada --
+  // sem isso, a tela buscaria o histórico inteiro do cliente de uma vez.
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || loading || refreshing) return;
+    setLoadingMore(true);
+    try {
+      const next = await listMyOrders({ limit: PAGE_SIZE, offset: orders.length });
+      setOrders((prev) => [...prev, ...next]);
+      setHasMore(next.length >= PAGE_SIZE);
+    } catch {
+      // silencioso
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, loading, refreshing, orders.length]);
 
   useFocusEffect(
     useCallback(() => {
@@ -172,6 +204,15 @@ export default function OrdersScreen() {
           keyExtractor={(o) => o.id}
           contentContainerStyle={{ padding: 20, paddingTop: 4, flexGrow: 1 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+          onEndReachedThreshold={0.4}
+          onEndReached={loadMore}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: 16 }}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Ionicons name="receipt-outline" size={54} color={colors.textMuted} />
@@ -350,7 +391,8 @@ export default function OrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   title: { ...typography.h1, color: colors.text, paddingHorizontal: 20, marginBottom: 10 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -481,4 +523,5 @@ const styles = StyleSheet.create({
     marginTop: 4, marginBottom: 4,
   },
   ratingDoneText: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
-});
+  });
+}

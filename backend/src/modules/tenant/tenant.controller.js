@@ -174,7 +174,7 @@ const markOrderReady = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-// Entregadores "da casa" (vinculados a este restaurante)
+// Entregadores da casa Restaurate
 const listOwnDeliverers = asyncHandler(async (req, res) => {
   const deliverers = await service.listOwnDeliverers(req.tenantId);
   res.json(deliverers);

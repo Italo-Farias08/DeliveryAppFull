@@ -38,7 +38,8 @@ import {
   unlinkFromRestaurant,
 } from '../../services/delivererService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 // Se o backend passar a mandar lat/lng no pedido, esses campos são
@@ -146,6 +147,8 @@ function RouteStops({
   onNavigateRestaurant: () => void;
   onNavigateClient: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const restaurantDone = stage === 'client';
 
   return (
@@ -192,6 +195,8 @@ function RouteStops({
 }
 
 function RestaurantAvatar({ uri, size = 44 }: { uri?: string | null; size?: number }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   if (uri) {
     return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size * 0.28 }} contentFit="cover" cachePolicy="memory-disk" />;
   }
@@ -208,6 +213,8 @@ function RestaurantAvatar({ uri, size = 44 }: { uri?: string | null; size?: numb
 // ícone de bicicleta, embaixo).
 // ---------------------------------------------------------------------
 function OrderValues({ total, deliveryFee }: { total: number; deliveryFee?: number }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.valuesCol}>
       <View style={styles.totalPill}>
@@ -222,6 +229,8 @@ function OrderValues({ total, deliveryFee }: { total: number; deliveryFee?: numb
 }
 
 export default function DelivererHomeScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { user, signOut } = useAuth();
   const [available, setAvailable] = useState(false);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
@@ -826,7 +835,8 @@ export default function DelivererHomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   hello: { ...typography.h1, color: colors.text },
@@ -936,3 +946,4 @@ const styles = StyleSheet.create({
   },
   confirmBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 },
 });
+};

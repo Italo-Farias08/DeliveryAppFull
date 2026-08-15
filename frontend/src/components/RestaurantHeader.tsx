@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
 }
 
 export default function RestaurantHeader({ title, subtitle, onMenuPress, right }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.row}>
       <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -26,7 +29,8 @@ export default function RestaurantHeader({ title, subtitle, onMenuPress, right }
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14,
@@ -39,3 +43,4 @@ const styles = StyleSheet.create({
   title: { ...typography.h1, color: colors.text, fontSize: 21 },
   subtitle: { color: colors.textMuted, fontSize: 12.5, marginTop: 1 },
 });
+};

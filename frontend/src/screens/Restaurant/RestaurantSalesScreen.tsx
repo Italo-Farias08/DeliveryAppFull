@@ -4,7 +4,8 @@ import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } 
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { TenantOrder } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 // Só "entregue" é venda de fato concluída — pedido pendente/em preparo ainda
@@ -127,6 +128,8 @@ function periodRangeStart(period: Period, now: Date): Date {
 const CHART_HEIGHT = 120;
 
 function BarChart({ buckets }: { buckets: Bucket[] }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const max = Math.max(1, ...buckets.map((b) => b.revenue));
   return (
     <View style={styles.chartRow}>
@@ -154,6 +157,8 @@ function BarChart({ buckets }: { buckets: Bucket[] }) {
 }
 
 export default function RestaurantSalesScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { orders, refreshing, reload } = useRestaurantPanel();
   const [period, setPeriod] = useState<Period>('week');
 
@@ -279,7 +284,8 @@ export default function RestaurantSalesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   tabsRow: {
     flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, padding: 4,
     borderWidth: 1, borderColor: colors.border, gap: 4,
@@ -330,3 +336,4 @@ const styles = StyleSheet.create({
   },
   infoText: { flex: 1, color: colors.textMuted, fontSize: 11.5, lineHeight: 16 },
 });
+};

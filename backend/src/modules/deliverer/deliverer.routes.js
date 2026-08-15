@@ -107,13 +107,18 @@ router.patch(
 );
 
 const messageSchema = z.object({ message: z.string().min(1).max(1000) });
+const listMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  before: z.string().datetime().optional(),
+});
 
 router.get(
   '/orders/:id/messages',
   asyncHandler(async (req, res) => {
     const order = await messagesService.getOrderParties(req.params.id);
     if (order.delivererId !== req.user.sub) throw new AppError('Acesso negado', 403);
-    res.json(await messagesService.listMessages(req.params.id));
+    const { limit, before } = listMessagesQuerySchema.parse(req.query);
+    res.json(await messagesService.listMessages(req.params.id, { limit, before }));
   })
 );
 

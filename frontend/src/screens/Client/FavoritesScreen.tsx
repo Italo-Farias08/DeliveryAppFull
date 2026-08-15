@@ -6,11 +6,14 @@ import { ActivityIndicator, RefreshControl, StyleSheet, Text, TouchableOpacity, 
 import { FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFavorites } from '../../context/FavoritesContext';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Restaurant } from '../../types';
 
 export default function FavoritesScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const { favorites, loading, refresh, toggleFavorite } = useFavorites();
   const [refreshing, setRefreshing] = useState(false);
@@ -71,6 +74,8 @@ function FavoriteRow({
   onPress: () => void;
   onRemove: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity style={styles.row} activeOpacity={0.85} onPress={onPress}>
       <Image source={{ uri: restaurant.image || undefined }} style={styles.rowImage} contentFit="cover" />
@@ -90,7 +95,8 @@ function FavoriteRow({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -113,3 +119,4 @@ const styles = StyleSheet.create({
   rowMetaDot: { color: colors.textMuted, fontSize: 12.5 },
   removeBtn: { padding: 4 },
 });
+};

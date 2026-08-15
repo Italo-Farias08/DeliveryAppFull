@@ -56,6 +56,7 @@ export interface RestaurantInput {
   deliveryTimeMin: number;
   deliveryTimeMax: number;
   deliveryFee: number;
+  minOrderValue?: number;
   image?: string;
   banner?: string;
   isOpen?: boolean;
@@ -301,8 +302,11 @@ export interface TenantOrderMessage {
   createdAt: string;
 }
 
-export async function getTenantOrderMessages(orderId: string): Promise<TenantOrderMessage[]> {
-  const { data } = await api.get(`/tenant/orders/${orderId}/messages`);
+export async function getTenantOrderMessages(
+  orderId: string,
+  options?: { before?: string; limit?: number }
+): Promise<TenantOrderMessage[]> {
+  const { data } = await api.get(`/tenant/orders/${orderId}/messages`, { params: options });
   return data;
 }
 

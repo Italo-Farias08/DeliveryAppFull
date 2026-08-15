@@ -24,7 +24,7 @@ async function createOrder(clientId, data) {
   try {
     await client.query('BEGIN');
     const restaurantResult = await client.query(
-      'SELECT id, tenant_id, delivery_fee, restaurant_open_now(id) AS is_open_now FROM restaurants WHERE id = $1',
+      'SELECT id, tenant_id, delivery_fee, min_order_value, restaurant_open_now(id) AS is_open_now FROM restaurants WHERE id = $1',
       [data.restaurantId]
     );
     if (restaurantResult.rowCount === 0) throw new AppError('Restaurante não encontrado', 404);
@@ -91,6 +91,13 @@ async function createOrder(clientId, data) {
     }
 
     const subtotal = data.items.reduce((sum, item) => sum + unitPrice(item) * item.qty, 0);
+    const minOrderValue = Number(restaurant.min_order_value || 0);
+    if (minOrderValue > 0 && subtotal < minOrderValue) {
+      throw new AppError(
+        `Pedido mínimo deste restaurante é de R$ ${minOrderValue.toFixed(2)}. Adicione mais itens para continuar.`,
+        400
+      );
+    }
     const deliveryFee = Number(restaurant.delivery_fee);
     const total = subtotal + deliveryFee;
 
@@ -154,12 +161,19 @@ async function createOrder(clientId, data) {
   }
 }
 
-async function listOrdersByClient(clientId) {
+async function listOrdersByClient(clientId, { limit = 20, offset = 0 } = {}) {
+  // Paginado: sem LIMIT aqui, clientes com muitos pedidos acumulados
+  // fariam essa tela buscar o histórico inteiro (e a query de itens
+  // logo abaixo) toda vez que a tela de pedidos abre.
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 50);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+
   const result = await pool.query(
     `${ORDER_SELECT}
      WHERE o.client_id = $1
-     ORDER BY o.created_at DESC`,
-    [clientId]
+     ORDER BY o.created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [clientId, safeLimit, safeOffset]
   );
   const orders = result.rows;
   if (orders.length === 0) return orders;

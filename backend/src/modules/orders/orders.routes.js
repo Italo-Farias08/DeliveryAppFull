@@ -17,6 +17,18 @@ const rateOrderSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).optional(),
 });
+// Paginação da lista de pedidos: por padrão 20 por página (a tela pede a
+// próxima página ao chegar perto do fim da lista, tipo "carregar mais").
+const listOrdersQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+// Paginação do chat: a tela pede mensagens mais antigas passando `before`
+// (o created_at da mensagem mais antiga já carregada).
+const listMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  before: z.string().datetime().optional(),
+});
 
 router.post(
   '/',
@@ -30,7 +42,8 @@ router.post(
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const orders = await service.listOrdersByClient(req.user.sub);
+    const { limit, offset } = listOrdersQuerySchema.parse(req.query);
+    const orders = await service.listOrdersByClient(req.user.sub, { limit, offset });
     res.json(orders);
   })
 );
@@ -66,7 +79,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const order = await messagesService.getOrderParties(req.params.id);
     if (order.clientId !== req.user.sub) throw new AppError('Acesso negado', 403);
-    res.json(await messagesService.listMessages(req.params.id));
+    const { limit, before } = listMessagesQuerySchema.parse(req.query);
+    res.json(await messagesService.listMessages(req.params.id, { limit, before }));
   })
 );
 

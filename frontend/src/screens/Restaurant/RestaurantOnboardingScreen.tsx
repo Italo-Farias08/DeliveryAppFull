@@ -14,10 +14,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { RestaurantInput } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 export default function RestaurantOnboardingScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { user, signOut } = useAuth();
   const { categories, onboardingSaving, handleCreateRestaurant } = useRestaurantPanel();
 
@@ -130,7 +133,8 @@ export default function RestaurantOnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
   eyebrow: { fontSize: 11, color: colors.textMuted, fontWeight: '700', letterSpacing: 0.6, marginBottom: 2 },
@@ -171,3 +175,4 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
 });
+};

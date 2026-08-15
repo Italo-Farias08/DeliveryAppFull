@@ -15,13 +15,16 @@ import * as Clipboard from 'expo-clipboard';
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { getDelivererInviteCode, removeOwnDeliverer } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 // Entregadores "da casa": exclusivos deste restaurante. Diferente do
 // entregador autônomo (que pega corridas de qualquer loja pelo radar),
 // esse aqui só recebe pedidos daqui, direto, sem passar pelo radar.
 export default function RestaurantDeliverersScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { ownDeliverers, reloadOwnDeliverers, refreshing } = useRestaurantPanel();
   const [code, setCode] = useState<string | null>(null);
   const [loadingCode, setLoadingCode] = useState(true);
@@ -152,7 +155,8 @@ export default function RestaurantDeliverersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: colors.secondaryLight, borderRadius: 14, padding: 12, marginBottom: 20,
@@ -189,3 +193,4 @@ const styles = StyleSheet.create({
   delivererSub: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   removeBtn: { padding: 4 },
 });
+};

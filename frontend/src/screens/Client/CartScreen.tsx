@@ -20,8 +20,14 @@ import { useCart } from '../../context/CartContext';
 import { Address, createAddress, listAddresses } from '../../services/addressService';
 import { createOrder } from '../../services/orderService';
 import { getRestaurantById } from '../../services/restaurantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { distanceMeters } from '../../utils/geo';
+
+// Distância máxima (em metros) entre o GPS atual e o endereço principal
+// pra considerar que a pessoa "está" no endereço cadastrado.
+const MAX_ADDRESS_DISTANCE_M = 200;
 
 function addressLabel(a: Address) {
   const line = [a.street, a.number].filter(Boolean).join(', ');
@@ -30,10 +36,13 @@ function addressLabel(a: Address) {
 }
 
 export default function CartScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { items, increaseItem, decreaseItem, updateItemNotes, subtotal, clear, restaurantId } = useCart();
   const [deliveryFee, setDeliveryFee] = useState(0);
+  const [minOrderValue, setMinOrderValue] = useState(0);
   const [loadingFee, setLoadingFee] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,7 +58,8 @@ export default function CartScreen() {
       const data = await listAddresses();
       setAddresses(data);
       if (data.length > 0) {
-        setSelectedAddressId((prev) => prev ?? data[0].id);
+        const defaultAddress = data.find((a) => a.isDefault);
+        setSelectedAddressId((prev) => prev ?? defaultAddress?.id ?? data[0].id);
       }
     } catch {
       // silencioso — usuário ainda pode capturar a localização atual
@@ -66,15 +76,22 @@ export default function CartScreen() {
     let active = true;
     if (!restaurantId) {
       setDeliveryFee(0);
+      setMinOrderValue(0);
       return;
     }
     setLoadingFee(true);
     getRestaurantById(restaurantId)
       .then((restaurant) => {
-        if (active) setDeliveryFee(restaurant?.deliveryFee ?? 0);
+        if (active) {
+          setDeliveryFee(restaurant?.deliveryFee ?? 0);
+          setMinOrderValue(restaurant?.minOrderValue ?? 0);
+        }
       })
       .catch(() => {
-        if (active) setDeliveryFee(0);
+        if (active) {
+          setDeliveryFee(0);
+          setMinOrderValue(0);
+        }
       })
       .finally(() => {
         if (active) setLoadingFee(false);
@@ -85,6 +102,8 @@ export default function CartScreen() {
   }, [restaurantId]);
 
   const total = subtotal + deliveryFee;
+  const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
+  const missingForMinimum = Math.max(0, minOrderValue - subtotal);
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
 
   async function handleUseCurrentLocation() {
@@ -124,12 +143,58 @@ export default function CartScreen() {
     }
   }
 
+  // Confere se a localização atual (GPS) bate com o endereço principal
+  // fixado. Se a pessoa estiver longe do endereço, avisa e deixa ela
+  // decidir se quer confirmar mesmo assim ou trocar o endereço.
+  async function confirmMatchesCurrentLocation(address: Address): Promise<boolean> {
+    if (address.lat == null || address.lng == null) return true; // sem GPS salvo, não dá pra conferir
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return true; // sem permissão, segue sem bloquear o pedido
+
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const distance = distanceMeters(
+        position.coords.latitude,
+        position.coords.longitude,
+        address.lat,
+        address.lng
+      );
+
+      if (distance <= MAX_ADDRESS_DISTANCE_M) return true;
+
+      return await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          'Você está longe do seu endereço principal',
+          `Sua localização atual está a ${(distance / 1000).toFixed(1)} km do endereço "${addressLabel(address)}". Confirma que quer entregar aí mesmo assim?`,
+          [
+            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Confirmar mesmo assim', onPress: () => resolve(true) },
+          ]
+        );
+      });
+    } catch {
+      return true; // não conseguiu obter GPS agora — não bloqueia o pedido por isso
+    }
+  }
+
   async function handleCheckout() {
     if (!restaurantId) return;
+    if (belowMinimum) {
+      Alert.alert(
+        'Pedido mínimo não atingido',
+        `Este restaurante exige um pedido mínimo de R$ ${minOrderValue.toFixed(2)}. Faltam R$ ${missingForMinimum.toFixed(2)} para continuar.`
+      );
+      return;
+    }
     if (!selectedAddressId) {
       Alert.alert('Endereço de entrega', 'Escolha ou cadastre um endereço para receber o pedido.');
       setPickerVisible(true);
       return;
+    }
+    if (selectedAddress) {
+      const ok = await confirmMatchesCurrentLocation(selectedAddress);
+      if (!ok) return;
     }
     setSubmitting(true);
     try {
@@ -251,11 +316,19 @@ export default function CartScreen() {
           <Text style={styles.totalLabel}>Total</Text>
           <Text style={styles.totalValue}>R$ {total.toFixed(2)}</Text>
         </View>
+        {belowMinimum && (
+          <View style={styles.minOrderWarning}>
+            <Ionicons name="alert-circle-outline" size={16} color={colors.danger} />
+            <Text style={styles.minOrderWarningText}>
+              Pedido mínimo deste restaurante: R$ {minOrderValue.toFixed(2)}. Faltam R$ {missingForMinimum.toFixed(2)}.
+            </Text>
+          </View>
+        )}
         <Button
           label="Finalizar pedido"
           onPress={handleCheckout}
           loading={submitting}
-          disabled={loadingFee}
+          disabled={loadingFee || belowMinimum}
           style={{ marginTop: 16 }}
         />
       </View>
@@ -309,7 +382,8 @@ export default function CartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   title: { ...typography.h1, color: colors.text, paddingHorizontal: 20, marginBottom: 14 },
   addressCard: {
@@ -349,6 +423,12 @@ const styles = StyleSheet.create({
   summaryValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
   totalLabel: { ...typography.bodyBold, color: colors.text },
   totalValue: { ...typography.h2, color: colors.primary },
+  minOrderWarning: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.dangerLight, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 8, marginTop: 8,
+  },
+  minOrderWarningText: { color: colors.danger, fontSize: 12, flex: 1, fontWeight: '600' },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 30 },
   emptyTitle: { ...typography.h2, color: colors.text, marginTop: 8 },
   emptySub: { color: colors.textMuted, textAlign: 'center' },
@@ -364,3 +444,4 @@ const styles = StyleSheet.create({
   },
   gpsBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
 });
+};

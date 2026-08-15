@@ -13,15 +13,33 @@ async function getOrderParties(orderId) {
   return result.rows[0];
 }
 
-async function listMessages(orderId) {
+async function listMessages(orderId, { limit = 50, before } = {}) {
+  // Paginado por cursor: sem isso, um chat com muita troca de mensagem
+  // (cliente + restaurante + entregador) carregava a conversa inteira
+  // toda vez que a tela de chat abria.
+  const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
+
+  const params = [orderId];
+  let beforeClause = '';
+  if (before) {
+    params.push(before);
+    beforeClause = `AND created_at < $${params.length}`;
+  }
+  params.push(safeLimit);
+
+  // Busca as `safeLimit` mensagens mais recentes (antes do cursor, se
+  // houver) em ordem decrescente, depois inverte pra devolver em ordem
+  // cronológica -- é o jeito de pegar "as últimas N" sem escanear a
+  // tabela inteira.
   const result = await pool.query(
     `SELECT id, sender_role AS "senderRole", message, created_at AS "createdAt"
      FROM order_messages
-     WHERE order_id = $1
-     ORDER BY created_at ASC`,
-    [orderId]
+     WHERE order_id = $1 ${beforeClause}
+     ORDER BY created_at DESC
+     LIMIT $${params.length}`,
+    params
   );
-  return result.rows;
+  return result.rows.reverse();
 }
 
 async function sendMessage(orderId, senderRole, senderId, message) {

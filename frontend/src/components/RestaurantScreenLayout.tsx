@@ -4,7 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useRestaurantPanel } from '../context/RestaurantContext';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import RestaurantDrawer, { RestaurantRoute } from './RestaurantDrawer';
 import RestaurantHeader from './RestaurantHeader';
 
@@ -20,6 +21,8 @@ interface Props {
 // hambúrguer + a gaveta lateral (Início/Pedidos/Cardápio/Localização/
 // Configuração), pra cada tela só precisar cuidar do próprio conteúdo.
 export default function RestaurantScreenLayout({ title, subtitle, active, headerRight, children }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const { signOut } = useAuth();
   const { restaurant, pendingCount } = useRestaurantPanel();
@@ -53,6 +56,8 @@ export default function RestaurantScreenLayout({ title, subtitle, active, header
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 });
+};

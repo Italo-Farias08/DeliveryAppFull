@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Sales' | 'Menu' | 'OutOfStock' | 'Location' | 'Hours' | 'Deliverers' | 'Settings';
@@ -40,6 +41,8 @@ export default function RestaurantDrawer({
   restaurantName,
   pendingCount = 0,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   // Desliza da esquerda: o painel começa fora da tela (-DRAWER_WIDTH) e
   // anima até 0 ao abrir; o fundo escurece junto (fade separado, pra dar
   // sensação de profundidade em vez de tudo se mover junto).
@@ -120,7 +123,8 @@ export default function RestaurantDrawer({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   root: { flex: 1, flexDirection: 'row' },
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.overlay },
   panel: {
@@ -167,3 +171,4 @@ const styles = StyleSheet.create({
   },
   signOutText: { color: colors.danger, fontSize: 14.5, fontWeight: '700' },
 });
+};

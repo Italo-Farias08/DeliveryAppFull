@@ -19,7 +19,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { requestLoginCode, verifyLoginCode } from '../../services/authService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { UserRole } from '../../types';
 
@@ -59,6 +60,8 @@ function PressScale({
 }
 
 export default function LoginScreen({ navigation }: any) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { signIn } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
   const [email, setEmail] = useState('');
@@ -403,7 +406,8 @@ export default function LoginScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingTop: 32, paddingBottom: 28 },
   logoMark: {
@@ -485,3 +489,4 @@ const styles = StyleSheet.create({
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: '700' },
 });
+};

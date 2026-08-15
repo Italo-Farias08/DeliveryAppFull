@@ -5,6 +5,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import AccountScreen from '../screens/Client/AccountScreen';
 import AddressesScreen from '../screens/Client/AddressesScreen';
+import AllRestaurantsScreen from '../screens/Client/AllRestaurantsScreen';
 import MyDataScreen from '../screens/Client/MyDataScreen';
 import FavoritesScreen from '../screens/Client/FavoritesScreen';
 import HelpScreen from '../screens/Client/HelpScreen';
@@ -13,7 +14,7 @@ import HomeScreen from '../screens/Client/HomeScreen';
 import OrdersScreen from '../screens/Client/OrdersScreen';
 import RestaurantDetailScreen from '../screens/Client/RestaurantDetailScreen';
 import SearchScreen from '../screens/Client/SearchScreen';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const Tab = createBottomTabNavigator();
 const HomeStackNav = createNativeStackNavigator();
@@ -27,6 +28,11 @@ function HomeStack() {
       <HomeStackNav.Screen
         name="Search"
         component={SearchScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <HomeStackNav.Screen
+        name="AllRestaurants"
+        component={AllRestaurantsScreen}
         options={{ animation: 'slide_from_right' }}
       />
       <HomeStackNav.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
@@ -58,6 +64,7 @@ function AccountStack() {
 }
 
 export default function ClientNavigator() {
+  const { colors } = useTheme();
   const { totalItems } = useCart();
 
   return (

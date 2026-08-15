@@ -10,6 +10,9 @@ const restaurantSchema = z.object({
   deliveryTimeMin: z.number().int().positive(),
   deliveryTimeMax: z.number().int().positive(),
   deliveryFee: z.number().nonnegative(),
+  // Valor mínimo do pedido (subtotal, sem taxa de entrega) que o
+  // restaurante exige pra aceitar o pedido. 0 = sem mínimo.
+  minOrderValue: z.number().nonnegative().optional(),
   image: z.string().optional(),
   banner: z.string().optional(),
   isOpen: z.boolean().optional(),

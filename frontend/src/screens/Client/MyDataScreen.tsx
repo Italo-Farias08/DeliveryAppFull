@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { getMe, updateMe } from '../../services/userService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 function formatCpf(raw?: string | null) {
@@ -26,6 +27,8 @@ function formatCpf(raw?: string | null) {
 }
 
 export default function MyDataScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const { user, updateUser } = useAuth();
 
@@ -190,6 +193,8 @@ function Field({
   autoCapitalize?: 'none' | 'words';
   placeholder?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -210,7 +215,8 @@ function Field({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -241,3 +247,4 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: colors.white, fontSize: 15, fontWeight: '700' },
 });
+};

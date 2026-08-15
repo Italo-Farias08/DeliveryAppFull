@@ -31,12 +31,15 @@ import {
   updateMenuItem,
   uploadMenuItemImage,
 } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Addon, MenuCategory, MenuItem } from '../../types';
 import { pickImageFromLibrary } from '../../utils/pickImage';
 
 export default function RestaurantMenuScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const {
     restaurant,
     menuItems,
@@ -585,7 +588,8 @@ export default function RestaurantMenuScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   headerAddBtn: {
     width: 38, height: 38, borderRadius: 13, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
@@ -695,3 +699,4 @@ const styles = StyleSheet.create({
   addonRowPrice: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
   addAddonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
 });
+};

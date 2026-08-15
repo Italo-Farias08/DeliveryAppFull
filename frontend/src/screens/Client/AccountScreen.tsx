@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DeleteAccountModal from '../../components/DeleteAccountModal';
 import { useAuth } from '../../context/AuthContext';
 import { deleteAccount } from '../../services/userService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; route?: string }[] = [
@@ -17,7 +18,15 @@ const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; route?: st
   { icon: 'help-circle-outline', label: 'Ajuda', route: 'Help' },
 ];
 
+const THEME_OPTIONS: { value: 'light' | 'dark' | 'system'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'light', label: 'Claro', icon: 'sunny-outline' },
+  { value: 'dark', label: 'Escuro', icon: 'moon-outline' },
+  { value: 'system', label: 'Automático', icon: 'phone-portrait-outline' },
+];
+
 export default function AccountScreen() {
+  const { colors, mode, setMode } = useTheme();
+  const styles = createStyles(colors);
   const { user, signOut } = useAuth();
   const navigation = useNavigation<any>();
   const initials = (user?.name ?? '?').charAt(0).toUpperCase();
@@ -43,6 +52,30 @@ export default function AccountScreen() {
             <Text style={styles.roleBadgeText}>Cliente</Text>
           </View>
         </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Aparência</Text>
+      <View style={styles.themeRow}>
+        {THEME_OPTIONS.map((opt) => {
+          const active = mode === opt.value;
+          return (
+            <TouchableOpacity
+              key={opt.value}
+              style={[styles.themeOption, active && styles.themeOptionActive]}
+              activeOpacity={0.8}
+              onPress={() => setMode(opt.value)}
+            >
+              <Ionicons
+                name={opt.icon}
+                size={18}
+                color={active ? colors.white : colors.textMuted}
+              />
+              <Text style={[styles.themeOptionLabel, active && styles.themeOptionLabelActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <View style={styles.list}>
@@ -96,7 +129,8 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   title: { ...typography.h1, color: colors.text, paddingHorizontal: 20, marginBottom: 18 },
   profileCard: {
@@ -116,6 +150,20 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2,
   },
   roleBadgeText: { color: colors.secondary, fontSize: 11, fontWeight: '700' },
+  sectionTitle: {
+    ...typography.bodyBold, color: colors.textMuted, fontSize: 12.5,
+    textTransform: 'uppercase', letterSpacing: 0.5,
+    marginTop: 26, marginHorizontal: 20, marginBottom: 10,
+  },
+  themeRow: { flexDirection: 'row', gap: 10, marginHorizontal: 20 },
+  themeOption: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  themeOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  themeOptionLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700' },
+  themeOptionLabelActive: { color: colors.white },
   list: { marginTop: 24, marginHorizontal: 20 },
   optionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
@@ -127,3 +175,4 @@ const styles = StyleSheet.create({
   deleteLabel: { color: colors.danger, fontSize: 12.5, fontWeight: '600' },
   version: { textAlign: 'center', color: colors.textMuted, fontSize: 11.5, marginTop: 10 },
 });
+};

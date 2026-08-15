@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSocket } from '../services/socket';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 export interface ChatMessage {
@@ -30,7 +31,7 @@ interface Props {
   orderId: string;
   myRole: 'client' | 'restaurant' | 'deliverer';
   title: string;
-  loadMessages: (orderId: string) => Promise<ChatMessage[]>;
+  loadMessages: (orderId: string, options?: { before?: string; limit?: number }) => Promise<ChatMessage[]>;
   sendMessage: (orderId: string, text: string) => Promise<ChatMessage>;
 }
 
@@ -43,10 +44,19 @@ const ROLE_LABEL: Record<ChatMessage['senderRole'], string> = {
   deliverer: 'Entregador',
 };
 
+// Mesmo tamanho de página usado como padrão no backend (ver
+// messages.service.js) -- serve só pra saber se ainda pode ter mensagem
+// mais antiga pra carregar (recebemos exatamente esse tanto = pode ter mais).
+const PAGE_SIZE = 50;
+
 export default function OrderChatModal({ visible, onClose, orderId, myRole, title, loadMessages, sendMessage }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<FlatList>(null);
@@ -56,12 +66,30 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
     try {
       const data = await loadMessages(orderId);
       setMessages(data);
+      setHasMore(data.length >= PAGE_SIZE);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 50);
     } catch {
       // silencioso
     } finally {
       setLoading(false);
     }
   }, [orderId, loadMessages]);
+
+  // "Carregar mensagens anteriores": busca a página anterior a partir da
+  // mensagem mais antiga já carregada, sem recarregar a conversa inteira.
+  const loadOlder = useCallback(async () => {
+    if (loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    try {
+      const older = await loadMessages(orderId, { before: messages[0].createdAt });
+      setMessages((prev) => [...older, ...prev]);
+      setHasMore(older.length >= PAGE_SIZE);
+    } catch {
+      // silencioso
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [orderId, loadMessages, loadingOlder, messages]);
 
   useEffect(() => {
     if (visible && orderId) {
@@ -77,6 +105,7 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
     function handleIncoming(payload: ChatMessage & { orderId: string }) {
       if (payload.orderId !== orderId) return;
       setMessages((prev) => (prev.some((m) => m.id === payload.id) ? prev : [...prev, payload]));
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     }
 
     socket.on('order:message', handleIncoming);
@@ -123,7 +152,25 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
               data={messages}
               keyExtractor={(m) => m.id}
               contentContainerStyle={{ padding: 16, flexGrow: 1 }}
-              onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+              // Mantém a posição de leitura estável quando mensagens mais
+              // antigas são inseridas no topo (em vez de pular pro fim,
+              // que era o comportamento de antes com onContentSizeChange).
+              maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+              ListHeaderComponent={
+                hasMore ? (
+                  <TouchableOpacity
+                    style={styles.loadOlderBtn}
+                    onPress={loadOlder}
+                    disabled={loadingOlder}
+                  >
+                    {loadingOlder ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text style={styles.loadOlderText}>Carregar mensagens anteriores</Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null
+              }
               ListEmptyComponent={
                 <View style={styles.center}>
                   <Ionicons name="chatbubble-ellipses-outline" size={40} color={colors.textMuted} />
@@ -165,7 +212,8 @@ export default function OrderChatModal({ visible, onClose, orderId, myRole, titl
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -174,6 +222,8 @@ const styles = StyleSheet.create({
   headerTitle: { ...typography.bodyBold, color: colors.text, fontSize: 15 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 60 },
   emptyText: { color: colors.textMuted, fontSize: 13 },
+  loadOlderBtn: { alignItems: 'center', paddingVertical: 10, marginBottom: 6 },
+  loadOlderText: { color: colors.primary, fontSize: 12.5, fontWeight: '700' },
   bubbleRow: { flexDirection: 'row', marginBottom: 8 },
   bubbleRowMine: { justifyContent: 'flex-end' },
   bubbleRowTheirs: { justifyContent: 'flex-start' },
@@ -195,3 +245,4 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 });
+};

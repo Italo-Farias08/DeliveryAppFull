@@ -12,11 +12,12 @@ import RestaurantOnboardingScreen from '../screens/Restaurant/RestaurantOnboardi
 import RestaurantOrdersScreen from '../screens/Restaurant/RestaurantOrdersScreen';
 import RestaurantSalesScreen from '../screens/Restaurant/RestaurantSalesScreen';
 import RestaurantSettingsScreen from '../screens/Restaurant/RestaurantSettingsScreen';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
 function RestaurantNavigatorInner() {
+  const { colors } = useTheme();
   const { loadingInit, restaurant } = useRestaurantPanel();
 
   if (loadingInit) {

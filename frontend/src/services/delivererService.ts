@@ -92,8 +92,11 @@ export interface DelivererOrderMessage {
   createdAt: string;
 }
 
-export async function getDelivererOrderMessages(orderId: string): Promise<DelivererOrderMessage[]> {
-  const { data } = await api.get(`/deliverer/orders/${orderId}/messages`);
+export async function getDelivererOrderMessages(
+  orderId: string,
+  options?: { before?: string; limit?: number }
+): Promise<DelivererOrderMessage[]> {
+  const { data } = await api.get(`/deliverer/orders/${orderId}/messages`, { params: options });
   return data;
 }
 

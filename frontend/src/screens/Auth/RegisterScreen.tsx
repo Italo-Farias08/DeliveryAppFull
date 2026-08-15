@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { register, RegisterPayload } from '../../services/authService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { UserRole } from '../../types';
 
@@ -58,6 +59,8 @@ function formatPlate(value: string) {
 }
 
 export default function RegisterScreen({ navigation }: any) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { signIn } = useAuth();
   const [role, setRole] = useState<UserRole>('client');
 
@@ -359,7 +362,8 @@ export default function RegisterScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 },
   backButton: { width: 40, height: 40, justifyContent: 'center', marginBottom: 8 },
@@ -426,3 +430,4 @@ const styles = StyleSheet.create({
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: '700' },
 });
+};

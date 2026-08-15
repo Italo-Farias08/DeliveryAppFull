@@ -14,7 +14,8 @@ import {
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { setMenuItemAvailability } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { MenuItem } from '../../types';
 
@@ -25,6 +26,8 @@ import { MenuItem } from '../../types';
 // sem botão de adicionar (ver FoodCard.tsx) -- assim ele sabe que existe
 // no cardápio, só não pode pedir agora.
 export default function RestaurantOutOfStockScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { menuItems, setMenuItems, menuCategories, refreshing, reload } = useRestaurantPanel();
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -121,7 +124,8 @@ export default function RestaurantOutOfStockScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   summaryCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 18, padding: 16,
@@ -149,3 +153,4 @@ const styles = StyleSheet.create({
   itemNameOut: { color: colors.textMuted, textDecorationLine: 'line-through' },
   itemPrice: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
 });
+};

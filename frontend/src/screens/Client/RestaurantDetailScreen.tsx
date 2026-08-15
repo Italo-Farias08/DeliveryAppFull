@@ -19,7 +19,8 @@ import { AddonsModal } from '../../components/AddonsModal';
 import SwitchRestaurantModal from '../../components/SwitchRestaurantModal';
 import { useCart } from '../../context/CartContext';
 import { getRestaurantById } from '../../services/restaurantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Addon, MenuItem, Restaurant } from '../../types';
 import { formatRating } from '../../utils/rating';
@@ -31,6 +32,8 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COVER_HEIGHT = SCREEN_WIDTH * 0.75;
 
 export default function RestaurantDetailScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { restaurantId } = route.params;
@@ -90,12 +93,17 @@ export default function RestaurantDetailScreen() {
     : restaurant.menu;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    // edges={[]} DE PROPÓSITO: a barra de tabs (Início/Pedidos/Conta) já
+    // reserva o espaço seguro embaixo — se a gente também pedir edges:
+    // ['bottom'] aqui, o inset é somado duas vezes e sobra uma faixa
+    // branca grossa em cima dos botões da tab bar. 'top' também fica de
+    // fora de propósito, pra o banner poder ir até debaixo da status bar.
+    <SafeAreaView style={styles.safe} edges={[]}>
       {/* barra de status transparente, ícones do sistema em branco,
           por cima da foto de capa -- sem faixa branca no topo */}
       <StatusBar style="light" translucent />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: showCartBar ? 100 : 30 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: showCartBar ? 88 : 24 }}>
         {/* ---- BANNER com texto sobreposto, indo até o topo real da tela ---- */}
         <View style={styles.coverWrapper}>
           <View style={styles.coverClip}>
@@ -239,7 +247,8 @@ export default function RestaurantDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   coverWrapper: { width: '100%', height: COVER_HEIGHT },
   coverClip: { width: '100%', height: '100%', overflow: 'hidden' },
@@ -314,3 +323,4 @@ const styles = StyleSheet.create({
   cartBarText: { color: colors.white, fontWeight: '700', flex: 1, fontSize: 15 },
   cartBarTotal: { color: colors.white, fontWeight: '800', fontSize: 15 },
 });
+};

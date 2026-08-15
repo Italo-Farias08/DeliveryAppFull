@@ -17,7 +17,8 @@ import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { AddressSuggestion, SearchBias, searchAddress } from '../../services/geocodingService';
 import { RestaurantLocationInput, updateRestaurantLocation } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 const SEARCH_DEBOUNCE_MS = 500;
@@ -43,6 +44,8 @@ function suggestionSecondary(s: AddressSuggestion) {
 }
 
 export default function RestaurantLocationScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { restaurant, setRestaurant } = useRestaurantPanel();
 
   const hasSavedLocation = !!restaurant?.street;
@@ -364,7 +367,8 @@ export default function RestaurantLocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   infoBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: colors.secondaryLight, borderRadius: 14, padding: 12, marginBottom: 16,
@@ -438,3 +442,4 @@ const styles = StyleSheet.create({
   saveBtn: { flex: 2, backgroundColor: colors.primary, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 13 },
   saveBtnText: { color: colors.white, fontWeight: '700' },
 });
+};

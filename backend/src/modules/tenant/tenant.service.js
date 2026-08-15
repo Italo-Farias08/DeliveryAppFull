@@ -2,6 +2,7 @@ const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/db');
 const { toClient, toTenant, toDeliverers, toDeliverer } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToDeliverers } = require('../../utils/push');
+const asyncHandler = require('../../utils/asyncHandler');
 
 const TENANT_ORDER_SELECT = `
   SELECT o.id, o.restaurant_id AS "restaurantId", o.client_id AS "clientId",
@@ -20,7 +21,8 @@ const TENANT_ORDER_SELECT = `
 `;
 
 const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating, delivery_time_min AS "deliveryTimeMin",
-            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", image, banner, is_open AS "isOpen",
+            delivery_time_max AS "deliveryTimeMax", delivery_fee AS "deliveryFee", min_order_value AS "minOrderValue",
+            image, banner, is_open AS "isOpen",
             restaurant_open_now(id) AS "isOpenNow",
             is_published AS "isPublished",
             street, number, complement, neighborhood, city, state, zip, lat, lng`;
@@ -36,10 +38,10 @@ async function listRestaurants(db) {
 
 async function createRestaurant(db, tenantId, data) {
   const result = await db.query(
-    `INSERT INTO restaurants (tenant_id, category_id, name, delivery_time_min, delivery_time_max, delivery_fee, image, banner, is_open)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, true))
+    `INSERT INTO restaurants (tenant_id, category_id, name, delivery_time_min, delivery_time_max, delivery_fee, min_order_value, image, banner, is_open)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, true))
      RETURNING ${RESTAURANT_SELECT_FIELDS}`,
-    [tenantId, data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen]
+    [tenantId, data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.minOrderValue ?? 0, data.image || null, data.banner || null, data.isOpen]
   );
   return result.rows[0];
 }
@@ -51,11 +53,11 @@ async function updateRestaurant(db, restaurantId, data) {
   const result = await db.query(
     `UPDATE restaurants
      SET category_id = $1, name = $2, delivery_time_min = $3, delivery_time_max = $4,
-         delivery_fee = $5, image = COALESCE($6, image), banner = COALESCE($7, banner),
-         is_open = COALESCE($8, is_open)
-     WHERE id = $9
+         delivery_fee = $5, min_order_value = $6, image = COALESCE($7, image), banner = COALESCE($8, banner),
+         is_open = COALESCE($9, is_open)
+     WHERE id = $10
      RETURNING ${RESTAURANT_SELECT_FIELDS}`,
-    [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.image || null, data.banner || null, data.isOpen, restaurantId]
+    [data.categoryId, data.name, data.deliveryTimeMin, data.deliveryTimeMax, data.deliveryFee, data.minOrderValue ?? 0, data.image || null, data.banner || null, data.isOpen, restaurantId]
   );
   if (result.rowCount === 0) throw new AppError('Restaurante não encontrado nesta conta', 404);
   return result.rows[0];
@@ -451,7 +453,6 @@ async function markOrderReady(db, tenantId, orderId, delivererId) {
   };
 
   if (ownDeliverer) {
-    // Vai direto pro entregador da casa -- não aparece no radar de ninguém.
     toDeliverer(ownDeliverer.id, 'order:assigned', courierPayload);
     toTenant(tenantId, 'order:courierAssigned', { id: order.id, delivererId: ownDeliverer.id });
     sendPushToUser(ownDeliverer.id, {
@@ -471,8 +472,6 @@ async function markOrderReady(db, tenantId, orderId, delivererId) {
   return { id: order.id, status: order.status, delivererId: ownDeliverer?.id || null };
 }
 
-// Entregadores vinculados a este restaurante (\"da casa\") -- não incluem
-// entregadores autônomos do radar público.
 async function listOwnDeliverers(tenantId) {
   const result = await pool.query(
     `SELECT u.id, u.name, u.phone, dp.vehicle_type AS "vehicleType", dp.is_available AS "isAvailable"
@@ -485,7 +484,6 @@ async function listOwnDeliverers(tenantId) {
   return result.rows;
 }
 
-// Desvincula um entregador da casa (ele volta a ser autônomo/marketplace).
 async function removeOwnDeliverer(tenantId, delivererId) {
   const result = await pool.query(
     `UPDATE deliverer_profiles SET tenant_id = NULL WHERE user_id = $1 AND tenant_id = $2 RETURNING user_id`,
@@ -494,8 +492,6 @@ async function removeOwnDeliverer(tenantId, delivererId) {
   if (result.rowCount === 0) throw new AppError('Entregador não encontrado nesta conta', 404);
 }
 
-// Código de convite que o restaurante compartilha com o próprio entregador
-// pra ele se vincular no cadastro. Gerado uma única vez (fica fixo depois).
 async function getOrCreateDelivererInviteCode(tenantId) {
   const existing = await pool.query('SELECT deliverer_invite_code AS code FROM tenants WHERE id = $1', [tenantId]);
   if (existing.rows[0]?.code) return existing.rows[0].code;
@@ -512,7 +508,7 @@ async function getOrCreateDelivererInviteCode(tenantId) {
       );
       return updated.rows[0].code;
     } catch (err) {
-      if (err.code !== '23505') throw err; // colisão de código único -- tenta outro
+      if (err.code !== '23505') throw err;
     }
   }
   throw new AppError('Não foi possível gerar o código de convite, tente novamente', 500);

@@ -3,7 +3,8 @@ import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from './Button';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { Addon, MenuItem } from '../types';
 
@@ -18,6 +19,8 @@ interface Props {
 // cadastrados pelo restaurante (ex: bacon extra, borda recheada). O preço
 // total já mostra o valor somado antes de confirmar.
 export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState('');
@@ -120,7 +123,8 @@ export function AddonsModal({ visible, item, onClose, onConfirm }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
   card: {
     backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -153,3 +157,4 @@ const styles = StyleSheet.create({
   },
   qtyValue: { fontWeight: '700', color: colors.text, minWidth: 18, textAlign: 'center', fontSize: 15 },
 });
+};

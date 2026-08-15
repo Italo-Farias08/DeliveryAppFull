@@ -61,13 +61,18 @@ router.delete('/deliverers/:delivererId', controller.removeOwnDeliverer);
 router.get('/deliverer-invite-code', controller.getDelivererInviteCode);
 
 const messageSchema = z.object({ message: z.string().min(1).max(1000) });
+const listMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  before: z.string().datetime().optional(),
+});
 
 router.get(
   '/orders/:orderId/messages',
   asyncHandler(async (req, res) => {
     const order = await messagesService.getOrderParties(req.params.orderId);
     if (order.tenantId !== req.tenantId) throw new AppError('Acesso negado', 403);
-    res.json(await messagesService.listMessages(req.params.orderId));
+    const { limit, before } = listMessagesQuerySchema.parse(req.query);
+    res.json(await messagesService.listMessages(req.params.orderId, { limit, before }));
   })
 );
 

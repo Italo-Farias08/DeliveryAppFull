@@ -5,7 +5,8 @@ import { Alert, Animated, RefreshControl, ScrollView, StyleSheet, Switch, Text, 
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { publishRestaurant } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 function todayKey(iso: string) {
@@ -15,6 +16,8 @@ function todayKey(iso: string) {
 // Ponto pulsante ao lado de "Loja aberta/fechada" — dá a sensação de status
 // "ao vivo" no card de destaque, sem exagerar na animação.
 function PulseDot({ color, active }: { color: string; active: boolean }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -50,6 +53,8 @@ function PulseDot({ color, active }: { color: string; active: boolean }) {
 }
 
 export default function RestaurantDashboardScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const { restaurant, orders, menuItems, refreshing, reload, savingStatus, handleToggleOpen, pendingCount, setRestaurant } =
     useRestaurantPanel();
@@ -230,7 +235,8 @@ export default function RestaurantDashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   publishBanner: {
     flexDirection: 'row', gap: 12,
     backgroundColor: '#FFF6E5', borderRadius: 18, padding: 16, marginBottom: 16,
@@ -296,3 +302,4 @@ const styles = StyleSheet.create({
   shortcutTitle: { ...typography.bodyBold, color: colors.text, fontSize: 14.5 },
   shortcutSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
 });
+};

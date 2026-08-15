@@ -12,8 +12,8 @@ export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
   return data;
 }
 
-export async function listMyOrders(): Promise<Order[]> {
-  const { data } = await api.get('/orders');
+export async function listMyOrders(options?: { limit?: number; offset?: number }): Promise<Order[]> {
+  const { data } = await api.get('/orders', { params: options });
   return data;
 }
 
@@ -31,8 +31,11 @@ export interface OrderMessage {
   createdAt: string;
 }
 
-export async function getOrderMessages(orderId: string): Promise<OrderMessage[]> {
-  const { data } = await api.get(`/orders/${orderId}/messages`);
+export async function getOrderMessages(
+  orderId: string,
+  options?: { before?: string; limit?: number }
+): Promise<OrderMessage[]> {
+  const { data } = await api.get(`/orders/${orderId}/messages`, { params: options });
   return data;
 }
 

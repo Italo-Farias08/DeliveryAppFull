@@ -14,7 +14,8 @@ import {
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { getRestaurantHours, setRestaurantHours } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { RestaurantHours } from '../../types';
 
@@ -40,6 +41,8 @@ function formatTimeInput(raw: string): string {
 }
 
 function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <TextInput
       style={styles.timeInput}
@@ -54,6 +57,8 @@ function TimeField({ value, onChange }: { value: string; onChange: (v: string) =
 }
 
 export default function RestaurantHoursScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { restaurant } = useRestaurantPanel();
   const [days, setDays] = useState<RestaurantHours[]>(defaultDays());
   const [loading, setLoading] = useState(true);
@@ -175,7 +180,8 @@ export default function RestaurantHoursScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   infoBox: {
     flexDirection: 'row', gap: 8, backgroundColor: colors.primaryLight, borderRadius: 14,
@@ -209,3 +215,4 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { color: colors.white, fontWeight: '700', fontSize: 14.5 },
 });
+};

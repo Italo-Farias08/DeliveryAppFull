@@ -3,7 +3,8 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { MenuItem } from '../types';
 
@@ -13,6 +14,8 @@ interface FoodCardProps {
 }
 
 export function FoodCard({ item, onAdd }: FoodCardProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const soldOut = item.isAvailable === false;
 
   return (
@@ -51,7 +54,8 @@ export function FoodCard({ item, onAdd }: FoodCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
@@ -122,3 +126,4 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 });
+};

@@ -3,7 +3,8 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 const FAQ: { question: string; answer: string }[] = [
@@ -41,6 +42,8 @@ const CONTACT_PHONE = '5581991204180';
 const CONTACT_EMAIL = 'italo.farias1wi@gmail.com';
 
 export default function HelpScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -129,7 +132,8 @@ export default function HelpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -162,3 +166,4 @@ const styles = StyleSheet.create({
   contactSubtitle: { fontSize: 12.5, color: colors.textMuted, marginTop: 2 },
   version: { textAlign: 'center', color: colors.textMuted, fontSize: 11.5, marginTop: 24 },
 });
+};

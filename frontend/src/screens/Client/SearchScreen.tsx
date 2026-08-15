@@ -12,11 +12,14 @@ import {
   getSearchHistory,
   removeSearchTerm,
 } from '../../services/searchHistoryService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { FoodSearchResult } from '../../types';
 
 export default function SearchScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation<any>();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
@@ -153,7 +156,8 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 8 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
@@ -177,3 +181,4 @@ const styles = StyleSheet.create({
   },
   historyText: { flex: 1, fontSize: 14.5, color: colors.text },
 });
+};

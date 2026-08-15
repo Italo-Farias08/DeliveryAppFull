@@ -14,10 +14,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { requestPasswordReset, resetPassword } from '../../services/authService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 export default function ForgotPasswordScreen({ navigation }: any) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [step, setStep] = useState<'email' | 'reset'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -173,7 +176,8 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
@@ -192,3 +196,4 @@ const styles = StyleSheet.create({
   buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   link: { color: colors.primary, fontSize: 13.5, fontWeight: '600', textAlign: 'center' },
 });
+};

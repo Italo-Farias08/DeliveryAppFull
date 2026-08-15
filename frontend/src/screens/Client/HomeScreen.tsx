@@ -15,15 +15,15 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { RestaurantGridCard } from '../../components/RestaurantGridCard';
 import { SearchBar } from '../../components/SearchBar';
 import { useAuth } from '../../context/AuthContext';
-import { useFavorites } from '../../context/FavoritesContext';
 import { useNotifications } from '../../context/NotificationsContext';
 import { getCategories, getRestaurants } from '../../services/restaurantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Category, Restaurant } from '../../types';
-import { formatRating } from '../../utils/rating';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const H_PAD = 20;
@@ -34,15 +34,6 @@ const BANNER_GAP = 12;
 const BANNER_WIDTH = SCREEN_WIDTH - H_PAD * 2;
 const BANNER_HEIGHT = 170;
 
-// Imagem usada só se o restaurante não tiver NENHUMA foto própria (nem
-// image, nem banner). Isso deve ser raro -- é só um último recurso.
-const FOOD_FALLBACKS = [
-  'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=80', // pizza
-  'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&q=80', // burger
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&q=80', // sushi
-  'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=600&q=80', // massa
-  'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=600&q=80', // salada
-];
 function getShortName(fullName?: string) {
   if (!fullName) return undefined;
   return fullName.trim().split(/\s+/).slice(0, 2).join(' ');
@@ -65,13 +56,6 @@ function getCategoryEmoji(name: string | null) {
   return CATEGORY_EMOJIS[name] ?? '🍴';
 }
 
-function getFallbackImage(id: string) {
-  // hash simples pra sempre cair na mesma imagem pro mesmo restaurante
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return { uri: FOOD_FALLBACKS[hash % FOOD_FALLBACKS.length] };
-}
-
 // FlatList "animável" — necessário para o onScroll funcionar com useNativeDriver.
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
 
@@ -87,6 +71,8 @@ const BANNERS = [
 ];
 
 function PromoCarousel() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const listRef = useRef<FlatList>(null);
   const indexRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -150,6 +136,8 @@ function CategoryChip({
   active: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity style={styles.categoryChip} onPress={onPress} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4 }}>
       <View style={[styles.categoryCircle, active && styles.categoryCircleActive]}>
@@ -176,6 +164,8 @@ function CompactCategoryChip({
   active: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity
       style={[styles.compactChip, active && styles.compactChipActive]}
@@ -208,76 +198,6 @@ function AnimatedCard({ children, index }: { children: React.ReactNode; index: n
   return <Animated.View style={{ opacity: fade, transform: [{ translateY: translate }] }}>{children}</Animated.View>;
 }
 
-function RestaurantListCard({ restaurant, onPress }: { restaurant: Restaurant; onPress: () => void }) {
-  const { isFavorite, toggleFavorite } = useFavorites();
-  const favorite = isFavorite(restaurant.id);
-  const [imgError, setImgError] = useState(false);
-
-  // campo certo é `image` (a logo do restaurante) -- `imageUrl` não existe
-  // no tipo Restaurant, então antes isso sempre caía no fallback aleatório.
-  const hasImage = !!restaurant.image && !imgError;
-  const imageSource = hasImage ? { uri: restaurant.image } : getFallbackImage(restaurant.id);
-  const isFree = (restaurant.deliveryFee ?? 0) === 0;
-  const closed = restaurant.isOpen === false;
-  const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
-
-  return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
-      <View style={styles.cardImageWrap}>
-        <Image
-          source={imageSource}
-          style={[styles.cardImage, closed && styles.cardImageClosed]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={150}
-          onError={() => setImgError(true)}
-        />
-
-        {/* nota em badge sobre a foto -- "Novo" pra restaurante que ainda
-            não recebeu nenhuma avaliação real, em vez de "0.0" */}
-        <View style={styles.ratingBadge}>
-          {ratingDisplay ? (
-            <>
-              <Ionicons name="star" size={10} color={colors.star} />
-              <Text style={styles.ratingBadgeText}>{ratingDisplay}</Text>
-            </>
-          ) : (
-            <Text style={styles.ratingBadgeText}>Novo</Text>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={styles.favoriteBtn}
-          onPress={() => toggleFavorite(restaurant)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={14} color={colors.primary} />
-        </TouchableOpacity>
-
-        {closed && (
-          <View style={styles.closedBadge}>
-            <Text style={styles.closedBadgeText}>Fechado</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{restaurant.name}</Text>
-        <View style={styles.cardMetaRow}>
-          <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-          <Text style={styles.cardMeta} numberOfLines={1}>
-            {restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} min
-          </Text>
-          <View style={styles.metaDot} />
-          <Text style={[styles.cardMeta, isFree && styles.cardFeeFree]} numberOfLines={1}>
-            {isFree ? 'Grátis' : `R$ ${restaurant.deliveryFee?.toFixed(2) ?? '0,00'}`}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Header completo da lista (saudação, busca, endereço, categorias, banner e
 // título da seção). Fica em React.memo de propósito: o HomeScreen re-renderiza
@@ -302,6 +222,7 @@ const ListHeader = React.memo(function ListHeader({
   onToggleTopRated,
   topInset,
   restaurantCount,
+  onSeeAll,
 }: {
   userName?: string;
   categories: Category[];
@@ -320,7 +241,10 @@ const ListHeader = React.memo(function ListHeader({
   onToggleTopRated: () => void;
   topInset: number;
   restaurantCount: number;
+  onSeeAll: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View>
       {/* Flat header — no gradient, no rounded crop, sits inside the safe area.
@@ -432,7 +356,12 @@ const ListHeader = React.memo(function ListHeader({
               {restaurantCount} {restaurantCount === 1 ? 'opção' : 'opções'} por perto
             </Text>
           </View>
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onSeeAll}
+            accessibilityRole="button"
+            accessibilityLabel="Ver todos os restaurantes"
+          >
             <View style={styles.seeAllRow}>
               <Text style={styles.seeAllText}>Ver todos</Text>
               <Ionicons name="chevron-forward" size={14} color={colors.primary} />
@@ -445,6 +374,8 @@ const ListHeader = React.memo(function ListHeader({
 });
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { user } = useAuth();
   const navigation = useNavigation<any>();
   const { enabled: notificationsEnabled, toggle: toggleNotifications } = useNotifications();
@@ -456,6 +387,12 @@ export default function HomeScreen() {
   // mais bem avaliados (nota mais alta primeiro).
   const [topRatedOnly, setTopRatedOnly] = useState(false);
   const toggleTopRated = useCallback(() => setTopRatedOnly((prev) => !prev), []);
+  // "Ver todos": abre uma tela separada com a lista completa de
+  // restaurantes, já levando a categoria selecionada aqui na home (se
+  // houver) como filtro inicial de lá.
+  const handleSeeAll = useCallback(() => {
+    navigation.navigate('AllRestaurants', { categoryId: activeCategory });
+  }, [navigation, activeCategory]);
 
   // Posição (Y) de onde começa a fileira de categorias dentro do header —
   // é o ponto que usamos pra saber quando trocar pra barra fixa e compacta.
@@ -670,12 +607,13 @@ export default function HomeScreen() {
             onToggleTopRated={toggleTopRated}
             topInset={insets.top}
             restaurantCount={displayedRestaurants.length}
+            onSeeAll={handleSeeAll}
           />
         }
         renderItem={({ item, index }) => (
           <View style={styles.gridItem}>
             <AnimatedCard index={index}>
-              <RestaurantListCard
+              <RestaurantGridCard
                 restaurant={item}
                 onPress={() => navigation.navigate('RestaurantDetail', { restaurantId: item.id })}
               />
@@ -761,7 +699,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   listContent: { paddingBottom: 30 },
   columnWrapper: { justifyContent: 'space-between', paddingHorizontal: H_PAD },
@@ -942,61 +881,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    marginBottom: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
-  },
-  cardImageWrap: { position: 'relative' },
-  cardImage: { width: '100%', height: 110, backgroundColor: colors.border },
-  cardImageClosed: { opacity: 0.45 },
-  ratingBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(28,27,26,0.72)',
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-  },
-  ratingBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  favoriteBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closedBadge: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(28,27,26,0.75)',
-    paddingVertical: 5,
-    alignItems: 'center',
-  },
-  closedBadgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
-  cardBody: { paddingTop: 10, paddingHorizontal: 10, paddingBottom: 12 },
-  cardTitle: { fontSize: 13.5, fontWeight: '700', color: colors.text, marginBottom: 5 },
-  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardMeta: { fontSize: 11.5, color: colors.textMuted, fontWeight: '600' },
-  cardFeeFree: { color: colors.secondary, fontWeight: '700' },
-  metaDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.border },
-
   emptyState: { alignItems: 'center', marginTop: 40, gap: 10, paddingHorizontal: 30 },
   emptyIconCircle: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primaryLight,
@@ -1042,3 +926,4 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 });
+};

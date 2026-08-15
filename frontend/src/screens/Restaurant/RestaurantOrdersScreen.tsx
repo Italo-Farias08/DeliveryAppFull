@@ -23,7 +23,8 @@ import {
   rejectOrder,
   sendTenantOrderMessage,
 } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { OrderStatus } from '../../types';
 
@@ -36,14 +37,16 @@ const statusLabel: Record<OrderStatus, string> = {
   cancelado: 'Cancelado',
 };
 
-const statusColor: Record<OrderStatus, string> = {
-  pendente: colors.primary,
-  preparando: colors.star,
-  procurando_entregador: colors.secondary,
-  a_caminho: colors.secondary,
-  entregue: colors.textMuted,
-  cancelado: colors.danger,
-};
+function getStatusColor(colors: ThemeColors): Record<OrderStatus, string> {
+  return {
+    pendente: colors.primary,
+    preparando: colors.star,
+    procurando_entregador: colors.secondary,
+    a_caminho: colors.secondary,
+    entregue: colors.textMuted,
+    cancelado: colors.danger,
+  };
+}
 
 // Ícone por status — reforça o significado da cor pra quem só olha rápido
 // (útil na correria da cozinha).
@@ -57,6 +60,9 @@ const statusIcon: Record<OrderStatus, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function RestaurantOrdersScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const statusColor = getStatusColor(colors);
   const { orders, setOrders, refreshing, reload, pendingCount, ownDeliverers } = useRestaurantPanel();
   const [delivererPickerOrder, setDelivererPickerOrder] = useState<TenantOrder | null>(null);
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
@@ -379,7 +385,8 @@ export default function RestaurantOrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   emptyBox: {
     alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.surface, borderRadius: 20, padding: 32,
@@ -497,4 +504,5 @@ const styles = StyleSheet.create({
   codeBannerLabel: { ...typography.bodyBold, color: colors.text, fontSize: 13 },
   codeBannerSub: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
   pickupCode: { ...typography.h2, color: colors.secondary, letterSpacing: 3 },
-});
+  });
+}

@@ -13,7 +13,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 interface Props {
@@ -32,6 +33,8 @@ const STAR_HINTS: Record<number, string> = {
 };
 
 export default function RatingModal({ visible, onClose, restaurantName, onSubmit }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -117,7 +120,8 @@ export default function RatingModal({ visible, onClose, restaurantName, onSubmit
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -139,3 +143,4 @@ const styles = StyleSheet.create({
   },
   submitBtnText: { color: colors.white, fontWeight: '700', fontSize: 14.5 },
 });
+};

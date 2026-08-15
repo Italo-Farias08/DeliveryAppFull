@@ -3,7 +3,8 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Restaurant } from '../types';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { formatRating } from '../utils/rating';
 
@@ -13,6 +14,8 @@ interface Props {
 }
 
 export function RestaurantCard({ restaurant, onPress }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
 
   return (
@@ -53,7 +56,8 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   card: { width: '100%', marginBottom: 18 },
   image: { width: '100%', height: 150, borderRadius: 16, backgroundColor: colors.border },
   closedBadge: {
@@ -68,3 +72,4 @@ const styles = StyleSheet.create({
   dot: { color: colors.textMuted },
   fee: { fontSize: 12.5, color: colors.secondary, fontWeight: '600', marginTop: 2 },
 });
+};

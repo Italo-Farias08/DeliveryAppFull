@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
 
 interface Props {
@@ -16,6 +17,8 @@ interface Props {
 // carrinho. Antes disso o app trocava o carrinho em silêncio -- agora
 // avisa e pede confirmação antes de apagar os itens antigos.
 export default function SwitchRestaurantModal({ visible, currentRestaurantName, onCancel, onConfirm }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.85)).current;
   const iconRotate = useRef(new Animated.Value(0)).current;
@@ -69,7 +72,8 @@ export default function SwitchRestaurantModal({ visible, currentRestaurantName, 
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: colors.overlay,
@@ -137,3 +141,4 @@ const styles = StyleSheet.create({
   },
   confirmText: { color: colors.white, fontWeight: '700', fontSize: 13.5 },
 });
+};

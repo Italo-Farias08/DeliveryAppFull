@@ -72,6 +72,9 @@ export interface Restaurant {
   deliveryTimeMin: number;
   deliveryTimeMax: number;
   deliveryFee: number;
+  // Valor mínimo de pedido exigido pelo restaurante (subtotal, sem taxa
+  // de entrega). 0 ou ausente = sem valor mínimo.
+  minOrderValue?: number;
   image: string;
   // Foto de capa da loja (diferente da logo). Opcional porque restaurantes
   // antigos ainda não tinham esse campo.

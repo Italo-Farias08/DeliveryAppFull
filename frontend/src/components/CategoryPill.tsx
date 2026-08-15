@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+import type { ThemeColors } from '../theme/colors';
 
 interface Props {
   name: string;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export function CategoryPill({ name, icon, active, onPress }: Props) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -23,7 +26,8 @@ export function CategoryPill({ name, icon, active, onPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -38,3 +42,4 @@ const styles = StyleSheet.create({
   text: { fontSize: 13, fontWeight: '600', color: colors.secondary },
   textActive: { color: colors.white },
 });
+};

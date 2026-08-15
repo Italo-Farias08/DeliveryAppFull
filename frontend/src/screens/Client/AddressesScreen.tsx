@@ -20,9 +20,11 @@ import {
   createAddress,
   deleteAddress,
   listAddresses,
+  setDefaultAddress,
 } from '../../services/addressService';
 import { AddressSuggestion, SearchBias, searchAddress } from '../../services/geocodingService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 
 const LABELS = ['Casa', 'Trabalho', 'Outro'];
@@ -62,9 +64,12 @@ function suggestionSecondary(s: AddressSuggestion) {
 }
 
 export default function AddressesScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [fixingId, setFixingId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [label, setLabel] = useState('Casa');
@@ -274,6 +279,23 @@ export default function AddressesScreen() {
     ]);
   }
 
+  // Fixa o endereço como principal: some no topo da lista e passa a ser
+  // usado depois pra conferir a localização real na hora do pedido.
+  async function handleSetDefault(id: string) {
+    setFixingId(id);
+    try {
+      const updated = await setDefaultAddress(id);
+      setAddresses((prev) => {
+        const next = prev.map((a) => ({ ...a, isDefault: a.id === updated.id }));
+        return [...next].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+      });
+    } catch {
+      Alert.alert('Erro', 'Não foi possível fixar este endereço.');
+    } finally {
+      setFixingId(null);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.headerRow}>
@@ -435,26 +457,49 @@ export default function AddressesScreen() {
           </View>
         ) : (
           addresses.map((a) => (
-            <View key={a.id} style={styles.addressCard}>
+            <View key={a.id} style={[styles.addressCard, a.isDefault && styles.addressCardDefault]}>
               <View style={styles.addressIcon}>
                 <Ionicons name={labelIcon(a.label) as any} size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.addressLabel}>{a.label || 'Endereço'}</Text>
+                <View style={styles.addressLabelRow}>
+                  <Text style={styles.addressLabel}>{a.label || 'Endereço'}</Text>
+                  {a.isDefault && (
+                    <View style={styles.defaultBadge}>
+                      <Ionicons name="pin" size={10} color={colors.white} />
+                      <Text style={styles.defaultBadgeText}>Principal</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.addressText}>{addressLine(a)}</Text>
                 {a.lat != null && a.lng != null && <Text style={styles.gpsTag}>GPS salvo</Text>}
               </View>
-              <TouchableOpacity
-                onPress={() => handleDelete(a.id)}
-                disabled={deletingId === a.id}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                {deletingId === a.id ? (
-                  <ActivityIndicator color={colors.danger} size="small" />
-                ) : (
-                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              <View style={styles.addressActions}>
+                {!a.isDefault && (
+                  <TouchableOpacity
+                    onPress={() => handleSetDefault(a.id)}
+                    disabled={fixingId === a.id}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    {fixingId === a.id ? (
+                      <ActivityIndicator color={colors.primary} size="small" />
+                    ) : (
+                      <Ionicons name="pin-outline" size={19} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDelete(a.id)}
+                  disabled={deletingId === a.id}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {deletingId === a.id ? (
+                    <ActivityIndicator color={colors.danger} size="small" />
+                  ) : (
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           ))
         )}
@@ -463,7 +508,8 @@ export default function AddressesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   headerRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -547,11 +593,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.border,
   },
+  addressCardDefault: { borderColor: colors.primary, borderWidth: 1.5 },
   addressIcon: {
     width: 38, height: 38, borderRadius: 10, backgroundColor: colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
+  addressLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   addressLabel: { ...typography.bodyBold, color: colors.text, fontSize: 14 },
   addressText: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
   gpsTag: { color: colors.secondary, fontSize: 10.5, fontWeight: '700', marginTop: 4 },
+  addressActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  defaultBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  defaultBadgeText: { color: colors.white, fontSize: 9.5, fontWeight: '700' },
 });
+};

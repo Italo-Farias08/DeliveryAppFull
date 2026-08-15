@@ -18,11 +18,20 @@ import { useAuth } from '../../context/AuthContext';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { deleteAccount } from '../../services/userService';
 import { RestaurantInput, updateRestaurant } from '../../services/tenantService';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { pickImageFromLibrary } from '../../utils/pickImage';
 
+const THEME_OPTIONS: { value: 'light' | 'dark' | 'system'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'light', label: 'Claro', icon: 'sunny-outline' },
+  { value: 'dark', label: 'Escuro', icon: 'moon-outline' },
+  { value: 'system', label: 'Automático', icon: 'phone-portrait-outline' },
+];
+
 export default function RestaurantSettingsScreen() {
+  const { colors, mode, setMode } = useTheme();
+  const styles = createStyles(colors);
   const { user, signOut } = useAuth();
   const {
     restaurant,
@@ -47,6 +56,7 @@ export default function RestaurantSettingsScreen() {
   const [name, setName] = useState(restaurant?.name || '');
   const [categoryId, setCategoryId] = useState<string | null>(restaurant?.categoryId || null);
   const [fee, setFee] = useState(restaurant ? String(restaurant.deliveryFee) : '');
+  const [minOrder, setMinOrder] = useState(restaurant ? String(restaurant.minOrderValue ?? 0) : '');
   const [min, setMin] = useState(restaurant ? String(restaurant.deliveryTimeMin) : '');
   const [max, setMax] = useState(restaurant ? String(restaurant.deliveryTimeMax) : '');
 
@@ -67,6 +77,7 @@ export default function RestaurantSettingsScreen() {
     setName(restaurant.name);
     setCategoryId(restaurant.categoryId);
     setFee(String(restaurant.deliveryFee));
+    setMinOrder(String(restaurant.minOrderValue ?? 0));
     setMin(String(restaurant.deliveryTimeMin));
     setMax(String(restaurant.deliveryTimeMax));
     setEditingData(true);
@@ -79,10 +90,15 @@ export default function RestaurantSettingsScreen() {
       return;
     }
     const feeNum = Number(fee.replace(',', '.'));
+    const minOrderNum = Number((minOrder || '0').replace(',', '.'));
     const minNum = parseInt(min, 10);
     const maxNum = parseInt(max, 10);
     if (Number.isNaN(feeNum) || feeNum < 0) {
       Alert.alert('Taxa inválida', 'Informe uma taxa de entrega válida.');
+      return;
+    }
+    if (Number.isNaN(minOrderNum) || minOrderNum < 0) {
+      Alert.alert('Pedido mínimo inválido', 'Informe um valor mínimo de pedido válido (ou 0 para não ter mínimo).');
       return;
     }
     if (!minNum || !maxNum || minNum <= 0 || maxNum <= 0) {
@@ -95,6 +111,7 @@ export default function RestaurantSettingsScreen() {
         name: name.trim(),
         categoryId,
         deliveryFee: feeNum,
+        minOrderValue: minOrderNum,
         deliveryTimeMin: minNum,
         deliveryTimeMax: maxNum,
         isOpen: restaurant.isOpen,
@@ -195,6 +212,14 @@ export default function RestaurantSettingsScreen() {
                 <Text style={styles.dataRowValue}>R$ {Number(restaurant.deliveryFee).toFixed(2)}</Text>
               </View>
               <View style={styles.dataRow}>
+                <Text style={styles.dataRowLabel}>Pedido mínimo</Text>
+                <Text style={styles.dataRowValue}>
+                  {Number(restaurant.minOrderValue || 0) > 0
+                    ? `R$ ${Number(restaurant.minOrderValue).toFixed(2)}`
+                    : 'Sem mínimo'}
+                </Text>
+              </View>
+              <View style={styles.dataRow}>
                 <Text style={styles.dataRowLabel}>Tempo de entrega</Text>
                 <Text style={styles.dataRowValue}>{restaurant.deliveryTimeMin}–{restaurant.deliveryTimeMax} min</Text>
               </View>
@@ -219,6 +244,16 @@ export default function RestaurantSettingsScreen() {
 
               <Text style={styles.label}>Taxa de entrega (R$)</Text>
               <TextInput style={styles.input} value={fee} onChangeText={setFee} placeholder="Ex: 6.90" placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" />
+
+              <Text style={styles.label}>Pedido mínimo (R$)</Text>
+              <TextInput
+                style={styles.input}
+                value={minOrder}
+                onChangeText={setMinOrder}
+                placeholder="0 = sem valor mínimo"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+              />
 
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
@@ -263,6 +298,26 @@ export default function RestaurantSettingsScreen() {
             <Text style={styles.dataRowValue}>{user?.email}</Text>
           </View>
 
+          <Text style={[styles.sectionTitle, { marginTop: 18, marginBottom: 8, fontSize: 13 }]}>Aparência</Text>
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = mode === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.themeOption, active && styles.themeOptionActive]}
+                  activeOpacity={0.8}
+                  onPress={() => setMode(opt.value)}
+                >
+                  <Ionicons name={opt.icon} size={17} color={active ? colors.white : colors.textMuted} />
+                  <Text style={[styles.themeOptionLabel, active && styles.themeOptionLabelActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           <TouchableOpacity style={styles.signOutRow} onPress={signOut}>
             <Ionicons name="log-out-outline" size={18} color={colors.danger} />
             <Text style={styles.signOutText}>Sair da conta</Text>
@@ -289,7 +344,8 @@ export default function RestaurantSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
   sectionCard: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 18, marginBottom: 16,
     borderWidth: 1, borderColor: colors.border,
@@ -352,6 +408,15 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
 
+  themeRow: { flexDirection: 'row', gap: 8 },
+  themeOption: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    backgroundColor: colors.background, borderRadius: 10, paddingVertical: 10,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  themeOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  themeOptionLabel: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  themeOptionLabelActive: { color: colors.white },
   signOutRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14,
     borderTopWidth: 1, borderTopColor: colors.border,
@@ -362,3 +427,4 @@ const styles = StyleSheet.create({
   },
   deleteText: { color: colors.danger, fontWeight: '600', fontSize: 12 },
 });
+};
