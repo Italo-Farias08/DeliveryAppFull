@@ -1,6 +1,6 @@
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/db');
-const { toClient, toTenant, toDeliverers, toDeliverer } = require('../../realtime/socket');
+const { toClient, toTenant, toDeliverers, toDeliverer, isDelivererOnline } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToDeliverers } = require('../../utils/push');
 const asyncHandler = require('../../utils/asyncHandler');
 
@@ -481,7 +481,10 @@ async function listOwnDeliverers(tenantId) {
      ORDER BY u.name ASC`,
     [tenantId]
   );
-  return result.rows;
+  // isOnline vem da conexão de socket em tempo real (app aberto e
+  // conectado agora), não do banco -- é o que faltava pra distinguir
+  // "marcou disponível uma vez e fechou o app" de "está online de fato".
+  return result.rows.map((d) => ({ ...d, isOnline: isDelivererOnline(d.id) }));
 }
 
 async function removeOwnDeliverer(tenantId, delivererId) {

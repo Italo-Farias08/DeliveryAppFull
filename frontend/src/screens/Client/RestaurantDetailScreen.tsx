@@ -126,13 +126,19 @@ export default function RestaurantDetailScreen() {
             />
           </View>
 
-          <PressableScale
-            onPress={() => navigation.goBack()}
-            style={[styles.backBtn, { top: insets.top + 10 }]}
-            scaleTo={0.88}
-          >
-            <Ionicons name="arrow-back" size={20} color={colors.text} />
-          </PressableScale>
+          {/* Posicionamento absoluto fica NESTE View, não dentro do
+              PressableScale: o Animated.View interno do PressableScale
+              tem tamanho zero (só o ícone), então se ele receber
+              position:absolute, o botão fica relativo a esse wrapper
+              zerado -- que entra no fluxo normal logo depois da imagem
+              (altura 100%) e acaba empurrado pra baixo da foto. Aqui a
+              View externa é quem fica absoluta sobre a capa; o
+              PressableScale só cuida do toque/animação por dentro. */}
+          <View style={[styles.backBtnWrap, { top: insets.top + 10 }]}>
+            <PressableScale onPress={() => navigation.goBack()} style={styles.backBtn} scaleTo={0.88}>
+              <Ionicons name="arrow-back" size={20} color={colors.text} />
+            </PressableScale>
+          </View>
 
           {/* nome + tagline, desenhados por cima do banner */}
           <View style={styles.coverContent}>
@@ -261,11 +267,14 @@ function createStyles(colors: ThemeColors) {
   coverOverlay: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
   },
-  backBtn: {
+  backBtnWrap: {
     position: 'absolute', left: 14,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
     zIndex: 2,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
     ...shadows.sm,
   },
   coverContent: {

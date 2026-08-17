@@ -128,6 +128,12 @@ export function RestaurantProvider({ children }: { children: React.ReactNode }) 
       s.on('order:cancelled', ({ id, status, cancelReason }: { id: string; status: OrderStatus; cancelReason?: string }) => {
         setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status, cancelReason } : o)));
       });
+      // Presença real do entregador da casa (conectou/desconectou o
+      // socket) -- atualiza o pontinho na hora, sem precisar puxar pra
+      // atualizar nem trocar de aba pra recarregar.
+      s.on('deliverer:presence', ({ delivererId, isOnline }: { delivererId: string; isOnline: boolean }) => {
+        setOwnDeliverers((prev) => prev.map((d) => (d.id === delivererId ? { ...d, isOnline } : d)));
+      });
     });
     return () => {
       disconnectSocket();

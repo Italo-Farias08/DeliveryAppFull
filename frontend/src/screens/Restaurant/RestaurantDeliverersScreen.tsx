@@ -126,30 +126,37 @@ export default function RestaurantDeliverersScreen() {
             <Text style={styles.emptySub}>Compartilhe o código acima com quem entrega por você.</Text>
           </View>
         ) : (
-          ownDeliverers.map((d) => (
-            <View key={d.id} style={styles.delivererCard}>
-              <View style={[styles.statusDot, { backgroundColor: d.isAvailable ? colors.secondary : colors.textMuted }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.delivererName}>{d.name}</Text>
-                <Text style={styles.delivererSub}>
-                  {d.isAvailable ? 'Disponível agora' : 'Indisponível'}
-                  {d.vehicleType ? ` · ${d.vehicleType}` : ''}
-                  {d.phone ? ` · ${d.phone}` : ''}
-                </Text>
+          ownDeliverers.map((d) => {
+            // Offline manda: se o app dele não está conectado agora, não
+            // importa o que o toggle "aceitar corridas" diz -- ele não
+            // está online de verdade.
+            const statusColor = !d.isOnline ? colors.textMuted : d.isAvailable ? colors.secondary : colors.star;
+            const statusLabel = !d.isOnline ? 'Offline' : d.isAvailable ? 'Disponível agora' : 'Online · indisponível';
+            return (
+              <View key={d.id} style={styles.delivererCard}>
+                <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.delivererName}>{d.name}</Text>
+                  <Text style={styles.delivererSub}>
+                    {statusLabel}
+                    {d.vehicleType ? ` · ${d.vehicleType}` : ''}
+                    {d.phone ? ` · ${d.phone}` : ''}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.removeBtn}
+                  onPress={() => handleRemove(d.id, d.name)}
+                  disabled={removingId === d.id}
+                >
+                  {removingId === d.id ? (
+                    <ActivityIndicator size="small" color={colors.danger} />
+                  ) : (
+                    <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
+                  )}
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.removeBtn}
-                onPress={() => handleRemove(d.id, d.name)}
-                disabled={removingId === d.id}
-              >
-                {removingId === d.id ? (
-                  <ActivityIndicator size="small" color={colors.danger} />
-                ) : (
-                  <Ionicons name="close-circle-outline" size={20} color={colors.danger} />
-                )}
-              </TouchableOpacity>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </RestaurantScreenLayout>

@@ -58,7 +58,12 @@ export interface OwnDeliverer {
   name: string;
   phone?: string | null;
   vehicleType?: string | null;
+  // Toggle manual do motoboy ("aceitar corridas") -- não muda sozinho
+  // quando ele fecha o app ou perde conexão.
   isAvailable: boolean;
+  // Presença real: true só enquanto o app dele está aberto e conectado
+  // agora (via socket). É essa que deve mandar no "online"/"offline".
+  isOnline: boolean;
 }
 
 export interface Restaurant {
