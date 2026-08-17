@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 const FAQ: { question: string; answer: string }[] = [
   {
@@ -146,7 +147,7 @@ function createStyles(colors: ThemeColors) {
     marginTop: 20, marginBottom: 8,
   },
   faqCard: {
-    backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: 16, ...shadows.sm,
     paddingHorizontal: 16,
   },
   faqItem: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 14 },
@@ -154,7 +155,7 @@ function createStyles(colors: ThemeColors) {
   faqQuestion: { flex: 1, fontSize: 14.5, fontWeight: '700', color: colors.text },
   faqAnswer: { marginTop: 8, fontSize: 13.5, color: colors.textMuted, lineHeight: 19 },
   contactCard: {
-    backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: 16, ...shadows.sm,
     paddingHorizontal: 16,
   },
   contactRow: {

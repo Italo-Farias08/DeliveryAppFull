@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
+import { PressableScale } from './PressableScale';
 
 export type RestaurantRoute = 'Dashboard' | 'Orders' | 'Sales' | 'Menu' | 'OutOfStock' | 'Location' | 'Hours' | 'Deliverers' | 'Settings';
 
@@ -72,9 +74,8 @@ export default function RestaurantDrawer({
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={styles.root}>
         <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
-
         <Animated.View style={[styles.panel, { width: DRAWER_WIDTH, transform: [{ translateX }] }]}>
           <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
             <View style={styles.header}>
@@ -88,11 +89,11 @@ export default function RestaurantDrawer({
               {ITEMS.map((item) => {
                 const isActive = item.route === active;
                 return (
-                  <TouchableOpacity
+                  <PressableScale
                     key={item.route}
                     style={[styles.item, isActive && styles.itemActive]}
                     onPress={() => onNavigate(item.route)}
-                    activeOpacity={0.7}
+                    scaleTo={0.96}
                   >
                     <Ionicons
                       name={item.icon}
@@ -105,16 +106,16 @@ export default function RestaurantDrawer({
                         <Text style={styles.badgeText}>{pendingCount}</Text>
                       </View>
                     )}
-                  </TouchableOpacity>
+                  </PressableScale>
                 );
               })}
             </View>
 
             <View style={styles.footer}>
-              <TouchableOpacity style={styles.signOutItem} onPress={onSignOut} activeOpacity={0.7}>
+              <PressableScale style={styles.signOutItem} onPress={onSignOut} scaleTo={0.96}>
                 <Ionicons name="log-out-outline" size={19} color={colors.danger} />
                 <Text style={styles.signOutText}>Sair</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </SafeAreaView>
         </Animated.View>
@@ -145,7 +146,7 @@ function createStyles(colors: ThemeColors) {
   },
   logoCircle: {
     width: 38, height: 38, borderRadius: 12, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', ...shadows.sm,
   },
   restaurantName: { ...typography.bodyBold, color: colors.text, flex: 1, fontSize: 15.5 },
 

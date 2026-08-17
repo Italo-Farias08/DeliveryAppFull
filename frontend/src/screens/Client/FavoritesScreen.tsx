@@ -9,6 +9,7 @@ import { useFavorites } from '../../context/FavoritesContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { Restaurant } from '../../types';
 
 export default function FavoritesScreen() {
@@ -110,7 +111,7 @@ function createStyles(colors: ThemeColors) {
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 16, padding: 12,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   rowImage: { width: 56, height: 56, borderRadius: 12, backgroundColor: colors.border },
   rowTitle: { ...typography.h2, fontSize: 15, color: colors.text },

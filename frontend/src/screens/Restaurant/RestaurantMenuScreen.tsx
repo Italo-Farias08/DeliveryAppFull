@@ -34,6 +34,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { Addon, MenuCategory, MenuItem } from '../../types';
 import { pickImageFromLibrary } from '../../utils/pickImage';
 
@@ -598,7 +599,7 @@ function createStyles(colors: ThemeColors) {
   emptyBox: {
     alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.surface, borderRadius: 20, padding: 32,
-    borderWidth: 1, borderColor: colors.border, marginTop: 16,
+    ...shadows.sm, marginTop: 16,
   },
   emptyIconCircle: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primaryLight,
@@ -616,7 +617,7 @@ function createStyles(colors: ThemeColors) {
   menuItemRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.surface, borderRadius: 16, padding: 12, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   menuItemThumb: { width: 52, height: 52, borderRadius: 12, backgroundColor: colors.border },
   menuItemName: { ...typography.bodyBold, color: colors.text },

@@ -1,12 +1,14 @@
 // components/FoodCard.tsx
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows, coloredShadow } from '../theme/shadows';
 import { MenuItem } from '../types';
+import { PressableScale } from './PressableScale';
 
 interface FoodCardProps {
   item: MenuItem;
@@ -17,6 +19,18 @@ export function FoodCard({ item, onAdd }: FoodCardProps) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const soldOut = item.isAvailable === false;
+
+  // Pequeno "pop" no ícone quando o item é adicionado -- reforço visual
+  // divertido além do encolher normal do toque.
+  const pop = useRef(new Animated.Value(1)).current;
+  function handleAdd() {
+    onAdd();
+    pop.setValue(1);
+    Animated.sequence([
+      Animated.spring(pop, { toValue: 1.35, friction: 4, useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }),
+    ]).start();
+  }
 
   return (
     <View style={[styles.card, soldOut && styles.cardSoldOut]}>
@@ -46,9 +60,11 @@ export function FoodCard({ item, onAdd }: FoodCardProps) {
       </View>
 
       {!soldOut && (
-        <TouchableOpacity style={styles.addBtn} onPress={onAdd} activeOpacity={0.8}>
-          <Ionicons name="add" size={22} color={colors.white} />
-        </TouchableOpacity>
+        <PressableScale onPress={handleAdd} style={styles.addBtn} scaleTo={0.85}>
+          <Animated.View style={{ transform: [{ scale: pop }] }}>
+            <Ionicons name="add" size={22} color={colors.white} />
+          </Animated.View>
+        </PressableScale>
       )}
     </View>
   );
@@ -62,11 +78,7 @@ function createStyles(colors: ThemeColors) {
     borderRadius: 18,
     padding: 12,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 2,
+    ...shadows.sm,
   },
   cardSoldOut: { opacity: 0.65 },
   image: {
@@ -119,11 +131,7 @@ function createStyles(colors: ThemeColors) {
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
-    elevation: 3,
+    ...coloredShadow(colors.primary, 0.35),
   },
 });
 };

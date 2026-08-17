@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import { publishRestaurant } from '../../services/tenantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 function todayKey(iso: string) {
   return new Date(iso).toDateString();
@@ -102,11 +105,11 @@ export default function RestaurantDashboardScreen() {
                   ? 'Adicione pelo menos um item ao cardápio pra poder publicar.'
                   : 'Cardápio pronto! Quando quiser, publique pra começar a receber pedidos.'}
               </Text>
-              <TouchableOpacity
+              <PressableScale
                 style={[styles.publishBtn, (publishing || menuItems.length === 0) && { opacity: 0.5 }]}
-                activeOpacity={0.85}
                 onPress={menuItems.length === 0 ? () => navigation.navigate('Menu') : handlePublish}
                 disabled={publishing}
+                scaleTo={0.96}
               >
                 <Text style={styles.publishBtnText}>
                   {menuItems.length === 0
@@ -115,12 +118,12 @@ export default function RestaurantDashboardScreen() {
                     ? 'Publicando...'
                     : 'Estou pronto, publicar loja'}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </View>
         )}
 
-        <View style={styles.heroCard}>
+        <FadeSlideIn index={0} style={styles.heroCard}>
           <View style={styles.heroTopRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.heroEyebrow}>STATUS DA LOJA</Text>
@@ -174,61 +177,73 @@ export default function RestaurantDashboardScreen() {
               </View>
             </View>
           </View>
-        </View>
+        </FadeSlideIn>
 
         <View style={styles.shortcutsGrid}>
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Orders')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-              {pendingCount > 0 && (
-                <View style={styles.shortcutBadge}>
-                  <Text style={styles.shortcutBadgeText}>{pendingCount}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.shortcutTitle}>Pedidos</Text>
-            <Text style={styles.shortcutSub}>{pendingCount > 0 ? `${pendingCount} novo${pendingCount > 1 ? 's' : ''}` : 'Ver tudo'}</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={1} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Orders')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="receipt-outline" size={18} color={colors.primary} />
+                {pendingCount > 0 && (
+                  <View style={styles.shortcutBadge}>
+                    <Text style={styles.shortcutBadgeText}>{pendingCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.shortcutTitle}>Pedidos</Text>
+              <Text style={styles.shortcutSub}>{pendingCount > 0 ? `${pendingCount} novo${pendingCount > 1 ? 's' : ''}` : 'Ver tudo'}</Text>
+            </PressableScale>
+          </FadeSlideIn>
 
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Sales')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="bar-chart-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.shortcutTitle}>Vendas</Text>
-            <Text style={styles.shortcutSub}>Faturamento e histórico</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={2} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Sales')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="bar-chart-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.shortcutTitle}>Vendas</Text>
+              <Text style={styles.shortcutSub}>Faturamento e histórico</Text>
+            </PressableScale>
+          </FadeSlideIn>
 
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Menu')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.shortcutTitle}>Cardápio</Text>
-            <Text style={styles.shortcutSub}>{menuItems.length} {menuItems.length === 1 ? 'item' : 'itens'}</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={3} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Menu')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="restaurant-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.shortcutTitle}>Cardápio</Text>
+              <Text style={styles.shortcutSub}>{menuItems.length} {menuItems.length === 1 ? 'item' : 'itens'}</Text>
+            </PressableScale>
+          </FadeSlideIn>
 
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Location')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="location-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.shortcutTitle}>Localização</Text>
-            <Text style={styles.shortcutSub}>{restaurant.street ? 'Endereço salvo' : 'Adicionar endereço'}</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={4} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Location')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="location-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.shortcutTitle}>Localização</Text>
+              <Text style={styles.shortcutSub}>{restaurant.street ? 'Endereço salvo' : 'Adicionar endereço'}</Text>
+            </PressableScale>
+          </FadeSlideIn>
 
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Hours')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="time-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.shortcutTitle}>Horário</Text>
-            <Text style={styles.shortcutSub}>Funcionamento por dia</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={5} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Hours')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="time-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.shortcutTitle}>Horário</Text>
+              <Text style={styles.shortcutSub}>Funcionamento por dia</Text>
+            </PressableScale>
+          </FadeSlideIn>
 
-          <TouchableOpacity style={styles.shortcutCard} onPress={() => navigation.navigate('Settings')} activeOpacity={0.85}>
-            <View style={styles.shortcutIconWrap}>
-              <Ionicons name="settings-outline" size={18} color={colors.primary} />
-            </View>
-            <Text style={styles.shortcutTitle}>Configuração</Text>
-            <Text style={styles.shortcutSub}>Fotos e dados da loja</Text>
-          </TouchableOpacity>
+          <FadeSlideIn index={6} style={styles.shortcutCardWrap}>
+            <PressableScale style={styles.shortcutCard} onPress={() => navigation.navigate('Settings')} scaleTo={0.95}>
+              <View style={styles.shortcutIconWrap}>
+                <Ionicons name="settings-outline" size={18} color={colors.primary} />
+              </View>
+              <Text style={styles.shortcutTitle}>Configuração</Text>
+              <Text style={styles.shortcutSub}>Fotos e dados da loja</Text>
+            </PressableScale>
+          </FadeSlideIn>
         </View>
       </ScrollView>
     </RestaurantScreenLayout>
@@ -286,9 +301,10 @@ function createStyles(colors: ThemeColors) {
   pulseDotCore: { width: 8, height: 8, borderRadius: 4 },
 
   shortcutsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 20 },
+  shortcutCardWrap: { width: '47%' },
   shortcutCard: {
-    width: '47%', backgroundColor: colors.surface, borderRadius: 18, padding: 16,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16,
+    ...shadows.sm,
   },
   shortcutIconWrap: {
     width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primaryLight,

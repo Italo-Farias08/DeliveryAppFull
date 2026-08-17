@@ -5,15 +5,17 @@ import {
   Alert,
   Linking,
   Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import OrderChatModal from '../../components/OrderChatModal';
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
 import {
   TenantOrder,
@@ -26,6 +28,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows, coloredShadow } from '../../theme/shadows';
 import { OrderStatus } from '../../types';
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -143,15 +146,15 @@ export default function RestaurantOrdersScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => reload(true)} tintColor={colors.primary} />}
       >
         {orders.length === 0 ? (
-          <View style={styles.emptyBox}>
+          <FadeSlideIn style={styles.emptyBox}>
             <View style={styles.emptyIconCircle}>
               <Ionicons name="fast-food-outline" size={28} color={colors.primary} />
             </View>
             <Text style={styles.emptyText}>Nenhum pedido ainda</Text>
             <Text style={styles.emptySub}>Os pedidos dos clientes vão aparecer aqui</Text>
-          </View>
+          </FadeSlideIn>
         ) : (
-          orders.map((order) => {
+          orders.map((order, index) => {
             const saving = savingOrderId === order.id;
             const addressLine = [order.street, order.number].filter(Boolean).join(', ');
             const addressRest = [order.neighborhood, order.city].filter(Boolean).join(' · ');
@@ -162,7 +165,7 @@ export default function RestaurantOrdersScreen() {
               : null;
             const sColor = statusColor[order.status] ?? colors.textMuted;
             return (
-              <View key={order.id} style={styles.orderCard}>
+              <FadeSlideIn key={order.id} index={index} style={styles.orderCard}>
                 <View style={styles.orderCardHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
@@ -187,15 +190,15 @@ export default function RestaurantOrdersScreen() {
                       </Text>
                     )}
                     {mapsUrl && (
-                      <TouchableOpacity onPress={() => Linking.openURL(mapsUrl)} style={styles.mapLinkRow}>
+                      <PressableScale onPress={() => Linking.openURL(mapsUrl)} style={styles.mapLinkRow} scaleTo={0.95}>
                         <Ionicons name="location-outline" size={13} color={colors.secondary} />
                         <Text style={styles.mapLinkText}>Ver localização no mapa</Text>
-                      </TouchableOpacity>
+                      </PressableScale>
                     )}
                   </View>
-                  <TouchableOpacity style={styles.chatBtn} onPress={() => setChatOrder(order)}>
+                  <PressableScale style={styles.chatBtn} onPress={() => setChatOrder(order)} scaleTo={0.9}>
                     <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.primary} />
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
 
                 {(order.items ?? []).length > 0 && (
@@ -234,54 +237,59 @@ export default function RestaurantOrdersScreen() {
 
                 {order.status === 'pendente' && (
                   <View style={styles.orderActionsRow}>
-                    <TouchableOpacity
+                    <PressableScale
                       style={[styles.outlineSmallBtn, saving && { opacity: 0.6 }]}
                       onPress={() => handleRejectOrder(order)}
                       disabled={saving}
+                      scaleTo={0.95}
                     >
                       <Text style={styles.outlineSmallBtnText}>Recusar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </PressableScale>
+                    <PressableScale
                       style={[styles.advanceBtn, { flex: 1 }, saving && { opacity: 0.6 }]}
                       onPress={() => handleAcceptOrder(order)}
                       disabled={saving}
+                      scaleTo={0.97}
                     >
                       {saving ? (
                         <ActivityIndicator color={colors.white} />
                       ) : (
                         <Text style={styles.advanceBtnText}>Aceitar pedido</Text>
                       )}
-                    </TouchableOpacity>
+                    </PressableScale>
                   </View>
                 )}
 
                 {order.status === 'preparando' && (
                   ownDeliverers.length === 0 ? (
-                    <TouchableOpacity
+                    <PressableScale
                       style={[styles.advanceBtn, styles.advanceBtnFull, saving && { opacity: 0.6 }]}
                       onPress={() => handleMarkReady(order)}
                       disabled={saving}
+                      scaleTo={0.97}
                     >
                       {saving ? (
                         <ActivityIndicator color={colors.white} />
                       ) : (
                         <Text style={styles.advanceBtnText}>Pedido pronto — chamar entregador</Text>
                       )}
-                    </TouchableOpacity>
+                    </PressableScale>
                   ) : (
                     <View style={styles.readyChoiceRow}>
-                      <TouchableOpacity
+                      <PressableScale
                         style={[styles.readyChoiceBtn, saving && { opacity: 0.6 }]}
                         onPress={() => handleMarkReady(order)}
                         disabled={saving}
+                        scaleTo={0.95}
                       >
                         <Ionicons name="radio-outline" size={15} color={colors.primary} />
                         <Text style={styles.readyChoiceBtnText}>Chamar entregador</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                      </PressableScale>
+                      <PressableScale
                         style={[styles.readyChoiceBtn, styles.readyChoiceBtnFilled, saving && { opacity: 0.6 }]}
                         onPress={() => handlePickOwnDeliverer(order)}
                         disabled={saving}
+                        scaleTo={0.95}
                       >
                         {saving ? (
                           <ActivityIndicator color={colors.white} />
@@ -291,7 +299,7 @@ export default function RestaurantOrdersScreen() {
                             <Text style={styles.readyChoiceBtnTextFilled}>Usar meu entregador</Text>
                           </>
                         )}
-                      </TouchableOpacity>
+                      </PressableScale>
                     </View>
                   )
                 )}
@@ -324,7 +332,7 @@ export default function RestaurantOrdersScreen() {
                     </View>
                   </View>
                 )}
-              </View>
+              </FadeSlideIn>
             );
           })
         )}
@@ -349,17 +357,13 @@ export default function RestaurantOrdersScreen() {
         onRequestClose={() => setDelivererPickerOrder(null)}
       >
         <View style={styles.pickerBackdrop}>
-          <TouchableOpacity
-            style={StyleSheet.absoluteFill}
-            activeOpacity={1}
-            onPress={() => setDelivererPickerOrder(null)}
-          />
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setDelivererPickerOrder(null)} />
           <View style={styles.pickerCard}>
             <Text style={styles.pickerTitle}>Qual entregador vai buscar?</Text>
             {ownDeliverers
               .filter((d) => d.isAvailable)
               .map((d) => (
-                <TouchableOpacity
+                <PressableScale
                   key={d.id}
                   style={styles.pickerRow}
                   onPress={() => {
@@ -367,17 +371,18 @@ export default function RestaurantOrdersScreen() {
                     setDelivererPickerOrder(null);
                     if (order) handleMarkReady(order, d.id);
                   }}
+                  scaleTo={0.97}
                 >
                   <View style={styles.pickerAvatar}>
                     <Ionicons name="bicycle" size={16} color={colors.primary} />
                   </View>
                   <Text style={styles.pickerRowText}>{d.name}</Text>
                   <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
+                </PressableScale>
               ))}
-            <TouchableOpacity style={styles.pickerCancel} onPress={() => setDelivererPickerOrder(null)}>
+            <PressableScale style={styles.pickerCancel} onPress={() => setDelivererPickerOrder(null)} scaleTo={0.95}>
               <Text style={styles.pickerCancelText}>Cancelar</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       </Modal>
@@ -390,7 +395,7 @@ function createStyles(colors: ThemeColors) {
   emptyBox: {
     alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.surface, borderRadius: 20, padding: 32,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   emptyIconCircle: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primaryLight,
@@ -402,7 +407,7 @@ function createStyles(colors: ThemeColors) {
   advanceBtn: {
     backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 12,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2,
+    ...coloredShadow(colors.primary, 0.25),
   },
   advanceBtnFull: { marginTop: 10 },
 
@@ -416,7 +421,7 @@ function createStyles(colors: ThemeColors) {
   readyChoiceBtnTextFilled: { color: colors.white, fontWeight: '700', fontSize: 12.5 },
 
   pickerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  pickerCard: { width: '100%', maxWidth: 360, backgroundColor: colors.surface, borderRadius: 18, padding: 16 },
+  pickerCard: { width: '100%', maxWidth: 360, backgroundColor: colors.surface, borderRadius: 18, padding: 16, ...shadows.lg },
   pickerTitle: { ...typography.bodyBold, color: colors.text, fontSize: 15, marginBottom: 10 },
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12,
@@ -433,8 +438,7 @@ function createStyles(colors: ThemeColors) {
 
   orderCard: {
     backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 18,
-    borderWidth: 1, borderColor: colors.border,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1,
+    ...shadows.sm,
   },
   orderCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   orderId: { ...typography.bodyBold, color: colors.text },

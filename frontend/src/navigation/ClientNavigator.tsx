@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { Animated } from 'react-native';
 import { useCart } from '../context/CartContext';
 import AccountScreen from '../screens/Client/AccountScreen';
 import AddressesScreen from '../screens/Client/AddressesScreen';
@@ -15,6 +16,7 @@ import OrdersScreen from '../screens/Client/OrdersScreen';
 import RestaurantDetailScreen from '../screens/Client/RestaurantDetailScreen';
 import SearchScreen from '../screens/Client/SearchScreen';
 import { useTheme } from '../context/ThemeContext';
+import { shadows } from '../theme/shadows';
 
 const Tab = createBottomTabNavigator();
 const HomeStackNav = createNativeStackNavigator();
@@ -63,6 +65,25 @@ function AccountStack() {
   );
 }
 
+// Ícone da aba com um leve "pop" ao ficar ativo -- pequeno detalhe que dá
+// vida à troca de abas, em vez da cor mudando sem transição nenhuma.
+function TabIcon({ name, color, size, focused }: { name: keyof typeof Ionicons.glyphMap; color: string; size: number; focused: boolean }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: focused ? 1.15 : 1,
+      friction: 5,
+      tension: 140,
+      useNativeDriver: true,
+    }).start();
+  }, [focused]);
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Ionicons name={name} size={size} color={color} />
+    </Animated.View>
+  );
+}
+
 export default function ClientNavigator() {
   const { colors } = useTheme();
   const { totalItems } = useCart();
@@ -73,15 +94,22 @@ export default function ClientNavigator() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { borderTopColor: colors.border, height: 60, paddingBottom: 8, paddingTop: 8 },
+        tabBarStyle: {
+          borderTopWidth: 0,
+          backgroundColor: colors.surface,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          ...shadows.md,
+        },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, size, focused }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
             Home: 'home',
             Orders: 'receipt',
             Account: 'person',
           };
-          return <Ionicons name={icons[route.name] ?? 'ellipse'} size={size - 2} color={color} />;
+          return <TabIcon name={icons[route.name] ?? 'ellipse'} size={size - 2} color={color} focused={focused} />;
         },
       })}
     >

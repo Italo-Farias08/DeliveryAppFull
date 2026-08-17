@@ -16,6 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 
 interface Props {
   visible: boolean;
@@ -133,7 +134,7 @@ function createStyles(colors: ThemeColors) {
   starsRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 8 },
   hintText: { textAlign: 'center', color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginBottom: 18 },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 14,
+    ...shadows.sm, borderRadius: 14, padding: 14,
     minHeight: 70, maxHeight: 120, color: colors.text, fontSize: 14, textAlignVertical: 'top',
     marginBottom: 16,
   },

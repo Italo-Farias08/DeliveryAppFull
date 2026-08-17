@@ -19,7 +19,8 @@ import { RestaurantGridCard } from '../../components/RestaurantGridCard';
 import { SearchBar } from '../../components/SearchBar';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationsContext';
-import { getCategories, getRestaurants } from '../../services/restaurantService';
+import { Coords, getCategories, getRestaurants } from '../../services/restaurantService';
+import { setCachedUserCoords } from '../../hooks/useUserCoords';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -403,6 +404,10 @@ export default function HomeScreen() {
 
   const [locationText, setLocationText] = useState('Toque para definir localização');
   const [locationLoading, setLocationLoading] = useState(false);
+  // Coordenadas do cliente -- usadas pra filtrar a listagem de
+  // restaurantes pelo raio de entrega (mesma ideia do iFood: só mostra
+  // quem realmente entrega até aqui).
+  const [coords, setCoords] = useState<Coords | null>(null);
 
   // ------------------------------------------------------------------
   // Splash de entrada — cobre a tela por um tempinho mínimo (pra não
@@ -429,6 +434,9 @@ export default function HomeScreen() {
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      const nextCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setCoords(nextCoords);
+      setCachedUserCoords(nextCoords);
       const [place] = await Location.reverseGeocodeAsync({
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
@@ -459,10 +467,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     setLoading(true);
-    getRestaurants(activeCategory ?? undefined)
+    getRestaurants(activeCategory ?? undefined, coords)
       .then(setRestaurants)
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+    // coords entra na dependência pra recarregar a lista já filtrada assim
+    // que o GPS responder (a primeira carga acontece sem coords, sem
+    // travar a tela esperando permissão de localização).
+  }, [activeCategory, coords]);
 
   // Com a estrelinha ativa, mostra só quem tem nota alta (4.5+), do maior
   // pro menor -- os restaurantes mais bem avaliados primeiro.

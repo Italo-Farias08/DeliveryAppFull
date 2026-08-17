@@ -17,6 +17,7 @@ import { setMenuItemAvailability } from '../../services/tenantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { MenuItem } from '../../types';
 
 // Área de esgotados: mostra o cardápio inteiro do restaurante e deixa
@@ -129,7 +130,7 @@ function createStyles(colors: ThemeColors) {
   summaryCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 18, padding: 16,
-    marginBottom: 24, borderWidth: 1, borderColor: colors.border,
+    marginBottom: 24, ...shadows.sm,
   },
   summaryIconCircle: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight,
@@ -145,7 +146,7 @@ function createStyles(colors: ThemeColors) {
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 14, padding: 10,
-    marginBottom: 8, borderWidth: 1, borderColor: colors.border,
+    marginBottom: 8, ...shadows.sm,
   },
   thumb: { width: 44, height: 44, borderRadius: 10 },
   thumbPlaceholder: { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },

@@ -18,6 +18,7 @@ import { getDelivererInviteCode, removeOwnDeliverer } from '../../services/tenan
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 // Entregadores "da casa": exclusivos deste restaurante. Diferente do
 // entregador autônomo (que pega corridas de qualquer loja pelo radar),
@@ -167,7 +168,7 @@ function createStyles(colors: ThemeColors) {
 
   codeCard: {
     backgroundColor: colors.surface, borderRadius: 16, padding: 18, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.border, marginBottom: 24,
+    ...shadows.sm, marginBottom: 24,
   },
   codeText: { fontSize: 30, fontWeight: '800', letterSpacing: 6, color: colors.primary },
   codeHint: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginTop: 10, lineHeight: 17 },
@@ -186,7 +187,7 @@ function createStyles(colors: ThemeColors) {
   delivererCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   delivererName: { ...typography.bodyBold, color: colors.text, fontSize: 14.5 },

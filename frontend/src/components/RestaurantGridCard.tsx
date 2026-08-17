@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useFavorites } from '../context/FavoritesContext';
 import { useTheme } from '../context/ThemeContext';
@@ -8,6 +8,8 @@ import type { ThemeColors } from '../theme/colors';
 import { Restaurant } from '../types';
 import { formatRating } from '../utils/rating';
 import { getFallbackRestaurantImage } from '../utils/restaurantImage';
+import { shadows } from '../theme/shadows';
+import { PressableScale } from './PressableScale';
 
 // Card compacto, pensado para grid de 2 colunas. Usa a LOGO do restaurante
 // (restaurant.image), igual à tela de detalhes. Se um dia você quiser
@@ -19,6 +21,7 @@ export function RestaurantGridCard({ restaurant, onPress }: { restaurant: Restau
   const { isFavorite, toggleFavorite } = useFavorites();
   const favorite = isFavorite(restaurant.id);
   const [imgError, setImgError] = useState(false);
+  const heartPop = useRef(new Animated.Value(1)).current;
 
   // campo certo é `image` (a logo do restaurante) -- `imageUrl` não existe
   // no tipo Restaurant, então antes isso sempre caía no fallback aleatório.
@@ -28,8 +31,17 @@ export function RestaurantGridCard({ restaurant, onPress }: { restaurant: Restau
   const closed = restaurant.isOpen === false;
   const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
 
+  function handleToggleFavorite() {
+    toggleFavorite(restaurant);
+    heartPop.setValue(1);
+    Animated.sequence([
+      Animated.spring(heartPop, { toValue: 1.4, friction: 3, useNativeDriver: true }),
+      Animated.spring(heartPop, { toValue: 1, friction: 3, useNativeDriver: true }),
+    ]).start();
+  }
+
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress}>
+    <PressableScale style={styles.card} onPress={onPress} scaleTo={0.97}>
       <View style={styles.cardImageWrap}>
         <Image
           source={imageSource}
@@ -53,13 +65,16 @@ export function RestaurantGridCard({ restaurant, onPress }: { restaurant: Restau
           )}
         </View>
 
-        <TouchableOpacity
+        <PressableScale
           style={styles.favoriteBtn}
-          onPress={() => toggleFavorite(restaurant)}
+          onPress={handleToggleFavorite}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          scaleTo={0.8}
         >
-          <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={14} color={colors.primary} />
-        </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: heartPop }] }}>
+            <Ionicons name={favorite ? 'heart' : 'heart-outline'} size={14} color={colors.primary} />
+          </Animated.View>
+        </PressableScale>
 
         {closed && (
           <View style={styles.closedBadge}>
@@ -81,7 +96,7 @@ export function RestaurantGridCard({ restaurant, onPress }: { restaurant: Restau
           </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -92,11 +107,7 @@ function createStyles(colors: ThemeColors) {
       borderRadius: 20,
       marginBottom: 16,
       overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOpacity: 0.07,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 5 },
-      elevation: 3,
+      ...shadows.sm,
     },
     cardImageWrap: { position: 'relative' },
     cardImage: { width: '100%', height: 110, backgroundColor: colors.border },

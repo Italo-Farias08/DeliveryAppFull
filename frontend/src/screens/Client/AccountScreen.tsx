@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DeleteAccountModal from '../../components/DeleteAccountModal';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import { deleteAccount } from '../../services/userService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows, coloredShadow } from '../../theme/shadows';
 
 const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; route?: string }[] = [
   { icon: 'person-outline', label: 'Meus dados', route: 'MyData' },
@@ -41,7 +44,7 @@ export default function AccountScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <Text style={styles.title}>Conta</Text>
 
-      <View style={styles.profileCard}>
+      <FadeSlideIn index={0} style={styles.profileCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
@@ -52,66 +55,64 @@ export default function AccountScreen() {
             <Text style={styles.roleBadgeText}>Cliente</Text>
           </View>
         </View>
-      </View>
+      </FadeSlideIn>
 
-      <Text style={styles.sectionTitle}>Aparência</Text>
-      <View style={styles.themeRow}>
-        {THEME_OPTIONS.map((opt) => {
-          const active = mode === opt.value;
-          return (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.themeOption, active && styles.themeOptionActive]}
-              activeOpacity={0.8}
-              onPress={() => setMode(opt.value)}
-            >
-              <Ionicons
-                name={opt.icon}
-                size={18}
-                color={active ? colors.white : colors.textMuted}
-              />
-              <Text style={[styles.themeOptionLabel, active && styles.themeOptionLabelActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+<Text style={styles.sectionTitle}>Aparência</Text>
+<FadeSlideIn index={1} style={styles.themeRow}>
+  {THEME_OPTIONS.map((opt) => {
+    const active = mode === opt.value;
+    return (
+      <PressableScale
+        key={opt.value}
+        style={[styles.themeOption, active && styles.themeOptionActive]}
+        onPress={() => setMode(opt.value)}
+        scaleTo={0.95}
+      >
+        <Ionicons
+          name={opt.icon}
+          size={18}
+          color={active ? colors.white : colors.textMuted}
+        />
+        <Text style={[styles.themeOptionLabel, active && styles.themeOptionLabelActive]}>
+          {opt.label}
+        </Text>
+      </PressableScale>
+    );
+  })}
+</FadeSlideIn>
 
-      <View style={styles.list}>
-        {OPTIONS.map((opt) => (
-          <TouchableOpacity
+      <FadeSlideIn index={2} style={styles.list}>
+        {OPTIONS.map((opt, i) => (
+          <PressableScale
             key={opt.label}
-            style={styles.optionRow}
-            activeOpacity={0.7}
+            style={[styles.optionRow, i === OPTIONS.length - 1 && { borderBottomWidth: 0 }]}
             onPress={() =>
               opt.route
                 ? navigation.navigate(opt.route)
                 : Alert.alert('Em breve', `${opt.label} chega com o backend.`)
             }
+            scaleTo={0.98}
           >
             <Ionicons name={opt.icon} size={20} color={colors.text} />
             <Text style={styles.optionLabel}>{opt.label}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          </PressableScale>
         ))}
+      </FadeSlideIn>
 
-        <TouchableOpacity style={styles.optionRow} activeOpacity={0.7} onPress={signOut}>
+      <FadeSlideIn index={3} style={styles.list}>
+        <PressableScale style={[styles.optionRow, { borderBottomWidth: 0 }]} onPress={signOut} scaleTo={0.98}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
           <Text style={[styles.optionLabel, { color: colors.danger }]}>Sair</Text>
-        </TouchableOpacity>
-      </View>
+        </PressableScale>
+      </FadeSlideIn>
 
-      <View style={styles.dangerZone}>
-        <TouchableOpacity
-          style={styles.deleteRow}
-          activeOpacity={0.7}
-          onPress={() => setDeleteModalVisible(true)}
-        >
+      <FadeSlideIn index={4} style={styles.dangerZone}>
+        <PressableScale style={styles.deleteRow} onPress={() => setDeleteModalVisible(true)} scaleTo={0.95}>
           <Ionicons name="trash-outline" size={18} color={colors.danger} />
           <Text style={styles.deleteLabel}>Excluir minha conta</Text>
-        </TouchableOpacity>
-      </View>
+        </PressableScale>
+      </FadeSlideIn>
 
       <Text style={styles.version}>versão 1.0.0 · demonstração</Text>
 
@@ -136,11 +137,12 @@ function createStyles(colors: ThemeColors) {
   profileCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     marginHorizontal: 20, backgroundColor: colors.surface, borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   avatar: {
     width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
+    ...coloredShadow(colors.primary, 0.3),
   },
   avatarText: { color: colors.white, fontSize: 22, fontWeight: '800' },
   name: { ...typography.h2, color: colors.text },
@@ -155,16 +157,19 @@ function createStyles(colors: ThemeColors) {
     textTransform: 'uppercase', letterSpacing: 0.5,
     marginTop: 26, marginHorizontal: 20, marginBottom: 10,
   },
-  themeRow: { flexDirection: 'row', gap: 10, marginHorizontal: 20 },
+  themeRow: { flexDirection: 'row', gap: 10, marginHorizontal: 20, minHeight: 60 },
   themeOption: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  themeOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 10,
+  borderWidth: 1, borderColor: colors.border,
+},
+  themeOptionActive: { backgroundColor: colors.primary, borderColor: colors.primary, ...coloredShadow(colors.primary, 0.28) },
   themeOptionLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700' },
   themeOptionLabelActive: { color: colors.white },
-  list: { marginTop: 24, marginHorizontal: 20 },
+  list: {
+    marginTop: 24, marginHorizontal: 20, paddingHorizontal: 16,
+    backgroundColor: colors.surface, borderRadius: 16, ...shadows.sm,
+  },
   optionRow: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border,

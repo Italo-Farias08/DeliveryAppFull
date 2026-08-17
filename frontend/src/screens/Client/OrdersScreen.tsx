@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import OrderChatModal from '../../components/OrderChatModal';
 import RatingModal from '../../components/RatingModal';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
 import { cancelOrder, getOrderMessages, listMyOrders, rateOrder, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { Order, OrderStatus } from '../../types';
 
 // Status com cor + ícone próprios — usados tanto no badge (fundo suave,
@@ -214,13 +217,13 @@ export default function OrdersScreen() {
             ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyWrap}>
+            <FadeSlideIn style={styles.emptyWrap}>
               <Ionicons name="receipt-outline" size={54} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>Nenhum pedido ainda</Text>
               <Text style={styles.emptySub}>Seus pedidos vão aparecer aqui depois da primeira compra</Text>
-            </View>
+            </FadeSlideIn>
           }
-          renderItem={({ item }: { item: Order }) => {
+          renderItem={({ item, index }: { item: Order; index: number }) => {
             const info = statusMap[item.status] ?? {
               label: item.status,
               color: colors.textMuted,
@@ -230,7 +233,7 @@ export default function OrdersScreen() {
             const isDelivered = item.status === 'entregue';
 
             return (
-              <View style={styles.card}>
+              <FadeSlideIn index={index} style={styles.card}>
                 {/* ---- Cabeçalho: logo do restaurante + nome + status ---- */}
                 <View style={styles.cardHeader}>
                   {item.restaurantImage ? (
@@ -290,11 +293,11 @@ export default function OrdersScreen() {
                 )}
 
                 {item.status === 'pendente' && (
-                  <TouchableOpacity
+                  <PressableScale
                     style={[styles.cancelOrderBtn, cancelingId === item.id && { opacity: 0.6 }]}
-                    activeOpacity={0.8}
                     onPress={() => handleCancelOrder(item)}
                     disabled={cancelingId === item.id}
+                    scaleTo={0.97}
                   >
                     {cancelingId === item.id ? (
                       <ActivityIndicator color={colors.danger} size="small" />
@@ -304,7 +307,7 @@ export default function OrdersScreen() {
                         <Text style={styles.cancelOrderBtnText}>Cancelar pedido</Text>
                       </>
                     )}
-                  </TouchableOpacity>
+                  </PressableScale>
                 )}
 
                 {isDelivered && (
@@ -323,14 +326,14 @@ export default function OrdersScreen() {
                       <Text style={styles.ratingDoneText}>Você avaliou esse pedido</Text>
                     </View>
                   ) : (
-                    <TouchableOpacity
+                    <PressableScale
                       style={styles.rateBtn}
-                      activeOpacity={0.8}
                       onPress={() => setRatingOrder(item)}
+                      scaleTo={0.97}
                     >
                       <Ionicons name="star-outline" size={15} color="#F5A623" />
                       <Text style={styles.rateBtnText}>Avaliar pedido</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   )
                 )}
 
@@ -341,19 +344,19 @@ export default function OrdersScreen() {
                     cliente realmente quer nesse ponto: repetir o pedido. */}
                 <View style={styles.footerRow}>
                   {isDelivered ? (
-                    <TouchableOpacity
+                    <PressableScale
                       style={styles.reorderBtn}
-                      activeOpacity={0.8}
                       onPress={() => handleReorder(item)}
+                      scaleTo={0.95}
                     >
                       <Ionicons name="repeat-outline" size={15} color={colors.white} />
                       <Text style={styles.reorderBtnText}>Pedir novamente</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   ) : (
-                    <TouchableOpacity style={styles.chatBtn} activeOpacity={0.8} onPress={() => setChatOrder(item)}>
+                    <PressableScale style={styles.chatBtn} onPress={() => setChatOrder(item)} scaleTo={0.95}>
                       <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.primary} />
                       <Text style={styles.chatBtnText}>Conversar</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   )}
 
                   <View style={styles.totalWrap}>
@@ -361,7 +364,7 @@ export default function OrdersScreen() {
                     <Text style={styles.total}>R$ {item.total.toFixed(2)}</Text>
                   </View>
                 </View>
-              </View>
+              </FadeSlideIn>
             );
           }}
         />
@@ -404,11 +407,7 @@ function createStyles(colors: ThemeColors) {
     borderRadius: 20,
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    ...shadows.sm,
   },
 
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },

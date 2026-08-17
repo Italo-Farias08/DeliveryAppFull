@@ -41,6 +41,7 @@ import { connectSocket, disconnectSocket } from '../../services/socket';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 // Se o backend passar a mandar lat/lng no pedido, esses campos são
 // usados automaticamente para abrir a rota com coordenadas exatas.
@@ -847,7 +848,7 @@ function createStyles(colors: ThemeColors) {
   statusCard: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginTop: 20,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   statusTitle: { ...typography.bodyBold, color: colors.text },
   statusSub: { color: colors.textMuted, fontSize: 12.5, marginTop: 2 },
@@ -855,7 +856,7 @@ function createStyles(colors: ThemeColors) {
   statsRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   statCard: {
     flex: 1, backgroundColor: colors.surface, borderRadius: 16, padding: 16, gap: 6,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   statValue: { ...typography.h1, color: colors.text },
   statLabel: { color: colors.textMuted, fontSize: 12 },
@@ -865,7 +866,7 @@ function createStyles(colors: ThemeColors) {
   emptyBox: {
     alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.surface, borderRadius: 16, padding: 30,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   emptyText: { ...typography.bodyBold, color: colors.text, marginTop: 4 },
   emptySub: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
@@ -873,7 +874,7 @@ function createStyles(colors: ThemeColors) {
   // Card de pedido (radar e entrega ativa compartilham o mesmo visual base)
   card: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1,
   },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
@@ -936,7 +937,7 @@ function createStyles(colors: ThemeColors) {
   codeLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginBottom: 8 },
   codeRow: { flexDirection: 'row', gap: 10 },
   codeInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14,
+    ...shadows.sm, borderRadius: 12, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 18, color: colors.text, backgroundColor: colors.background,
     width: 100, textAlign: 'center', letterSpacing: 4, fontWeight: '700',
   },

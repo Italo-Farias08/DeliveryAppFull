@@ -17,6 +17,7 @@ import { getSocket } from '../services/socket';
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 
 export interface ChatMessage {
   id: string;
@@ -230,14 +231,14 @@ function createStyles(colors: ThemeColors) {
   bubbleRoleLabel: { color: colors.textMuted, fontSize: 10.5, fontWeight: '700', marginBottom: 3, marginLeft: 4 },
   bubble: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleMine: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
-  bubbleTheirs: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
+  bubbleTheirs: { backgroundColor: colors.surface, ...shadows.sm, borderBottomLeftRadius: 4 },
   bubbleText: { color: colors.text, fontSize: 14 },
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 12,
     borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
   },
   input: {
-    flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 14,
+    flex: 1, ...shadows.sm, borderRadius: 14,
     paddingHorizontal: 14, paddingVertical: 10, maxHeight: 100, color: colors.text, fontSize: 14,
   },
   sendBtn: {

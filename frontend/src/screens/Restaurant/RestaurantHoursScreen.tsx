@@ -17,6 +17,7 @@ import { getRestaurantHours, setRestaurantHours } from '../../services/tenantSer
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { RestaurantHours } from '../../types';
 
 const DAY_NAMES = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -191,7 +192,7 @@ function createStyles(colors: ThemeColors) {
 
   dayCard: {
     backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   dayHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dayName: { ...typography.bodyBold, color: colors.text, fontSize: 14 },
@@ -202,7 +203,7 @@ function createStyles(colors: ThemeColors) {
   timeGroup: { alignItems: 'center' },
   timeLabel: { fontSize: 10.5, color: colors.textMuted, fontWeight: '700', marginBottom: 4 },
   timeInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+    ...shadows.sm, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
     width: 68, textAlign: 'center', fontSize: 14, fontWeight: '700', color: colors.text,
     backgroundColor: colors.background,
   },

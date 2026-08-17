@@ -5,11 +5,22 @@ const AppError = require('../../utils/AppError');
 
 const router = Router();
 
+// Lat/lng são opcionais -- se o cliente não mandou (sem permissão de
+// localização, por exemplo), os services simplesmente não filtram por
+// distância e voltam a se comportar como antes.
+function parseCoord(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 router.get(
   '/',
   asyncHandler(async (req, res) => {
     const { categoryId } = req.query;
-    const restaurants = await service.listRestaurants(categoryId);
+    const lat = parseCoord(req.query.lat);
+    const lng = parseCoord(req.query.lng);
+    const restaurants = await service.listRestaurants(categoryId, lat, lng);
     res.json(restaurants);
   })
 );
@@ -19,7 +30,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const q = req.query.q || '';
     if (!q.trim()) return res.json([]);
-    const restaurants = await service.search(q);
+    const lat = parseCoord(req.query.lat);
+    const lng = parseCoord(req.query.lng);
+    const restaurants = await service.search(q, lat, lng);
     res.json(restaurants);
   })
 );
@@ -29,7 +42,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const q = req.query.q || '';
     if (!q.trim()) return res.json([]);
-    const items = await service.searchItems(q);
+    const lat = parseCoord(req.query.lat);
+    const lng = parseCoord(req.query.lng);
+    const items = await service.searchItems(q, lat, lng);
     res.json(items);
   })
 );

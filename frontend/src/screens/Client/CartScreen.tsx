@@ -10,12 +10,13 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
 import { Address, createAddress, listAddresses } from '../../services/addressService';
 import { createOrder } from '../../services/orderService';
@@ -23,6 +24,7 @@ import { getRestaurantById } from '../../services/restaurantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { distanceMeters } from '../../utils/geo';
 
 // Distância máxima (em metros) entre o GPS atual e o endereço principal
@@ -222,11 +224,11 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.emptyWrap}>
+        <FadeSlideIn style={styles.emptyWrap}>
           <Ionicons name="cart-outline" size={54} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>Seu carrinho está vazio</Text>
           <Text style={styles.emptySub}>Adicione itens de um restaurante para começar</Text>
-        </View>
+        </FadeSlideIn>
       </SafeAreaView>
     );
   }
@@ -239,7 +241,7 @@ export default function CartScreen() {
         keyExtractor={(ci) => ci.key}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
         ListHeaderComponent={
-          <TouchableOpacity style={styles.addressCard} onPress={() => setPickerVisible(true)}>
+          <PressableScale style={styles.addressCard} onPress={() => setPickerVisible(true)} scaleTo={0.98}>
             <Ionicons name="location-outline" size={20} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.addressLabel}>Entregar em</Text>
@@ -252,12 +254,12 @@ export default function CartScreen() {
               )}
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          </PressableScale>
         }
-        renderItem={({ item: ci }) => {
+        renderItem={({ item: ci, index }) => {
           const unitPrice = ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
           return (
-            <View style={styles.cartItemCard}>
+            <FadeSlideIn index={index} style={styles.cartItemCard}>
               <View style={styles.row}>
                 <Image source={{ uri: ci.item.image }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -270,13 +272,13 @@ export default function CartScreen() {
                   <Text style={styles.price}>R$ {unitPrice.toFixed(2)}</Text>
                 </View>
                 <View style={styles.qtyRow}>
-                  <TouchableOpacity onPress={() => decreaseItem(ci.key)} style={styles.qtyBtn}>
+                  <PressableScale onPress={() => decreaseItem(ci.key)} style={styles.qtyBtn} scaleTo={0.82}>
                     <Ionicons name="remove" size={16} color={colors.secondary} />
-                  </TouchableOpacity>
+                  </PressableScale>
                   <Text style={styles.qtyText}>{ci.qty}</Text>
-                  <TouchableOpacity onPress={() => increaseItem(ci.key)} style={styles.qtyBtn}>
+                  <PressableScale onPress={() => increaseItem(ci.key)} style={styles.qtyBtn} scaleTo={0.82}>
                     <Ionicons name="add" size={16} color={colors.secondary} />
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               </View>
 
@@ -294,7 +296,7 @@ export default function CartScreen() {
                   maxLength={300}
                 />
               </View>
-            </View>
+            </FadeSlideIn>
           );
         }}
       />
@@ -338,19 +340,20 @@ export default function CartScreen() {
           <View style={[styles.modalCard, { paddingBottom: insets.bottom + 20 }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Endereço de entrega</Text>
-              <TouchableOpacity onPress={() => setPickerVisible(false)} hitSlop={10}>
+              <PressableScale onPress={() => setPickerVisible(false)} hitSlop={10} scaleTo={0.85}>
                 <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
+              </PressableScale>
             </View>
 
             {addresses.map((addr) => (
-              <TouchableOpacity
+              <PressableScale
                 key={addr.id}
                 style={styles.addressOption}
                 onPress={() => {
                   setSelectedAddressId(addr.id);
                   setPickerVisible(false);
                 }}
+                scaleTo={0.98}
               >
                 <Ionicons
                   name={selectedAddressId === addr.id ? 'radio-button-on' : 'radio-button-off'}
@@ -358,13 +361,14 @@ export default function CartScreen() {
                   color={selectedAddressId === addr.id ? colors.primary : colors.textMuted}
                 />
                 <Text style={styles.addressOptionText}>{addressLabel(addr)}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
 
-            <TouchableOpacity
+            <PressableScale
               style={[styles.gpsBtn, capturingLocation && { opacity: 0.6 }]}
               onPress={handleUseCurrentLocation}
               disabled={capturingLocation}
+              scaleTo={0.97}
             >
               {capturingLocation ? (
                 <ActivityIndicator color={colors.primary} />
@@ -374,7 +378,7 @@ export default function CartScreen() {
                   <Text style={styles.gpsBtnText}>Usar minha localização atual</Text>
                 </>
               )}
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       </Modal>
@@ -389,14 +393,14 @@ function createStyles(colors: ThemeColors) {
   addressCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 16,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   addressLabel: { color: colors.textMuted, fontSize: 11.5, fontWeight: '700' },
   addressValue: { color: colors.text, fontSize: 13.5, marginTop: 2, fontWeight: '600' },
   addressMissing: { color: colors.danger, fontSize: 13, marginTop: 2, fontWeight: '600' },
   cartItemCard: {
     backgroundColor: colors.surface, borderRadius: 14, padding: 12, marginBottom: 14,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   image: { width: 60, height: 60, borderRadius: 10, backgroundColor: colors.border },
@@ -416,7 +420,10 @@ function createStyles(colors: ThemeColors) {
   qtyText: { fontWeight: '700', color: colors.text, minWidth: 16, textAlign: 'center' },
   summary: {
     padding: 20, paddingBottom: 28,
-    borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    ...shadows.lg,
+    shadowOffset: { width: 0, height: -8 },
   },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   summaryLabel: { color: colors.textMuted, fontSize: 14 },
@@ -433,7 +440,7 @@ function createStyles(colors: ThemeColors) {
   emptyTitle: { ...typography.h2, color: colors.text, marginTop: 8 },
   emptySub: { color: colors.textMuted, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
+  modalCard: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, ...shadows.lg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitle: { ...typography.h2, color: colors.text },
   addressOption: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },

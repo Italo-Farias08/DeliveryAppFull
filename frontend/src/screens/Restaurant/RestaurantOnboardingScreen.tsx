@@ -17,6 +17,7 @@ import { RestaurantInput } from '../../services/tenantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 export default function RestaurantOnboardingScreen() {
   const { colors } = useTheme();
@@ -143,11 +144,11 @@ function createStyles(colors: ThemeColors) {
   signOutBtn: {
     width: 40, height: 40, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, ...shadows.sm,
   },
   sectionCard: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 18, marginTop: 16,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   sectionIconCircle: {
@@ -157,12 +158,12 @@ function createStyles(colors: ThemeColors) {
   sectionTitle: { ...typography.h2, color: colors.text, marginBottom: 12 },
   label: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginTop: 12, marginBottom: 6 },
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14,
+    ...shadows.sm, borderRadius: 14, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: colors.text, backgroundColor: colors.background,
   },
   pillsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9,
+    ...shadows.sm, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9,
     backgroundColor: colors.background,
   },
   pillActive: { backgroundColor: colors.secondary, borderColor: colors.secondary },

@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Restaurant } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
 import { typography } from '../theme/typography';
+import { shadows } from '../theme/shadows';
 import { formatRating } from '../utils/rating';
+import { PressableScale } from './PressableScale';
 
 interface Props {
   restaurant: Restaurant;
@@ -19,7 +21,7 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
   const ratingDisplay = formatRating(restaurant.rating, restaurant.ratingCount);
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
+    <PressableScale onPress={onPress} style={styles.card} scaleTo={0.98}>
       <View>
         <Image
           source={{ uri: restaurant.banner || restaurant.image }}
@@ -52,14 +54,14 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
           {restaurant.deliveryFee === 0 ? 'Entrega grátis' : `Entrega R$ ${restaurant.deliveryFee.toFixed(2)}`}
         </Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
 function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   card: { width: '100%', marginBottom: 18 },
-  image: { width: '100%', height: 150, borderRadius: 16, backgroundColor: colors.border },
+  image: { width: '100%', height: 150, borderRadius: 16, backgroundColor: colors.border, ...shadows.sm },
   closedBadge: {
     position: 'absolute', top: 10, left: 10,
     backgroundColor: colors.overlay, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8,

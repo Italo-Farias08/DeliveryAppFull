@@ -8,7 +8,15 @@ export async function getCategories(): Promise<Category[]> {
   return data;
 }
 
-export async function getRestaurants(categoryId?: string): Promise<Restaurant[]> {
+// coords é opcional -- quando o app não tem a localização do cliente
+// ainda (sem permissão, por exemplo), o backend simplesmente não filtra
+// por raio de entrega e devolve a lista normal.
+export interface Coords {
+  lat: number;
+  lng: number;
+}
+
+export async function getRestaurants(categoryId?: string, coords?: Coords | null): Promise<Restaurant[]> {
   if (USE_MOCK) {
     return new Promise((resolve) =>
       setTimeout(() => {
@@ -17,11 +25,13 @@ export async function getRestaurants(categoryId?: string): Promise<Restaurant[]>
       }, 400)
     );
   }
-  const { data } = await api.get('/restaurants', { params: { categoryId } });
+  const { data } = await api.get('/restaurants', {
+    params: { categoryId, lat: coords?.lat, lng: coords?.lng },
+  });
   return data;
 }
 
-export async function searchRestaurantsAndFoods(query: string): Promise<Restaurant[]> {
+export async function searchRestaurantsAndFoods(query: string, coords?: Coords | null): Promise<Restaurant[]> {
   if (USE_MOCK) {
     const q = query.trim().toLowerCase();
     return new Promise((resolve) =>
@@ -36,14 +46,14 @@ export async function searchRestaurantsAndFoods(query: string): Promise<Restaura
       }, 250)
     );
   }
-  const { data } = await api.get('/search', { params: { q: query } });
+  const { data } = await api.get('/search', { params: { q: query, lat: coords?.lat, lng: coords?.lng } });
   return data;
 }
 
 // Busca por ITEM de cardápio: pesquisar "carne" retorna os pratos que
 // batem, cada um já com o nome/logo do restaurante de onde ele vem --
 // diferente de `searchRestaurantsAndFoods`, que retorna restaurantes.
-export async function searchFoodItems(query: string): Promise<FoodSearchResult[]> {
+export async function searchFoodItems(query: string, coords?: Coords | null): Promise<FoodSearchResult[]> {
   if (USE_MOCK) {
     const q = query.trim().toLowerCase();
     return new Promise((resolve) =>
@@ -83,7 +93,9 @@ export async function searchFoodItems(query: string): Promise<FoodSearchResult[]
       }, 250)
     );
   }
-  const { data } = await api.get('/restaurants/search-items', { params: { q: query } });
+  const { data } = await api.get('/restaurants/search-items', {
+    params: { q: query, lat: coords?.lat, lng: coords?.lng },
+  });
   return data;
 }
 

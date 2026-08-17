@@ -7,6 +7,7 @@ import { TenantOrder } from '../../services/tenantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 // Só "entregue" é venda de fato concluída — pedido pendente/em preparo ainda
 // pode ser cancelado, então não entra na conta de faturamento do período.
@@ -288,7 +289,7 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   tabsRow: {
     flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, padding: 4,
-    borderWidth: 1, borderColor: colors.border, gap: 4,
+    ...shadows.sm, gap: 4,
   },
   tab: { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' },
   tabActive: { backgroundColor: colors.primary },
@@ -298,14 +299,14 @@ function createStyles(colors: ThemeColors) {
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
   statCard: {
     flex: 1, backgroundColor: colors.surface, borderRadius: 16, padding: 12,
-    borderWidth: 1, borderColor: colors.border, gap: 4,
+    ...shadows.sm, gap: 4,
   },
   statValue: { ...typography.bodyBold, color: colors.text, fontSize: 14.5, marginTop: 2 },
   statLabel: { color: colors.textMuted, fontSize: 10.5, fontWeight: '600' },
 
   card: {
     backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginTop: 16,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   cardTitle: { ...typography.bodyBold, color: colors.text, fontSize: 14.5, marginBottom: 14 },
 
@@ -332,7 +333,7 @@ function createStyles(colors: ThemeColors) {
 
   infoBanner: {
     flexDirection: 'row', gap: 8, backgroundColor: colors.background, borderRadius: 14,
-    padding: 12, marginTop: 16, borderWidth: 1, borderColor: colors.border,
+    padding: 12, marginTop: 16, ...shadows.sm,
   },
   infoText: { flex: 1, color: colors.textMuted, fontSize: 11.5, lineHeight: 16 },
 });

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FoodSearchResultCard } from '../../components/FoodSearchResultCard';
 import { SearchBar } from '../../components/SearchBar';
 import { searchFoodItems } from '../../services/restaurantService';
+import { useUserCoords } from '../../hooks/useUserCoords';
 import {
   addSearchTerm,
   clearSearchHistory,
@@ -26,6 +27,7 @@ export default function SearchScreen() {
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const coords = useUserCoords();
 
   // Só foca o campo (abrindo o teclado) depois que a animação de entrada
   // da tela terminar. Focar de cara com autoFocus faz o teclado subir ao
@@ -50,13 +52,13 @@ export default function SearchScreen() {
     }
     setLoading(true);
     const timeout = setTimeout(() => {
-      searchFoodItems(query).then((r) => {
+      searchFoodItems(query, coords).then((r) => {
         setResults(r);
         setLoading(false);
       });
     }, 300);
     return () => clearTimeout(timeout);
-  }, [query]);
+  }, [query, coords]);
 
   // Salva o termo no histórico -- só quando a busca é "confirmada" (tecla
   // de busca do teclado ou toque num resultado), não a cada letra digitada,

@@ -5,20 +5,21 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import { register, RegisterPayload } from '../../services/authService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows, coloredShadow } from '../../theme/shadows';
 import { UserRole } from '../../types';
 
 const ROLES: { key: UserRole; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -177,9 +178,9 @@ export default function RegisterScreen({ navigation }: any) {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={10}>
+          <PressableScale onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={10} scaleTo={0.88}>
             <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </TouchableOpacity>
+          </PressableScale>
 
           <Text style={styles.title}>Criar conta</Text>
           <Text style={styles.subtitle}>Preencha seus dados para começar</Text>
@@ -188,15 +189,15 @@ export default function RegisterScreen({ navigation }: any) {
             {ROLES.map((r) => {
               const active = role === r.key;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={r.key}
                   onPress={() => setRole(r.key)}
-                  activeOpacity={0.85}
                   style={[styles.roleCard, active && styles.roleCardActive]}
+                  scaleTo={0.94}
                 >
                   <Ionicons name={r.icon} size={17} color={active ? colors.white : colors.primary} />
                   <Text style={[styles.roleLabel, active && styles.roleLabelActive]}>{r.label}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </View>
@@ -215,7 +216,7 @@ export default function RegisterScreen({ navigation }: any) {
 
           {/* Campos exclusivos do Restaurante */}
           {role === 'restaurant' && (
-            <>
+            <FadeSlideIn>
               <View style={styles.inputWrap}>
                 <Ionicons name="storefront-outline" size={20} color={colors.textMuted} />
                 <TextInput
@@ -238,12 +239,12 @@ export default function RegisterScreen({ navigation }: any) {
                   onChangeText={(v) => setCnpj(formatCnpj(v))}
                 />
               </View>
-            </>
+            </FadeSlideIn>
           )}
 
           {/* CPF — Cliente e Entregador */}
           {(role === 'client' || role === 'deliverer') && (
-            <View style={styles.inputWrap}>
+            <FadeSlideIn style={styles.inputWrap}>
               <Ionicons name="card-outline" size={20} color={colors.textMuted} />
               <TextInput
                 style={styles.input}
@@ -254,26 +255,26 @@ export default function RegisterScreen({ navigation }: any) {
                 value={cpf}
                 onChangeText={(v) => setCpf(formatCpf(v))}
               />
-            </View>
+            </FadeSlideIn>
           )}
 
           {/* Campos exclusivos do Entregador */}
           {role === 'deliverer' && (
-            <>
+            <FadeSlideIn>
               <Text style={styles.fieldLabel}>Veículo</Text>
               <View style={styles.vehicleRow}>
                 {VEHICLE_TYPES.map((v) => {
                   const active = vehicleType === v.key;
                   return (
-                    <TouchableOpacity
+                    <PressableScale
                       key={v.key}
                       onPress={() => setVehicleType(v.key)}
-                      activeOpacity={0.85}
                       style={[styles.vehicleCard, active && styles.vehicleCardActive]}
+                      scaleTo={0.94}
                     >
                       <Ionicons name={v.icon} size={16} color={active ? colors.white : colors.primary} />
                       <Text style={[styles.vehicleLabel, active && styles.vehicleLabelActive]}>{v.label}</Text>
-                    </TouchableOpacity>
+                    </PressableScale>
                   );
                 })}
               </View>
@@ -309,7 +310,7 @@ export default function RegisterScreen({ navigation }: any) {
                 Vai trabalhar fixo pra um restaurante? Peça o código pra ele e cole aqui. Sem código, você entra como
                 entregador autônomo e pega corridas de qualquer loja.
               </Text>
-            </>
+            </FadeSlideIn>
           )}
 
           <View style={styles.inputWrap}>
@@ -335,26 +336,24 @@ export default function RegisterScreen({ navigation }: any) {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
+            <PressableScale onPress={() => setShowPassword((v) => !v)} hitSlop={10} scaleTo={0.85}>
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={colors.textMuted} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
-          <View style={styles.registerButton}>
-            <Pressable onPress={handleRegister} disabled={loading} style={styles.registerButtonPressable}>
-              {loading ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <Text style={styles.registerButtonText}>Criar conta</Text>
-              )}
-            </Pressable>
-          </View>
+          <PressableScale onPress={handleRegister} disabled={loading} style={styles.registerButton} scaleTo={0.97}>
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.registerButtonText}>Criar conta</Text>
+            )}
+          </PressableScale>
 
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Já tem conta? </Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
+            <PressableScale onPress={() => navigation.goBack()} scaleTo={0.9}>
               <Text style={styles.footerLink}>Entrar</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -379,7 +378,7 @@ function createStyles(colors: ThemeColors) {
     backgroundColor: colors.primaryLight,
     borderRadius: 14,
   },
-  roleCardActive: { backgroundColor: colors.primary },
+  roleCardActive: { backgroundColor: colors.primary, ...coloredShadow(colors.primary, 0.3) },
   roleLabel: { fontSize: 11.5, fontWeight: '700', color: colors.primaryDark },
   roleLabelActive: { color: colors.white },
   fieldLabel: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8 },
@@ -394,7 +393,7 @@ function createStyles(colors: ThemeColors) {
     backgroundColor: colors.primaryLight,
     borderRadius: 12,
   },
-  vehicleCardActive: { backgroundColor: colors.primary },
+  vehicleCardActive: { backgroundColor: colors.primary, ...coloredShadow(colors.primary, 0.3) },
   vehicleLabel: { fontSize: 12.5, fontWeight: '700', color: colors.primaryDark },
   vehicleLabelActive: { color: colors.white },
   inviteHint: { color: colors.textMuted, fontSize: 11.5, lineHeight: 16, marginTop: -6, marginBottom: 12 },
@@ -410,21 +409,19 @@ function createStyles(colors: ThemeColors) {
     borderColor: colors.border,
     width: '100%',
     marginBottom: 14,
+    ...shadows.xs,
   },
   input: { flex: 1, fontSize: 15, color: colors.text },
   registerButton: {
     width: '100%',
+    height: 54,
     borderRadius: 14,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primary,
     marginTop: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    ...coloredShadow(colors.primary, 0.32),
   },
-  registerButtonPressable: { height: 54, alignItems: 'center', justifyContent: 'center' },
   registerButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { color: colors.textMuted, fontSize: 14 },

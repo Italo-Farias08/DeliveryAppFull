@@ -8,7 +8,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,11 +16,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { FoodCard } from '../../components/FoodCard';
 import { AddonsModal } from '../../components/AddonsModal';
 import SwitchRestaurantModal from '../../components/SwitchRestaurantModal';
+import { FadeSlideIn } from '../../components/FadeSlideIn';
+import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
 import { getRestaurantById } from '../../services/restaurantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows, coloredShadow } from '../../theme/shadows';
 import { Addon, MenuItem, Restaurant } from '../../types';
 import { formatRating } from '../../utils/rating';
 
@@ -124,12 +126,13 @@ export default function RestaurantDetailScreen() {
             />
           </View>
 
-          <TouchableOpacity
+          <PressableScale
             onPress={() => navigation.goBack()}
             style={[styles.backBtn, { top: insets.top + 10 }]}
+            scaleTo={0.88}
           >
             <Ionicons name="arrow-back" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </PressableScale>
 
           {/* nome + tagline, desenhados por cima do banner */}
           <View style={styles.coverContent}>
@@ -187,22 +190,24 @@ export default function RestaurantDetailScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsRow}
             >
-              <TouchableOpacity
+              <PressableScale
                 style={[styles.chip, !activeCategoryId && styles.chipActive]}
                 onPress={() => setActiveCategoryId(null)}
+                scaleTo={0.93}
               >
                 <Text style={[styles.chipText, !activeCategoryId && styles.chipTextActive]}>Todos</Text>
-              </TouchableOpacity>
+              </PressableScale>
               {menuCategories.map((cat) => (
-                <TouchableOpacity
+                <PressableScale
                   key={cat.id}
                   style={[styles.chip, activeCategoryId === cat.id && styles.chipActive]}
                   onPress={() => setActiveCategoryId(cat.id)}
+                  scaleTo={0.93}
                 >
                   <Text style={[styles.chipText, activeCategoryId === cat.id && styles.chipTextActive]}>
                     {cat.name}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </ScrollView>
           )}
@@ -210,25 +215,25 @@ export default function RestaurantDetailScreen() {
           {filteredMenu.length === 0 ? (
             <Text style={styles.emptyMenuText}>Nenhum item nessa categoria ainda.</Text>
           ) : (
-            filteredMenu.map((item) => (
-              <FoodCard key={item.id} item={item} onAdd={() => handleAdd(item)} />
+            filteredMenu.map((item, i) => (
+              <FadeSlideIn key={item.id} index={i}>
+                <FoodCard item={item} onAdd={() => handleAdd(item)} />
+              </FadeSlideIn>
             ))
           )}
         </View>
       </ScrollView>
 
       {showCartBar && (
-        <TouchableOpacity
-          style={styles.cartBar}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('Cart')}
-        >
-          <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>{totalItems}</Text>
-          </View>
-          <Text style={styles.cartBarText}>Ver carrinho</Text>
-          <Text style={styles.cartBarTotal}>R$ {subtotal.toFixed(2)}</Text>
-        </TouchableOpacity>
+        <FadeSlideIn style={styles.cartBarWrap} distance={30}>
+          <PressableScale style={styles.cartBar} onPress={() => navigation.navigate('Cart')} scaleTo={0.97}>
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{totalItems}</Text>
+            </View>
+            <Text style={styles.cartBarText}>Ver carrinho</Text>
+            <Text style={styles.cartBarTotal}>R$ {subtotal.toFixed(2)}</Text>
+          </PressableScale>
+        </FadeSlideIn>
       )}
 
       <AddonsModal
@@ -261,6 +266,7 @@ function createStyles(colors: ThemeColors) {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center',
     zIndex: 2,
+    ...shadows.sm,
   },
   coverContent: {
     position: 'absolute', left: 20, right: 20, bottom: 44,
@@ -308,15 +314,16 @@ function createStyles(colors: ThemeColors) {
     borderWidth: 1, borderColor: colors.border, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.surface,
   },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary, ...coloredShadow(colors.primary, 0.28) },
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: colors.white },
   emptyMenuText: { color: colors.textMuted, fontSize: 13.5, textAlign: 'center', paddingVertical: 20 },
+  cartBarWrap: { position: 'absolute', bottom: 16, left: 20, right: 20 },
   cartBar: {
-    position: 'absolute', bottom: 16, left: 20, right: 20, height: 56,
+    height: 56,
     backgroundColor: colors.secondary, borderRadius: 16,
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10,
-    shadowColor: '#000', shadowOpacity: 0.2, shadowOffset: { width: 0, height: 6 }, shadowRadius: 10, elevation: 6,
+    ...coloredShadow(colors.secondary, 0.35),
   },
   cartBadge: { backgroundColor: colors.white, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3 },
   cartBadgeText: { color: colors.secondary, fontWeight: '800', fontSize: 12.5 },

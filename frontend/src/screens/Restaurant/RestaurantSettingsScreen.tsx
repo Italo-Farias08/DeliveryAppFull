@@ -21,6 +21,7 @@ import { RestaurantInput, updateRestaurant } from '../../services/tenantService'
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 import { pickImageFromLibrary } from '../../utils/pickImage';
 
 const THEME_OPTIONS: { value: 'light' | 'dark' | 'system'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -348,7 +349,7 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
   sectionCard: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 18, marginBottom: 16,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   sectionIconCircle: {

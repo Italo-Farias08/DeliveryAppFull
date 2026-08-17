@@ -26,6 +26,7 @@ import { AddressSuggestion, SearchBias, searchAddress } from '../../services/geo
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { shadows } from '../../theme/shadows';
 
 const LABELS = ['Casa', 'Trabalho', 'Outro'];
 const SEARCH_DEBOUNCE_MS = 500;
@@ -524,7 +525,7 @@ function createStyles(colors: ThemeColors) {
 
   formCard: {
     backgroundColor: colors.surface, borderRadius: 16, padding: 16, marginBottom: 20,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   formLabel: { color: colors.textMuted, fontSize: 12.5, fontWeight: '700', marginTop: 12, marginBottom: 6 },
   chipsRow: { flexDirection: 'row', gap: 8 },
@@ -538,12 +539,12 @@ function createStyles(colors: ThemeColors) {
 
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    ...shadows.sm, borderRadius: 12,
     paddingHorizontal: 12, backgroundColor: colors.background,
   },
   searchInput: { flex: 1, paddingVertical: 11, fontSize: 14.5, color: colors.text },
   suggestionsBox: {
-    marginTop: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    marginTop: 6, ...shadows.sm, borderRadius: 12,
     backgroundColor: colors.surface, maxHeight: 260,
   },
   suggestionRow: {
@@ -566,7 +567,7 @@ function createStyles(colors: ThemeColors) {
   locationBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13.5 },
 
   input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14,
+    ...shadows.sm, borderRadius: 12, paddingHorizontal: 14,
     paddingVertical: 11, fontSize: 14.5, color: colors.text, backgroundColor: colors.background,
   },
   row2: { flexDirection: 'row', gap: 10 },
@@ -574,7 +575,7 @@ function createStyles(colors: ThemeColors) {
   formActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
   cancelBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 13,
-    borderRadius: 12, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 12, ...shadows.sm,
   },
   cancelBtnText: { color: colors.textMuted, fontWeight: '700' },
   saveBtn: { flex: 2, backgroundColor: colors.primary, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 13 },
@@ -583,7 +584,7 @@ function createStyles(colors: ThemeColors) {
   emptyBox: {
     alignItems: 'center', justifyContent: 'center', gap: 6,
     backgroundColor: colors.surface, borderRadius: 16, padding: 30,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   emptyText: { ...typography.bodyBold, color: colors.text, marginTop: 4 },
   emptySub: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },
@@ -591,7 +592,7 @@ function createStyles(colors: ThemeColors) {
   addressCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border,
+    ...shadows.sm,
   },
   addressCardDefault: { borderColor: colors.primary, borderWidth: 1.5 },
   addressIcon: {

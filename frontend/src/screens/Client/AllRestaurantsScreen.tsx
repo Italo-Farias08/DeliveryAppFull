@@ -7,6 +7,7 @@ import { RestaurantGridCard } from '../../components/RestaurantGridCard';
 import { SearchBar } from '../../components/SearchBar';
 import { useTheme } from '../../context/ThemeContext';
 import { getCategories, getRestaurants } from '../../services/restaurantService';
+import { useUserCoords } from '../../hooks/useUserCoords';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Category, Restaurant } from '../../types';
@@ -40,6 +41,7 @@ export default function AllRestaurantsScreen() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [topRatedOnly, setTopRatedOnly] = useState(false);
+  const coords = useUserCoords();
 
   useEffect(() => {
     getCategories().then(setCategories);
@@ -47,10 +49,10 @@ export default function AllRestaurantsScreen() {
 
   useEffect(() => {
     setLoading(true);
-    getRestaurants(activeCategory ?? undefined)
+    getRestaurants(activeCategory ?? undefined, coords)
       .then(setRestaurants)
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+  }, [activeCategory, coords]);
 
   const toggleTopRated = useCallback(() => setTopRatedOnly((prev) => !prev), []);
 

@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { forwardRef } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { forwardRef, useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import type { ThemeColors } from '../theme/colors';
+import { shadows } from '../theme/shadows';
+import { PressableScale } from './PressableScale';
 
 interface Props {
   placeholder?: string;
@@ -23,18 +25,38 @@ export const SearchBar = forwardRef<TextInput, Props>(function SearchBar(
 ) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
+  // Anima um leve "glow" na borda quando o campo ganha foco -- dá uma
+  // resposta visual mais viva do que a borda estática de antes.
+  const focusAnim = useRef(new Animated.Value(0)).current;
+  const [focused, setFocused] = useState(false);
+
+  function animateFocus(toValue: number) {
+    Animated.timing(focusAnim, { toValue, duration: 180, useNativeDriver: false }).start();
+  }
 
   if (!editable && onPress) {
     return (
-      <TouchableOpacity style={styles.wrapper} onPress={onPress} activeOpacity={0.8}>
+      <PressableScale onPress={onPress} style={[styles.wrapper, shadows.xs]} scaleTo={0.98}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <Text style={styles.placeholderText}>{placeholder}</Text>
-      </TouchableOpacity>
+      </PressableScale>
     );
   }
+
+  const borderColor = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.border, colors.primary],
+  });
+
   return (
-    <View style={styles.wrapper}>
-      <Ionicons name="search" size={18} color={colors.textMuted} />
+    <Animated.View
+      style={[
+        styles.wrapper,
+        { borderColor },
+        focused && { ...shadows.sm, shadowColor: colors.primary },
+      ]}
+    >
+      <Ionicons name="search" size={18} color={focused ? colors.primary : colors.textMuted} />
       <TextInput
         ref={ref}
         style={styles.input}
@@ -45,8 +67,16 @@ export const SearchBar = forwardRef<TextInput, Props>(function SearchBar(
         autoFocus={autoFocus}
         returnKeyType="search"
         onSubmitEditing={onSubmitEditing}
+        onFocus={() => {
+          setFocused(true);
+          animateFocus(1);
+        }}
+        onBlur={() => {
+          setFocused(false);
+          animateFocus(0);
+        }}
       />
-    </View>
+    </Animated.View>
   );
 });
 
