@@ -48,7 +48,53 @@ async function createPaymentForOrder(clientId, orderId) {
       500
     );
   }
-  // Cria um pagamento Pix DIRETO na API do Mercado Pago (Checkout API/transparente),
+
+  const preference = new Preference(mpClient);
+  const items = [
+    {
+      id: order.id,
+      title: `Pedido em ${order.restaurantName}`,
+      quantity: 1,
+      unit_price: Number(order.total),
+      currency_id: 'BRL',
+    },
+  ];
+
+  const result = await preference.create({
+    body: {
+      items,
+      external_reference: order.id,
+      payer: order.clientEmail ? { email: order.clientEmail, name: order.clientName } : undefined,
+      // Pix, crédito e débito ficam habilitados; boleto (ticket) fica fora
+      // porque não faz sentido pra um pedido de delivery que precisa ser
+      // pago na hora. installments: 1 mantém o pagamento à vista.
+      payment_methods: {
+        excluded_payment_types: [{ id: 'ticket' }],
+        installments: 1,
+      },
+      back_urls: {
+        success: `${APP_PUBLIC_URL}/api/payments/return?status=success`,
+        pending: `${APP_PUBLIC_URL}/api/payments/return?status=pending`,
+        failure: `${APP_PUBLIC_URL}/api/payments/return?status=failure`,
+      },
+      auto_return: 'approved',
+      notification_url: `${APP_PUBLIC_URL}/api/payments/webhook`,
+    },
+  });
+
+  await pool.query(`UPDATE orders SET mp_preference_id = $1 WHERE id = $2`, [result.id, order.id]);
+
+  return {
+    orderId: order.id,
+    preferenceId: result.id,
+    initPoint: result.init_point,
+    // en sandbox (credenciais TEST-...) o Mercado Pago também devolve um
+    // sandbox_init_point — mais estável pra testar com cartões de teste
+    sandboxInitPoint: result.sandbox_init_point,
+  };
+}
+
+// Cria um pagamento Pix DIRETO na API do Mercado Pago (Checkout API/transparente),
 // sem passar pela página web do Checkout Pro. Retorna o QR code (base64) e o
 // código "copia e cola" pra mostrar dentro do próprio app.
 // Pix no Brasil exige CPF do pagador — por isso o cliente precisa ter
@@ -115,54 +161,9 @@ async function createPixPaymentForOrder(clientId, orderId) {
     orderId: order.id,
     paymentId: result.id,
     status: result.status, // normalmente "pending" até o pagamento cair
-    qrCodeBase64: txData.qr_code_base64, // já vem pronto pra <Image source={{uri:`data:image/png;base64,${qrCodeBase64}`}} />
-    qrCode: txData.qr_code, // código "copia e cola"
+    qrCodeBase64: txData.qr_code_base64,
+    qrCode: txData.qr_code,
     expiresAt: result.date_of_expiration,
-  };
-}
-
-  const preference = new Preference(mpClient);
-  const items = [
-    {
-      id: order.id,
-      title: `Pedido em ${order.restaurantName}`,
-      quantity: 1,
-      unit_price: Number(order.total),
-      currency_id: 'BRL',
-    },
-  ];
-
-  const result = await preference.create({
-    body: {
-      items,
-      external_reference: order.id,
-      payer: order.clientEmail ? { email: order.clientEmail, name: order.clientName } : undefined,
-      // Pix, crédito e débito ficam habilitados; boleto (ticket) fica fora
-      // porque não faz sentido pra um pedido de delivery que precisa ser
-      // pago na hora. installments: 1 mantém o pagamento à vista.
-      payment_methods: {
-        excluded_payment_types: [{ id: 'ticket' }],
-        installments: 1,
-      },
-      back_urls: {
-        success: `${APP_PUBLIC_URL}/api/payments/return?status=success`,
-        pending: `${APP_PUBLIC_URL}/api/payments/return?status=pending`,
-        failure: `${APP_PUBLIC_URL}/api/payments/return?status=failure`,
-      },
-      auto_return: 'approved',
-      notification_url: `${APP_PUBLIC_URL}/api/payments/webhook`,
-    },
-  });
-
-  await pool.query(`UPDATE orders SET mp_preference_id = $1 WHERE id = $2`, [result.id, order.id]);
-
-  return {
-    orderId: order.id,
-    preferenceId: result.id,
-    initPoint: result.init_point,
-    // en sandbox (credenciais TEST-...) o Mercado Pago também devolve um
-    // sandbox_init_point — mais estável pra testar com cartões de teste
-    sandboxInitPoint: result.sandbox_init_point,
   };
 }
 
@@ -411,6 +412,7 @@ async function listAllSettlements() {
 
 module.exports = {
   createPaymentForOrder,
+  createPixPaymentForOrder,
   processPaymentNotification,
   getPendingCommission,
   listSettlementsByTenant,
