@@ -296,15 +296,23 @@ async function orderClientId(orderId) {
 }
 
 // --- Comissão / acertos semanais ---
+//
+// O pagamento do cliente (Pix/cartão) cai inteiro na conta Mercado Pago DA
+// PLATAFORMA (é o token da plataforma que cria a cobrança). Ou seja, quem
+// deve dinheiro pra quem toda semana é a PLATAFORMA PRO RESTAURANTE: o
+// valor líquido (subtotal dos pedidos - comissão da plataforma), chamado
+// aqui de "netAmount". A plataforma faz esse repasse por fora (Pix/TED)
+// pra chave do restaurante e marca o acerto como pago.
 
-// Quanto um tenant deve AGORA (pedidos já pagos, ainda não incluídos em
-// nenhum acerto semanal). Usado tanto na tela do restaurante quanto no
-// fechamento semanal.
+// Quanto a plataforma deve repassar AGORA pro tenant (pedidos já pagos,
+// ainda não incluídos em nenhum acerto semanal). Usado tanto na tela do
+// restaurante quanto no fechamento semanal.
 async function getPendingCommission(tenantId) {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS "ordersCount",
             COALESCE(SUM(subtotal), 0) AS "grossAmount",
-            COALESCE(SUM(commission_amount), 0) AS "commissionAmount"
+            COALESCE(SUM(commission_amount), 0) AS "commissionAmount",
+            COALESCE(SUM(subtotal - commission_amount), 0) AS "netAmount"
      FROM orders
      WHERE tenant_id = $1 AND payment_status = 'pago' AND settlement_id IS NULL`,
     [tenantId]
@@ -316,7 +324,8 @@ async function listSettlementsByTenant(tenantId) {
   const result = await pool.query(
     `SELECT id, period_start AS "periodStart", period_end AS "periodEnd", orders_count AS "ordersCount",
             gross_amount AS "grossAmount", commission_rate AS "commissionRate",
-            commission_amount AS "commissionAmount", status, paid_at AS "paidAt", created_at AS "createdAt"
+            commission_amount AS "commissionAmount", (gross_amount - commission_amount) AS "netAmount",
+            status, paid_at AS "paidAt", created_at AS "createdAt"
      FROM settlements WHERE tenant_id = $1 ORDER BY period_start DESC`,
     [tenantId]
   );
@@ -351,7 +360,8 @@ async function generateSettlementForTenant(tenantId, periodStart, periodEnd) {
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, period_start AS "periodStart", period_end AS "periodEnd", orders_count AS "ordersCount",
                  gross_amount AS "grossAmount", commission_rate AS "commissionRate",
-                 commission_amount AS "commissionAmount", status, created_at AS "createdAt"`,
+                 commission_amount AS "commissionAmount", (gross_amount - commission_amount) AS "netAmount",
+                 status, created_at AS "createdAt"`,
       [tenantId, periodStart, periodEnd, orders.length, grossAmount.toFixed(2), COMMISSION_RATE, commissionAmount.toFixed(2)]
     );
     const settlement = settlementResult.rows[0];
@@ -387,6 +397,8 @@ async function generateWeeklySettlements() {
   return settlements;
 }
 
+// Marca um acerto como pago -- use DEPOIS que você (plataforma) já tiver
+// feito o Pix/TED do valor líquido (netAmount) pra chave do restaurante.
 async function markSettlementPaid(settlementId) {
   const result = await pool.query(
     `UPDATE settlements SET status = 'pago', paid_at = now() WHERE id = $1 AND status = 'pendente'
@@ -402,7 +414,8 @@ async function listAllSettlements() {
     `SELECT s.id, s.tenant_id AS "tenantId", t.name AS "tenantName",
             s.period_start AS "periodStart", s.period_end AS "periodEnd", s.orders_count AS "ordersCount",
             s.gross_amount AS "grossAmount", s.commission_rate AS "commissionRate",
-            s.commission_amount AS "commissionAmount", s.status, s.paid_at AS "paidAt", s.created_at AS "createdAt"
+            s.commission_amount AS "commissionAmount", (s.gross_amount - s.commission_amount) AS "netAmount",
+            s.status, s.paid_at AS "paidAt", s.created_at AS "createdAt"
      FROM settlements s
      JOIN tenants t ON t.id = s.tenant_id
      ORDER BY s.status ASC, s.period_start DESC`

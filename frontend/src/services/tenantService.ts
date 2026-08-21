@@ -325,6 +325,9 @@ export interface PendingCommission {
   ordersCount: number;
   grossAmount: number;
   commissionAmount: number;
+  // valor líquido que a plataforma deve repassar ao restaurante
+  // (grossAmount - commissionAmount)
+  netAmount: number;
 }
 
 export interface Settlement {
@@ -335,6 +338,8 @@ export interface Settlement {
   grossAmount: number;
   commissionRate: number;
   commissionAmount: number;
+  // valor líquido que a plataforma repassa (ou repassou) ao restaurante
+  netAmount: number;
   status: 'pendente' | 'pago';
   paidAt?: string | null;
   createdAt: string;

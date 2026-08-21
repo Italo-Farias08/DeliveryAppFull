@@ -284,10 +284,10 @@ export default function RestaurantSalesScreen() {
 
         {billing && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Comissão da plataforma</Text>
+            <Text style={styles.cardTitle}>Valor a receber</Text>
             <View style={styles.commissionRow}>
               <View>
-                <Text style={styles.commissionValue}>{formatMoney(billing.pending.commissionAmount)}</Text>
+                <Text style={styles.commissionValue}>{formatMoney(billing.pending.netAmount)}</Text>
                 <Text style={styles.historySub}>
                   {billing.pending.ordersCount} {billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'}{' '}
                   ainda não fechados nesta semana
@@ -295,7 +295,8 @@ export default function RestaurantSalesScreen() {
               </View>
             </View>
             <Text style={[styles.infoText, { marginTop: 10 }]}>
-              Toda semana esse valor é fechado e você faz o repasse (Pix/transferência) direto pra plataforma.
+              Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o
+              valor líquido, com a comissão da plataforma já descontada.
             </Text>
             {billing.settlements.length > 0 && (
               <View style={{ marginTop: 4 }}>
@@ -307,7 +308,7 @@ export default function RestaurantSalesScreen() {
                         {new Date(s.periodEnd).toLocaleDateString('pt-BR')}
                       </Text>
                       <Text style={styles.historySub}>
-                        {s.status === 'pago' ? 'Pago' : 'Pendente'} · {s.ordersCount} pedidos
+                        {s.status === 'pago' ? 'Recebido' : 'Aguardando repasse'} · {s.ordersCount} pedidos
                       </Text>
                     </View>
                     <Text
@@ -316,7 +317,7 @@ export default function RestaurantSalesScreen() {
                         s.status === 'pendente' && { color: '#B5760A' },
                       ]}
                     >
-                      {formatMoney(s.commissionAmount)}
+                      {formatMoney(s.netAmount)}
                     </Text>
                   </View>
                 ))}

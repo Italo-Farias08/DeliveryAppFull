@@ -27,8 +27,8 @@ router.post(
   })
 );
 
-// Marca um acerto como pago -- use depois que o restaurante te transferir
-// o valor da comissão da semana (Pix, TED etc.), fora do app.
+// Marca um acerto como pago -- use depois que VOCÊ transferir o valor
+// líquido (netAmount) da semana pro restaurante (Pix, TED etc.), fora do app.
 router.patch(
   '/settlements/:id/mark-paid',
   asyncHandler(async (req, res) => {

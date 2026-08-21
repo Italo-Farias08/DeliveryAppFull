@@ -53,9 +53,9 @@ router.delete('/menu-categories/:categoryId', controller.deleteMenuCategory);
 
 router.get('/orders', controller.listOrders);
 
-// Quanto esse restaurante deve repassar de comissão: valor já pago pelos
-// clientes e ainda não incluído em nenhum acerto semanal, mais o
-// histórico de acertos já fechados (pagos ou pendentes).
+// Quanto a PLATAFORMA deve repassar pra esse restaurante (netAmount =
+// valor já pago pelos clientes menos a comissão), tanto o que ainda está
+// solto (pending) quanto o histórico de acertos já fechados.
 router.get(
   '/billing',
   asyncHandler(async (req, res) => {

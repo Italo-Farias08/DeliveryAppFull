@@ -20,7 +20,11 @@
   </style>
 </head>
 <body>
-  <h1>Acertos semanais de comissão</h1>
+  <h1>Acertos semanais — repasse aos restaurantes</h1>
+  <p style="color:#666; font-size:14px;">
+    O pagamento do cliente cai na sua conta Mercado Pago. Toda semana, feche o período e transfira (Pix/TED),
+    por fora do app, o valor líquido de cada restaurante — depois marque como pago aqui.
+  </p>
   <div class="row">
     <input id="key" type="password" placeholder="Chave de admin (ADMIN_API_KEY)" />
     <button onclick="saveKeyAndLoad()">Entrar</button>
@@ -34,7 +38,7 @@
     <thead>
       <tr>
         <th>Restaurante</th><th>Período</th><th>Pedidos</th><th>Vendido</th>
-        <th>Comissão (%)</th><th>Deve repassar</th><th>Status</th><th></th>
+        <th>Comissão (%)</th><th>Comissão (R$)</th><th>Repassar (líquido)</th><th>Status</th><th></th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -79,8 +83,9 @@
             <td>${fmtMoney(s.grossAmount)}</td>
             <td>${s.commissionRate}%</td>
             <td>${fmtMoney(s.commissionAmount)}</td>
-            <td class="${s.status}">${s.status === 'pago' ? 'Pago' : 'Pendente'}</td>
-            <td>${s.status === 'pendente' ? `<button onclick="markPaid('${s.id}')">Marcar como pago</button>` : ''}</td>
+            <td><strong>${fmtMoney(s.netAmount)}</strong></td>
+            <td class="${s.status}">${s.status === 'pago' ? 'Repassado' : 'Pendente'}</td>
+            <td>${s.status === 'pendente' ? `<button onclick="markPaid('${s.id}')">Marquei o repasse como feito</button>` : ''}</td>
           `;
           tbody.appendChild(tr);
         }
