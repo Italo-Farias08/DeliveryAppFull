@@ -1,16 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import OrderChatModal from '../../components/OrderChatModal';
 import RatingModal from '../../components/RatingModal';
+import { PixPaymentModal } from '../../components/PixPaymentModal';
 import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
-import { cancelOrder, getOrderMessages, listMyOrders, payOrder, rateOrder, sendOrderMessage } from '../../services/orderService';
+import {
+  cancelOrder,
+  getOrderMessages,
+  listMyOrders,
+  payOrderPix,
+  PixPayment,
+  rateOrder,
+  sendOrderMessage,
+} from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -76,6 +84,9 @@ export default function OrdersScreen() {
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixModalVisible, setPixModalVisible] = useState(false);
+  const [pixOrderId, setPixOrderId] = useState<string | null>(null);
 
   // Página fixa de 20 pedidos por vez -- igual ao padrão do backend
   // (ver orders.service.js). A tela pede a próxima página sozinha quando
@@ -161,11 +172,14 @@ export default function OrdersScreen() {
   // cliente fechou o navegador do checkout sem terminar de pagar).
   const handlePayNow = useCallback(async (order: Order) => {
     setPayingId(order.id);
+    setPixOrderId(order.id);
+    setPixModalVisible(true);
     try {
-      const payment = await payOrder(order.id);
-      await WebBrowser.openBrowserAsync(payment.sandboxInitPoint || payment.initPoint);
+      const payment = await payOrderPix(order.id);
+      setPixPayment(payment);
     } catch (err: any) {
-      const message = err?.response?.data?.error || 'Não foi possível abrir o pagamento agora.';
+      setPixModalVisible(false);
+      const message = err?.response?.data?.error || 'Não foi possível gerar o Pix agora.';
       Alert.alert('Erro', message);
     } finally {
       setPayingId(null);
@@ -454,6 +468,20 @@ export default function OrdersScreen() {
           onSubmit={handleSubmitRating}
         />
       )}
+
+      <PixPaymentModal
+        visible={pixModalVisible}
+        orderId={pixOrderId ?? ''}
+        payment={pixPayment}
+        onClose={() => {
+          setPixModalVisible(false);
+          setPixPayment(null);
+        }}
+        onPaid={() => {
+          setPixModalVisible(false);
+          setPixPayment(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

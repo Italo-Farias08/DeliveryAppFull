@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,9 +17,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '../../components/Button';
 import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
+import { PixPaymentModal } from '../../components/PixPaymentModal';
 import { useCart } from '../../context/CartContext';
 import { Address, createAddress, listAddresses } from '../../services/addressService';
-import { createOrder, payOrder } from '../../services/orderService';
+import { createOrder, payOrderPix, PixPayment } from '../../services/orderService';
 import { getRestaurantById } from '../../services/restaurantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -54,6 +54,9 @@ export default function CartScreen() {
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [capturingLocation, setCapturingLocation] = useState(false);
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
+  const [pixModalVisible, setPixModalVisible] = useState(false);
+  const [pixOrderId, setPixOrderId] = useState<string | null>(null);
 
   const loadAddresses = useCallback(async () => {
     setLoadingAddresses(true);
@@ -213,22 +216,24 @@ export default function CartScreen() {
       });
       clear();
 
-      // Pedido criado, mas ainda não pago -- abre o checkout do Mercado
-      // Pago (Pix, crédito ou débito). O restaurante só vê o pedido depois
-      // que o pagamento for confirmado (webhook -> evento em tempo real),
-      // então nem sempre é preciso ficar esperando essa tela: o status do
-      // pedido atualiza sozinho assim que o pagamento passar.
+      // Pedido criado, mas ainda não pago -- gera o Pix direto (QR code +
+      // copia-e-cola) dentro do próprio app. O restaurante só vê o pedido
+      // depois que o pagamento for confirmado (webhook -> evento em tempo
+      // real via socket), que é o que fecha esse modal sozinho.
+      setPixOrderId(order.id);
+      setPixModalVisible(true);
       try {
-        const payment = await payOrder(order.id);
-        navigation.navigate('Orders');
-        await WebBrowser.openBrowserAsync(payment.sandboxInitPoint || payment.initPoint);
-      } catch (payErr) {
-        // O pedido já existe mesmo se o link de pagamento falhar agora --
+        const payment = await payOrderPix(order.id);
+        setPixPayment(payment);
+      } catch (payErr: any) {
+        // O pedido já existe mesmo se a geração do Pix falhar agora --
         // a tela de pedidos tem um botão "Pagar agora" pra tentar de novo.
+        setPixModalVisible(false);
         navigation.navigate('Orders');
+        const message = payErr?.response?.data?.error || 'Não foi possível gerar o Pix agora.';
         Alert.alert(
           'Pedido criado',
-          'Não foi possível abrir o pagamento agora. Vá em "Meus pedidos" e toque em "Pagar agora" para tentar de novo.'
+          `${message} Vá em "Meus pedidos" e toque em "Pagar agora" para tentar de novo.`
         );
       }
     } catch (err: any) {
@@ -400,6 +405,22 @@ export default function CartScreen() {
           </View>
         </View>
       </Modal>
+
+      <PixPaymentModal
+        visible={pixModalVisible}
+        orderId={pixOrderId ?? ''}
+        payment={pixPayment}
+        onClose={() => {
+          setPixModalVisible(false);
+          setPixPayment(null);
+          navigation.navigate('Orders');
+        }}
+        onPaid={() => {
+          setPixModalVisible(false);
+          setPixPayment(null);
+          navigation.navigate('Orders');
+        }}
+      />
     </SafeAreaView>
   );
 }

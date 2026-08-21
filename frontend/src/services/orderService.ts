@@ -24,16 +24,24 @@ export interface PaymentLink {
   sandboxInitPoint?: string;
 }
 
-// Gera o link de pagamento (Checkout Pro) do Mercado Pago para o pedido.
-// Abra `initPoint` (ou `sandboxInitPoint`, se estiver usando credenciais de
-// teste) num navegador -- o cliente escolhe lá Pix, crédito ou débito.
 export async function payOrder(orderId: string): Promise<PaymentLink> {
   const { data } = await api.post(`/orders/${orderId}/pay`);
   return data;
 }
+export interface PixPayment {
+  orderId: string;
+  paymentId: number;
+  status: string;
+  qrCodeBase64: string;
+  qrCode: string;
+  expiresAt?: string;
+}
 
-// Só funciona enquanto o pedido ainda está "pendente" (restaurante não
-// começou o preparo) — o backend recusa (409) fora dessa janela.
+export async function payOrderPix(orderId: string): Promise<PixPayment> {
+  const { data } = await api.post(`/orders/${orderId}/pay-pix`);
+  return data;
+}
+
 export async function cancelOrder(orderId: string, reason?: string): Promise<{ id: string; status: string }> {
   const { data } = await api.patch(`/orders/${orderId}/cancel`, reason ? { reason } : {});
   return data;

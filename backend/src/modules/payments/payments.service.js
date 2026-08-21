@@ -48,6 +48,78 @@ async function createPaymentForOrder(clientId, orderId) {
       500
     );
   }
+  // Cria um pagamento Pix DIRETO na API do Mercado Pago (Checkout API/transparente),
+// sem passar pela página web do Checkout Pro. Retorna o QR code (base64) e o
+// código "copia e cola" pra mostrar dentro do próprio app.
+// Pix no Brasil exige CPF do pagador — por isso o cliente precisa ter
+// cadastrado o CPF antes (tela "Meus dados").
+async function createPixPaymentForOrder(clientId, orderId) {
+  const orderResult = await pool.query(
+    `SELECT o.id, o.total, o.status, o.payment_status AS "paymentStatus",
+            c.name AS "clientName", c.email AS "clientEmail", c.cpf AS "clientCpf"
+     FROM orders o
+     JOIN users c ON c.id = o.client_id
+     WHERE o.id = $1 AND o.client_id = $2`,
+    [orderId, clientId]
+  );
+  if (orderResult.rowCount === 0) throw new AppError('Pedido não encontrado', 404);
+  const order = orderResult.rows[0];
+
+  if (order.paymentStatus === 'pago') {
+    throw new AppError('Este pedido já foi pago', 409);
+  }
+  if (order.status === 'cancelado') {
+    throw new AppError('Este pedido foi cancelado', 409);
+  }
+  if (!order.clientCpf) {
+    throw new AppError('Cadastre seu CPF em "Meus dados" para pagar com Pix', 422);
+  }
+  if (!APP_PUBLIC_URL) {
+    throw new AppError(
+      'APP_PUBLIC_URL não configurado no servidor — defina no .env a URL pública do backend para habilitar pagamentos.',
+      500
+    );
+  }
+
+  const [firstName, ...rest] = (order.clientName || 'Cliente').trim().split(' ');
+  const lastName = rest.join(' ') || firstName;
+
+  const payment = new Payment(mpClient);
+  const result = await payment.create({
+    body: {
+      transaction_amount: Number(order.total),
+      description: `Pedido #${order.id.slice(0, 8)}`,
+      payment_method_id: 'pix',
+      external_reference: order.id,
+      notification_url: `${APP_PUBLIC_URL}/api/payments/webhook`,
+      payer: {
+        email: order.clientEmail,
+        first_name: firstName,
+        last_name: lastName,
+        identification: {
+          type: 'CPF',
+          number: order.clientCpf.replace(/\D/g, ''),
+        },
+      },
+    },
+  });
+
+  const txData = result.point_of_interaction?.transaction_data;
+  if (!txData?.qr_code) {
+    throw new AppError('Mercado Pago não retornou o QR code do Pix. Tente novamente.', 502);
+  }
+
+  await pool.query(`UPDATE orders SET mp_payment_id = $1 WHERE id = $2`, [String(result.id), order.id]);
+
+  return {
+    orderId: order.id,
+    paymentId: result.id,
+    status: result.status, // normalmente "pending" até o pagamento cair
+    qrCodeBase64: txData.qr_code_base64, // já vem pronto pra <Image source={{uri:`data:image/png;base64,${qrCodeBase64}`}} />
+    qrCode: txData.qr_code, // código "copia e cola"
+    expiresAt: result.date_of_expiration,
+  };
+}
 
   const preference = new Preference(mpClient);
   const items = [
