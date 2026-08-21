@@ -18,14 +18,10 @@ const rateOrderSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().max(500).optional(),
 });
-// Paginação da lista de pedidos: por padrão 20 por página (a tela pede a
-// próxima página ao chegar perto do fim da lista, tipo "carregar mais").
 const listOrdersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
-// Paginação do chat: a tela pede mensagens mais antigas passando `before`
-// (o created_at da mensagem mais antiga já carregada).
 const listMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
   before: z.string().datetime().optional(),
@@ -57,13 +53,20 @@ router.get(
   })
 );
 
-// Gera o link de pagamento (Checkout Pro) do Mercado Pago pro pedido.
-// O app abre esse link (initPoint) num navegador/webview; o cliente paga
-// lá (Pix, crédito ou débito) e o Mercado Pago confirma via webhook.
 router.post(
   '/:id/pay',
   asyncHandler(async (req, res) => {
     const payment = await paymentsService.createPaymentForOrder(req.user.sub, req.params.id);
+    res.json(payment);
+  })
+);
+
+// Gera um pagamento Pix DIRETO (QR code + copia-e-cola) sem redirecionar
+// pra fora do app. Diferente de /pay (Checkout Pro), esse não abre browser.
+router.post(
+  '/:id/pay-pix',
+  asyncHandler(async (req, res) => {
+    const payment = await paymentsService.createPixPaymentForOrder(req.user.sub, req.params.id);
     res.json(payment);
   })
 );
