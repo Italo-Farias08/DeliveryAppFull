@@ -14,6 +14,8 @@ const ordersRoutes = require('./modules/orders/orders.routes');
 const addressesRoutes = require('./modules/addresses/addresses.routes');
 const tenantRoutes = require('./modules/tenant/tenant.routes');
 const delivererRoutes = require('./modules/deliverer/deliverer.routes');
+const paymentsRoutes = require('./modules/payments/payments.routes');
+const adminRoutes = require('./modules/admin/admin.routes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -33,6 +35,12 @@ app.use(morgan('dev'));
 // Nada de imagem em base64/blob no banco — só o caminho/URL fica salvo lá.
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
+// Painel simples (HTML puro) pra você fechar a semana e marcar acertos de
+// comissão como pagos, sem precisar de Postman. Protegido pela mesma
+// ADMIN_API_KEY das rotas /api/admin/* — quem não souber a chave só vê
+// erro de "Acesso negado" ao tentar carregar os dados.
+app.use('/admin', express.static(path.join(__dirname, '..', 'public')));
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
@@ -44,6 +52,12 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/addresses', addressesRoutes);
 app.use('/api/tenant', tenantRoutes);
 app.use('/api/deliverer', delivererRoutes);
+// Sem authenticate/authorize — é chamada pelo Mercado Pago (webhook) e
+// pela própria página de retorno do checkout.
+app.use('/api/payments', paymentsRoutes);
+// Protegida por chave simples (ADMIN_API_KEY), não pelo login normal --
+// ver admin.routes.js.
+app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Rota não encontrada' });

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Acertos semanais</title>
+  <style>
+    body { font-family: -apple-system, Segoe UI, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 22px; }
+    .row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    input[type=password] { flex: 1; min-width: 220px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    button { padding: 10px 16px; border: none; border-radius: 8px; background: #FF5A1F; color: #fff; font-weight: 700; cursor: pointer; }
+    button.secondary { background: #444; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+    .pendente { color: #B5760A; font-weight: 700; }
+    .pago { color: #2e7d32; font-weight: 700; }
+    #msg { font-size: 13px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Acertos semanais de comissão</h1>
+  <div class="row">
+    <input id="key" type="password" placeholder="Chave de admin (ADMIN_API_KEY)" />
+    <button onclick="saveKeyAndLoad()">Entrar</button>
+  </div>
+  <div class="row">
+    <button onclick="generate()">Fechar semana agora</button>
+    <button class="secondary" onclick="load()">Atualizar lista</button>
+  </div>
+  <div id="msg"></div>
+  <table id="tbl" style="display:none">
+    <thead>
+      <tr>
+        <th>Restaurante</th><th>Período</th><th>Pedidos</th><th>Vendido</th>
+        <th>Comissão (%)</th><th>Deve repassar</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    function getKey() { return localStorage.getItem('adminKey') || ''; }
+    function saveKeyAndLoad() {
+      localStorage.setItem('adminKey', document.getElementById('key').value.trim());
+      load();
+    }
+    document.getElementById('key').value = getKey();
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        ...options,
+        headers: { 'x-admin-key': getKey(), 'Content-Type': 'application/json', ...(options.headers || {}) },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+      return res.json();
+    }
+
+    function fmtMoney(v) { return 'R$ ' + Number(v).toFixed(2); }
+    function fmtDate(v) { return new Date(v).toLocaleDateString('pt-BR'); }
+
+    async function load() {
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Carregando...';
+      try {
+        const settlements = await api('/api/admin/settlements');
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
+        for (const s of settlements) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${s.tenantName}</td>
+            <td>${fmtDate(s.periodStart)} – ${fmtDate(s.periodEnd)}</td>
+            <td>${s.ordersCount}</td>
+            <td>${fmtMoney(s.grossAmount)}</td>
+            <td>${s.commissionRate}%</td>
+            <td>${fmtMoney(s.commissionAmount)}</td>
+            <td class="${s.status}">${s.status === 'pago' ? 'Pago' : 'Pendente'}</td>
+            <td>${s.status === 'pendente' ? `<button onclick="markPaid('${s.id}')">Marcar como pago</button>` : ''}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+        document.getElementById('tbl').style.display = settlements.length ? 'table' : 'none';
+        msg.textContent = settlements.length ? '' : 'Nenhum acerto ainda.';
+      } catch (err) {
+        msg.textContent = 'Erro: ' + err.message;
+      }
+    }
+
+    async function generate() {
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Fechando semana...';
+      try {
+        const result = await api('/api/admin/settlements/generate', { method: 'POST' });
+        msg.textContent = `${result.generated} acerto(s) gerado(s).`;
+        load();
+      } catch (err) {
+        msg.textContent = 'Erro: ' + err.message;
+      }
+    }
+
+    async function markPaid(id) {
+      try {
+        await api(`/api/admin/settlements/${id}/mark-paid`, { method: 'PATCH' });
+        load();
+      } catch (err) {
+        alert('Erro: ' + err.message);
+      }
+    }
+
+    if (getKey()) load();
+  </script>
+</body>
+</html>

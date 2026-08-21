@@ -33,16 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
-    // remove o token de push deste aparelho ANTES de tirar a autenticação --
-    // senão a conta que saiu continuaria recebendo push nesse celular
     await unregisterPushNotifications();
     setUser(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
     await setAuthToken(null);
   }
 
-  // Atualiza o usuário em memória e no AsyncStorage depois que a pessoa
-  // edita nome/e-mail/telefone/CPF na tela "Meus dados".
   async function updateUser(updated: User) {
     setUser(updated);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));

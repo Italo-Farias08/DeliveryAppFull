@@ -8,6 +8,8 @@ const TENANT_ORDER_SELECT = `
   SELECT o.id, o.restaurant_id AS "restaurantId", o.client_id AS "clientId",
          o.deliverer_id AS "delivererId", o.status, o.subtotal, o.delivery_fee AS "deliveryFee",
          o.total, o.pickup_code AS "pickupCode",
+         o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod",
+         o.commission_amount AS "commissionAmount",
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
          c.name AS "clientName", c.phone AS "clientPhone",
@@ -316,9 +318,14 @@ async function deleteAddon(db, addonId) {
 }
 
 async function listOrders(db, tenantId) {
+  // Pedido só entra na fila do restaurante depois de PAGO (ou, se já foi
+  // pago e depois estornado por cancelamento, continua aparecendo pra
+  // manter o histórico) -- pedido ainda aguardando pagamento não aparece
+  // aqui, mesmo em rede (defesa extra além de simplesmente não emitir o
+  // evento de socket na criação).
   const ordersResult = await db.query(
     `${TENANT_ORDER_SELECT}
-     WHERE o.tenant_id = $1
+     WHERE o.tenant_id = $1 AND o.payment_status IN ('pago', 'estornado')
      ORDER BY o.created_at DESC`,
     [tenantId]
   );
@@ -340,9 +347,11 @@ async function listOrders(db, tenantId) {
 
 // Restaurante aceita o pedido: pendente -> preparando
 async function acceptOrder(db, tenantId, orderId) {
+  // payment_status = 'pago' aqui é defesa extra -- na prática o pedido só
+  // chega até o restaurante (listOrders/socket) depois de pago mesmo.
   const result = await db.query(
     `UPDATE orders SET status = 'preparando', accepted_at = now()
-     WHERE id = $1 AND tenant_id = $2 AND status = 'pendente'
+     WHERE id = $1 AND tenant_id = $2 AND status = 'pendente' AND payment_status = 'pago'
      RETURNING id, status, client_id AS "clientId"`,
     [orderId, tenantId]
   );

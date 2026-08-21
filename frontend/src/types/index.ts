@@ -166,6 +166,11 @@ export interface Order {
   deliveryFee: number;
   total: number;
   status: OrderStatus;
+  // status do pagamento no Mercado Pago -- independente do status do
+  // pedido em si (ver OrderStatus acima)
+  paymentStatus?: 'pendente' | 'pago' | 'recusado' | 'estornado';
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | null;
+  paidAt?: string | null;
   createdAt: string;
   acceptedAt?: string | null;
   readyAt?: string | null;

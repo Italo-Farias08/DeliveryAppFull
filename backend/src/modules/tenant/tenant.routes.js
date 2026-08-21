@@ -5,6 +5,7 @@ const AppError = require('../../utils/AppError');
 const { authenticate, authorize } = require('../../middlewares/auth');
 const tenantContext = require('../../middlewares/tenantContext');
 const messagesService = require('../messages/messages.service');
+const paymentsService = require('../payments/payments.service');
 const controller = require('./tenant.controller');
 const { buildUploader } = require('../../middlewares/upload');
 
@@ -51,6 +52,20 @@ router.put('/menu-categories/:categoryId', controller.updateMenuCategory);
 router.delete('/menu-categories/:categoryId', controller.deleteMenuCategory);
 
 router.get('/orders', controller.listOrders);
+
+// Quanto esse restaurante deve repassar de comissão: valor já pago pelos
+// clientes e ainda não incluído em nenhum acerto semanal, mais o
+// histórico de acertos já fechados (pagos ou pendentes).
+router.get(
+  '/billing',
+  asyncHandler(async (req, res) => {
+    const [pending, settlements] = await Promise.all([
+      paymentsService.getPendingCommission(req.tenantId),
+      paymentsService.listSettlementsByTenant(req.tenantId),
+    ]);
+    res.json({ pending, settlements });
+  })
+);
 router.patch('/orders/:orderId/accept', controller.acceptOrder);
 router.patch('/orders/:orderId/reject', controller.rejectOrder);
 router.patch('/orders/:orderId/ready', controller.markOrderReady);

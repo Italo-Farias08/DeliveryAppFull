@@ -30,10 +30,6 @@ import { shadows } from '../../theme/shadows';
 
 const LABELS = ['Casa', 'Trabalho', 'Outro'];
 const SEARCH_DEBOUNCE_MS = 500;
-
-// Por enquanto fixo em Vitória de Santo Antão, PE — depois dá pra trocar
-// isso pra pegar a localização atual da pessoa dinamicamente (device GPS)
-// em vez de um ponto fixo, se o app for usado em várias cidades/regiões.
 const REGION_BIAS: SearchBias = {
   lat: -8.1219,
   lng: -35.2939,
@@ -74,18 +70,12 @@ export default function AddressesScreen() {
 
   const [showForm, setShowForm] = useState(false);
   const [label, setLabel] = useState('Casa');
-
-  // Campo de busca (estilo Uber/Google Maps) — o que a pessoa digita e a
-  // lista de sugestões que aparece embaixo dele.
   const [searchText, setSearchText] = useState('');
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-
-  // Endereço já selecionado (pela busca ou pelo GPS) — os campos ficam
-  // editáveis depois de escolhido, principalmente número e complemento.
   const [selected, setSelected] = useState(false);
   const [street, setStreet] = useState('');
   const [number, setNumber] = useState('');
@@ -97,13 +87,7 @@ export default function AddressesScreen() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // Ponto usado pra ordenar/priorizar a busca por distância. Começa no
-  // centro fixo da cidade e é refinado pra localização real da pessoa
-  // assim que o GPS responder (sem pedir permissão de novo se ela já foi
-  // concedida antes em outra tela do app).
   const [searchOrigin, setSearchOrigin] = useState<SearchBias>(REGION_BIAS);
-
   useEffect(() => {
     Location.getLastKnownPositionAsync()
       .then((pos) => {
@@ -112,7 +96,6 @@ export default function AddressesScreen() {
         }
       })
       .catch(() => {
-        // sem permissão ainda ou sem posição em cache — mantém o centro da cidade
       });
   }, []);
 
@@ -131,10 +114,6 @@ export default function AddressesScreen() {
   useEffect(() => {
     load();
   }, [load]);
-
-  // Busca com debounce: espera a pessoa parar de digitar por
-  // SEARCH_DEBOUNCE_MS antes de bater na API, e cancela a busca anterior
-  // se uma nova letra for digitada antes da resposta chegar.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     abortRef.current?.abort();
@@ -195,8 +174,6 @@ export default function AddressesScreen() {
     setSelected(true);
   }
 
-  // Preenche com a localização atual do GPS — alternativa a digitar e
-  // buscar, útil quando a pessoa já está no endereço que quer salvar.
   async function handleUseCurrentLocation() {
     setLocating(true);
     try {
@@ -280,8 +257,6 @@ export default function AddressesScreen() {
     ]);
   }
 
-  // Fixa o endereço como principal: some no topo da lista e passa a ser
-  // usado depois pra conferir a localização real na hora do pedido.
   async function handleSetDefault(id: string) {
     setFixingId(id);
     try {
@@ -296,7 +271,6 @@ export default function AddressesScreen() {
       setFixingId(null);
     }
   }
-
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.headerRow}>

@@ -15,6 +15,10 @@ export interface TenantOrder {
   readyAt?: string | null;
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
+  paymentStatus?: 'pendente' | 'pago' | 'recusado' | 'estornado';
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | null;
+  // quanto desse pedido é comissão da plataforma (12% do subtotal, por padrão)
+  commissionAmount?: number | null;
   clientName?: string;
   clientPhone?: string | null;
   street?: string;
@@ -312,5 +316,38 @@ export async function getTenantOrderMessages(
 
 export async function sendTenantOrderMessage(orderId: string, message: string): Promise<TenantOrderMessage> {
   const { data } = await api.post(`/tenant/orders/${orderId}/messages`, { message });
+  return data;
+}
+
+// --- Comissão da plataforma / acertos semanais ---
+
+export interface PendingCommission {
+  ordersCount: number;
+  grossAmount: number;
+  commissionAmount: number;
+}
+
+export interface Settlement {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  ordersCount: number;
+  grossAmount: number;
+  commissionRate: number;
+  commissionAmount: number;
+  status: 'pendente' | 'pago';
+  paidAt?: string | null;
+  createdAt: string;
+}
+
+export interface TenantBilling {
+  pending: PendingCommission;
+  settlements: Settlement[];
+}
+
+// Quanto o restaurante já deve de comissão (pedidos pagos ainda não
+// fechados num acerto semanal) + o histórico de acertos já fechados.
+export async function getTenantBilling(): Promise<TenantBilling> {
+  const { data } = await api.get('/tenant/billing');
   return data;
 }

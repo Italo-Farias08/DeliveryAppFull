@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,7 +20,7 @@ import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
 import { Address, createAddress, listAddresses } from '../../services/addressService';
-import { createOrder } from '../../services/orderService';
+import { createOrder, payOrder } from '../../services/orderService';
 import { getRestaurantById } from '../../services/restaurantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -200,7 +201,7 @@ export default function CartScreen() {
     }
     setSubmitting(true);
     try {
-      await createOrder({
+      const order = await createOrder({
         restaurantId,
         addressId: selectedAddressId,
         items: items.map((ci) => ({
@@ -211,8 +212,25 @@ export default function CartScreen() {
         })),
       });
       clear();
-      Alert.alert('Pedido enviado!', 'Seu pedido foi enviado ao restaurante.');
-      navigation.navigate('Orders');
+
+      // Pedido criado, mas ainda não pago -- abre o checkout do Mercado
+      // Pago (Pix, crédito ou débito). O restaurante só vê o pedido depois
+      // que o pagamento for confirmado (webhook -> evento em tempo real),
+      // então nem sempre é preciso ficar esperando essa tela: o status do
+      // pedido atualiza sozinho assim que o pagamento passar.
+      try {
+        const payment = await payOrder(order.id);
+        navigation.navigate('Orders');
+        await WebBrowser.openBrowserAsync(payment.sandboxInitPoint || payment.initPoint);
+      } catch (payErr) {
+        // O pedido já existe mesmo se o link de pagamento falhar agora --
+        // a tela de pedidos tem um botão "Pagar agora" pra tentar de novo.
+        navigation.navigate('Orders');
+        Alert.alert(
+          'Pedido criado',
+          'Não foi possível abrir o pagamento agora. Vá em "Meus pedidos" e toque em "Pagar agora" para tentar de novo.'
+        );
+      }
     } catch (err: any) {
       const message = err?.response?.data?.error || 'Não foi possível enviar o pedido. Tente novamente.';
       Alert.alert('Erro ao finalizar pedido', message);
@@ -327,7 +345,7 @@ export default function CartScreen() {
           </View>
         )}
         <Button
-          label="Finalizar pedido"
+          label="Ir para pagamento"
           onPress={handleCheckout}
           loading={submitting}
           disabled={loadingFee || belowMinimum}

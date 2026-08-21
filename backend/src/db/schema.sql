@@ -165,6 +165,14 @@ CREATE TABLE orders (
   subtotal NUMERIC(10,2) NOT NULL,
   delivery_fee NUMERIC(10,2) NOT NULL,
   total NUMERIC(10,2) NOT NULL,
+  payment_status TEXT NOT NULL DEFAULT 'pendente' CHECK (payment_status IN ('pendente', 'pago', 'recusado', 'estornado')),
+  payment_method TEXT, -- pix | credit_card | debit_card
+  mp_preference_id TEXT,
+  mp_payment_id TEXT,
+  paid_at TIMESTAMPTZ,
+  commission_rate NUMERIC(5,2),
+  commission_amount NUMERIC(10,2),
+  settlement_id UUID,
   accepted_at TIMESTAMPTZ,
   ready_at TIMESTAMPTZ,
   picked_up_at TIMESTAMPTZ,
@@ -178,6 +186,30 @@ CREATE INDEX idx_orders_tenant_id ON orders(tenant_id);
 CREATE INDEX idx_orders_client_id ON orders(client_id);
 CREATE INDEX idx_orders_deliverer_id ON orders(deliverer_id);
 CREATE INDEX idx_orders_restaurant_id ON orders(restaurant_id);
+CREATE INDEX idx_orders_payment_status ON orders(payment_status);
+CREATE INDEX idx_orders_pending_settlement ON orders(tenant_id) WHERE payment_status = 'pago' AND settlement_id IS NULL;
+
+-- Um "fechamento" semanal por tenant: soma tudo que foi pago naquela janela
+-- e trava o valor de comissão devido. O restaurante paga esse valor por
+-- fora (Pix, transferência etc.) e a plataforma marca como quitado manualmente.
+CREATE TABLE settlements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  period_start TIMESTAMPTZ NOT NULL,
+  period_end TIMESTAMPTZ NOT NULL,
+  orders_count INTEGER NOT NULL DEFAULT 0,
+  gross_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  commission_rate NUMERIC(5,2) NOT NULL,
+  commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente', 'pago')),
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_settlements_tenant_id ON settlements(tenant_id);
+CREATE INDEX idx_settlements_status ON settlements(status);
+
+ALTER TABLE orders ADD CONSTRAINT fk_orders_settlement FOREIGN KEY (settlement_id) REFERENCES settlements(id);
 CREATE INDEX idx_orders_status_radar ON orders(status) WHERE deliverer_id IS NULL;
 
 CREATE TABLE order_items (

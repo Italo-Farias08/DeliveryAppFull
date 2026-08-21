@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -9,7 +10,7 @@ import RatingModal from '../../components/RatingModal';
 import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { useCart } from '../../context/CartContext';
-import { cancelOrder, getOrderMessages, listMyOrders, rateOrder, sendOrderMessage } from '../../services/orderService';
+import { cancelOrder, getOrderMessages, listMyOrders, payOrder, rateOrder, sendOrderMessage } from '../../services/orderService';
 import { connectSocket, disconnectSocket } from '../../services/socket';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -74,6 +75,7 @@ export default function OrdersScreen() {
   const [chatOrder, setChatOrder] = useState<Order | null>(null);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
 
   // Página fixa de 20 pedidos por vez -- igual ao padrão do backend
   // (ver orders.service.js). A tela pede a próxima página sozinha quando
@@ -122,6 +124,12 @@ export default function OrdersScreen() {
       s.on('order:status', ({ id, status }: { id: string; status: OrderStatus }) => {
         setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
       });
+      // Confirmação/recusa do pagamento chega aqui assim que o Mercado Pago
+      // avisa o backend (webhook) -- geralmente segundos depois do cliente
+      // pagar, mesmo que ele já tenha voltado pro app.
+      s.on('order:payment', ({ id, paymentStatus }: { id: string; paymentStatus: Order['paymentStatus'] }) => {
+        setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, paymentStatus } : o)));
+      });
     });
     return () => {
       disconnectSocket();
@@ -148,6 +156,21 @@ export default function OrdersScreen() {
     },
     [addItem, navigation]
   );
+
+  // Retoma o pagamento de um pedido criado mas ainda não pago (ex: o
+  // cliente fechou o navegador do checkout sem terminar de pagar).
+  const handlePayNow = useCallback(async (order: Order) => {
+    setPayingId(order.id);
+    try {
+      const payment = await payOrder(order.id);
+      await WebBrowser.openBrowserAsync(payment.sandboxInitPoint || payment.initPoint);
+    } catch (err: any) {
+      const message = err?.response?.data?.error || 'Não foi possível abrir o pagamento agora.';
+      Alert.alert('Erro', message);
+    } finally {
+      setPayingId(null);
+    }
+  }, []);
 
   // Só funciona enquanto o restaurante ainda não aceitou o pedido -- passado
   // isso, o backend recusa (409) e sugerimos falar com o restaurante pelo chat.
@@ -264,6 +287,47 @@ export default function OrdersScreen() {
                   <Ionicons name={info.icon} size={13} color={info.color} />
                   <Text style={[styles.badgeText, { color: info.color }]}>{info.label}</Text>
                 </View>
+
+                {/* Enquanto o pedido está "pendente" (restaurante ainda não
+                    viu), o status do pagamento é a informação que mais
+                    importa pro cliente -- é o que decide se o pedido vai
+                    ou não avançar. */}
+                {item.status === 'pendente' && item.paymentStatus !== 'pago' && (
+                  <View
+                    style={[
+                      styles.paymentBanner,
+                      item.paymentStatus === 'recusado' && styles.paymentBannerDanger,
+                    ]}
+                  >
+                    <Ionicons
+                      name={item.paymentStatus === 'recusado' ? 'close-circle-outline' : 'time-outline'}
+                      size={16}
+                      color={item.paymentStatus === 'recusado' ? colors.danger : '#B5760A'}
+                    />
+                    <Text
+                      style={[
+                        styles.paymentBannerText,
+                        item.paymentStatus === 'recusado' && { color: colors.danger },
+                      ]}
+                    >
+                      {item.paymentStatus === 'recusado'
+                        ? 'Pagamento recusado'
+                        : 'Aguardando pagamento'}
+                    </Text>
+                    <PressableScale
+                      style={styles.payNowBtn}
+                      onPress={() => handlePayNow(item)}
+                      disabled={payingId === item.id}
+                      scaleTo={0.95}
+                    >
+                      {payingId === item.id ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                      ) : (
+                        <Text style={styles.payNowBtnText}>Pagar agora</Text>
+                      )}
+                    </PressableScale>
+                  </View>
+                )}
 
                 <View style={styles.divider} />
 
@@ -439,6 +503,19 @@ function createStyles(colors: ThemeColors) {
     marginBottom: 12,
   },
   badgeText: { fontSize: 11.5, fontWeight: '700' },
+
+  paymentBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F5A62314', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 8, marginBottom: 12,
+  },
+  paymentBannerDanger: { backgroundColor: colors.danger + '14' },
+  paymentBannerText: { flex: 1, color: '#B5760A', fontSize: 12.5, fontWeight: '700' },
+  payNowBtn: {
+    backgroundColor: colors.primary, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  payNowBtnText: { color: colors.white, fontSize: 12, fontWeight: '700' },
 
   divider: { height: 1, backgroundColor: colors.border, marginBottom: 12 },
 

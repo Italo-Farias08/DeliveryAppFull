@@ -7,6 +7,7 @@ const { sendPushToTenant } = require('../../utils/push');
 const ORDER_SELECT = `
   SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total,
          o.delivery_code AS "deliveryCode",
+         o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod", o.paid_at AS "paidAt",
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt", o.cancelled_at AS "cancelledAt",
          o.cancel_reason AS "cancelReason",
@@ -131,26 +132,10 @@ async function createOrder(clientId, data) {
     await client.query('COMMIT');
     const order = await getOrderById(orderId, clientId);
 
-    // avisa o restaurante em tempo real que um pedido novo chegou pra aceitar
-    // (usa o mesmo formato que a tela do restaurante espera, com nome do cliente e endereço)
-    const tenantOrderResult = await pool.query(
-      `SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total,
-              o.pickup_code AS "pickupCode", o.created_at AS "createdAt",
-              c.name AS "clientName", c.phone AS "clientPhone",
-              a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a.lat, a.lng
-       FROM orders o
-       JOIN users c ON c.id = o.client_id
-       LEFT JOIN addresses a ON a.id = o.address_id
-       WHERE o.id = $1`,
-      [orderId]
-    );
-    const tenantOrder = { ...tenantOrderResult.rows[0], items: order.items };
-    toTenant(restaurant.tenant_id, 'order:new', tenantOrder);
-    sendPushToTenant(restaurant.tenant_id, {
-      title: 'Novo pedido! 🛎️',
-      body: `${tenantOrder.clientName} acabou de fazer um pedido.`,
-      data: { orderId: order.id, type: 'order:new' },
-    });
+    // IMPORTANTE: o restaurante só é avisado do pedido depois que o
+    // pagamento for confirmado (ver payments.service.js -> notifyOrderPaid,
+    // chamado pelo webhook do Mercado Pago). Antes disso o pedido fica
+    // "pendente" com payment_status "pendente" e não aparece na fila dele.
 
     return order;
   } catch (err) {
@@ -197,8 +182,29 @@ async function listOrdersByClient(clientId, { limit = 20, offset = 0 } = {}) {
 // prejuízo/confusão pro restaurante; nesse ponto o cliente deve falar com
 // o restaurante pelo chat em vez de cancelar direto.
 async function cancelOrder(clientId, orderId, reason) {
+  const existing = await pool.query(
+    `SELECT id, status, payment_status AS "paymentStatus", mp_payment_id AS "mpPaymentId"
+     FROM orders WHERE id = $1 AND client_id = $2`,
+    [orderId, clientId]
+  );
+  if (existing.rowCount === 0) throw new AppError('Pedido não encontrado', 404);
+  const existingOrder = existing.rows[0];
+  if (existingOrder.status !== 'pendente') {
+    throw new AppError(
+      'Pedido não encontrado ou não pode mais ser cancelado (o restaurante já começou o preparo)',
+      409
+    );
+  }
+
+  // Se já foi pago, precisa estornar no Mercado Pago ANTES de cancelar --
+  // senão o dinheiro fica retido sem o pedido existir mais.
+  if (existingOrder.paymentStatus === 'pago' && existingOrder.mpPaymentId) {
+    await refundPayment(existingOrder.mpPaymentId);
+  }
+
   const result = await pool.query(
-    `UPDATE orders SET status = 'cancelado', cancelled_at = now(), cancel_reason = $1
+    `UPDATE orders SET status = 'cancelado', cancelled_at = now(), cancel_reason = $1,
+            payment_status = CASE WHEN payment_status = 'pago' THEN 'estornado' ELSE payment_status END
      WHERE id = $2 AND client_id = $3 AND status = 'pendente'
      RETURNING id, status, tenant_id AS "tenantId"`,
     [reason || 'Cancelado pelo cliente', orderId, clientId]
@@ -219,6 +225,23 @@ async function cancelOrder(clientId, orderId, reason) {
     data: { orderId: order.id, type: 'order:cancelled' },
   });
   return { id: order.id, status: order.status };
+}
+
+// Estorna um pagamento aprovado no Mercado Pago (devolve o dinheiro
+// inteiro pro cliente). Usado quando o cliente cancela um pedido que já
+// tinha sido pago, antes do restaurante começar o preparo.
+async function refundPayment(mpPaymentId) {
+  const { PaymentRefund } = require('mercadopago');
+  const { mpClient } = require('../../config/mercadopago');
+  try {
+    const refund = new PaymentRefund(mpClient);
+    await refund.create({ payment_id: mpPaymentId });
+  } catch (err) {
+    throw new AppError(
+      'Não foi possível estornar o pagamento automaticamente. Entre em contato com o suporte.',
+      502
+    );
+  }
 }
 
 // Cliente avalia o pedido depois de entregue -- só uma vez por pedido

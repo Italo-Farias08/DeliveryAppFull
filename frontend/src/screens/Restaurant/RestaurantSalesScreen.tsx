@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import RestaurantScreenLayout from '../../components/RestaurantScreenLayout';
 import { useRestaurantPanel } from '../../context/RestaurantContext';
-import { TenantOrder } from '../../services/tenantService';
+import { getTenantBilling, TenantBilling, TenantOrder } from '../../services/tenantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -162,6 +162,15 @@ export default function RestaurantSalesScreen() {
   const styles = createStyles(colors);
   const { orders, refreshing, reload } = useRestaurantPanel();
   const [period, setPeriod] = useState<Period>('week');
+  const [billing, setBilling] = useState<TenantBilling | null>(null);
+
+  useEffect(() => {
+    getTenantBilling()
+      .then(setBilling)
+      .catch(() => {
+        // silencioso — o card de comissão simplesmente não aparece se falhar
+      });
+  }, [orders]);
 
   const buckets = useMemo(() => buildBuckets(period, orders), [period, orders]);
 
@@ -273,6 +282,49 @@ export default function RestaurantSalesScreen() {
           )}
         </View>
 
+        {billing && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Comissão da plataforma</Text>
+            <View style={styles.commissionRow}>
+              <View>
+                <Text style={styles.commissionValue}>{formatMoney(billing.pending.commissionAmount)}</Text>
+                <Text style={styles.historySub}>
+                  {billing.pending.ordersCount} {billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'}{' '}
+                  ainda não fechados nesta semana
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.infoText, { marginTop: 10 }]}>
+              Toda semana esse valor é fechado e você faz o repasse (Pix/transferência) direto pra plataforma.
+            </Text>
+            {billing.settlements.length > 0 && (
+              <View style={{ marginTop: 4 }}>
+                {billing.settlements.slice(0, 4).map((s) => (
+                  <View key={s.id} style={styles.historyRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyLabel}>
+                        {new Date(s.periodStart).toLocaleDateString('pt-BR')} –{' '}
+                        {new Date(s.periodEnd).toLocaleDateString('pt-BR')}
+                      </Text>
+                      <Text style={styles.historySub}>
+                        {s.status === 'pago' ? 'Pago' : 'Pendente'} · {s.ordersCount} pedidos
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.historyValue,
+                        s.status === 'pendente' && { color: '#B5760A' },
+                      ]}
+                    >
+                      {formatMoney(s.commissionAmount)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />
           <Text style={styles.infoText}>
@@ -330,6 +382,9 @@ function createStyles(colors: ThemeColors) {
     alignItems: 'center', justifyContent: 'center',
   },
   rankText: { color: colors.primary, fontSize: 11.5, fontWeight: '800' },
+
+  commissionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  commissionValue: { ...typography.h2, color: '#B5760A' },
 
   infoBanner: {
     flexDirection: 'row', gap: 8, backgroundColor: colors.background, borderRadius: 14,

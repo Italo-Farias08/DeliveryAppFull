@@ -57,14 +57,8 @@ function getCategoryEmoji(name: string | null) {
   return CATEGORY_EMOJIS[name] ?? '🍴';
 }
 
-// FlatList "animável" — necessário para o onScroll funcionar com useNativeDriver.
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
 
-// ---------------------------------------------------------------------------
-// Promo carousel — drop your own artwork in place of these placeholders.
-// Add the files at the paths below (any real image, same filenames) and
-// everything else (loop, dots, swipe) already works.
-// ---------------------------------------------------------------------------
 const BANNERS = [
   { id: 'promo-1', image: require('../../img/banners/banner_promocional_delivery_v2.png') },
   { id: 'promo-2', image: require('../../img/banners/banner_promocional_2.png') },
@@ -122,10 +116,6 @@ function PromoCarousel() {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Category chip — circular icon + label, matches the mockup's ring highlight.
-// Used in the normal (non-scrolled) position, above the promo carousel.
-// ---------------------------------------------------------------------------
 function CategoryChip({
   name,
   emoji,
@@ -151,11 +141,6 @@ function CategoryChip({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Compact category chip — texto num "pill" retangular, sem círculo, usado só
-// na barra fixa (sticky) que aparece quando o usuário rola a tela pra baixo.
-// Ocupa bem menos altura que a versão circular.
-// ---------------------------------------------------------------------------
 function CompactCategoryChip({
   name,
   active,
@@ -180,12 +165,6 @@ function CompactCategoryChip({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Restaurant card — compacto, pensado para grid de 2 colunas.
-// Usa a LOGO do restaurante (restaurant.image), igual à tela de detalhes.
-// Se um dia você quiser mostrar o banner/foto de capa em vez da logo aqui,
-// troque `restaurant.image` por `restaurant.banner || restaurant.image`.
-// ---------------------------------------------------------------------------
 function AnimatedCard({ children, index }: { children: React.ReactNode; index: number }) {
   const fade = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(18)).current;
@@ -199,12 +178,6 @@ function AnimatedCard({ children, index }: { children: React.ReactNode; index: n
   return <Animated.View style={{ opacity: fade, transform: [{ translateY: translate }] }}>{children}</Animated.View>;
 }
 
-// ---------------------------------------------------------------------------
-// Header completo da lista (saudação, busca, endereço, categorias, banner e
-// título da seção). Fica em React.memo de propósito: o HomeScreen re-renderiza
-// a cada mudança do scroll (pra saber quando mostrar a barra fixa), e sem o
-// memo isso remontava o carrossel de banners a cada frame, travando-o.
-// ---------------------------------------------------------------------------
 const ListHeader = React.memo(function ListHeader({
   userName,
   categories,

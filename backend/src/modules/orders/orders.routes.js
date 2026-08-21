@@ -5,6 +5,7 @@ const AppError = require('../../utils/AppError');
 const { authenticate, authorize } = require('../../middlewares/auth');
 const service = require('./orders.service');
 const messagesService = require('../messages/messages.service');
+const paymentsService = require('../payments/payments.service');
 const { createOrderSchema } = require('./orders.schema');
 
 const router = Router();
@@ -53,6 +54,17 @@ router.get(
   asyncHandler(async (req, res) => {
     const order = await service.getOrderById(req.params.id, req.user.sub);
     res.json(order);
+  })
+);
+
+// Gera o link de pagamento (Checkout Pro) do Mercado Pago pro pedido.
+// O app abre esse link (initPoint) num navegador/webview; o cliente paga
+// lá (Pix, crédito ou débito) e o Mercado Pago confirma via webhook.
+router.post(
+  '/:id/pay',
+  asyncHandler(async (req, res) => {
+    const payment = await paymentsService.createPaymentForOrder(req.user.sub, req.params.id);
+    res.json(payment);
   })
 );
 
