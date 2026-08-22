@@ -591,7 +591,7 @@
             </svg>
           </div>
           <h1>Login realizado</h1>
-          <p class="subtitulo">Tudo certo! O painel de gestão do restaurante chega em breve por aqui.</p>
+          <p class="subtitulo">Tudo certo! Levando você para o painel de pedidos...</p>
         </div>
 
       </div>
@@ -742,6 +742,7 @@ async function confirmarCodigo(evento) {
     salvarSessao(resultado.token, resultado.user);
     senhaEmUso = '';
     trocarEtapa(etapaSucesso);
+    irParaPainel();
   } catch (erro) {
     mostrarMensagem(mensagemCodigo, erro.message, 'erro');
   } finally {
@@ -752,6 +753,15 @@ async function confirmarCodigo(evento) {
 function salvarSessao(token, usuario) {
   localStorage.setItem('restauranteToken', token);
   localStorage.setItem('restauranteUsuario', JSON.stringify(usuario));
+}
+
+// Pequena pausa só pra deixar a animação do "check" aparecer antes de sair
+// da página -- o painel (./painel.html) já lê restauranteToken/restauranteUsuario
+// do localStorage sozinho, então basta a sessão estar salva antes de navegar.
+function irParaPainel() {
+  setTimeout(() => {
+    window.location.href = './painel.html';
+  }, 900);
 }
 
 async function reenviarCodigo() {
@@ -927,6 +937,7 @@ async function cadastrar(evento) {
 
     salvarSessao(resultado.token, resultado.user);
     trocarEtapa(etapaSucesso);
+    irParaPainel();
   } catch (erro) {
     mostrarMensagem(mensagemCadastro, erro.message, 'erro');
   } finally {

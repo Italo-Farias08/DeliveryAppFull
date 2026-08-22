@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pedidos — Portal do Restaurante</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --vermelho: #e4002b;
+    --vermelho-escuro: #8f0019;
+    --texto: #1c1b1a;
+    --texto-suave: #8a8580;
+    --branco: #ffffff;
+    --creme: #fcfaf8;
+    --borda: #e9e4de;
+    --verde: #1f6f5c;
+    --verde-claro: #e7f5f0;
+    --dourado: #ffb400;
+    --dourado-claro: #fff6e0;
+    --vermelho-claro: #fde8ea;
+
+    --fonte-titulo: "Sora", sans-serif;
+    --fonte-ui: "Manrope", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: var(--fonte-ui);
+    color: var(--texto);
+    background: var(--creme);
+  }
+
+  /* ============ BARRA SUPERIOR ============ */
+
+  .barra-topo {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 26px;
+    background: var(--branco);
+    border-bottom: 1px solid var(--borda);
+  }
+
+  .marca-topo { display: flex; align-items: center; gap: 12px; }
+
+  .espaco-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--vermelho);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .espaco-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .icone-logo-padrao { display: none; align-items: center; justify-content: center; width: 100%; height: 100%; }
+  .icone-logo-padrao svg { width: 20px; height: 20px; }
+
+  .nome-topo {
+    font-family: var(--fonte-titulo);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .nome-topo span {
+    display: block;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--texto-suave);
+  }
+
+  .acoes-topo { display: flex; align-items: center; gap: 14px; }
+
+  .indicador-atualizacao {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ponto-vivo {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--verde);
+    animation: pulsar 2s ease-out infinite;
+  }
+  @keyframes pulsar {
+    0%   { box-shadow: 0 0 0 0 rgba(31, 111, 92, 0.5); }
+    70%  { box-shadow: 0 0 0 7px rgba(31, 111, 92, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(31, 111, 92, 0); }
+  }
+
+  .botao-icone {
+    width: 34px; height: 34px; border-radius: 9px;
+    border: 1.5px solid var(--borda);
+    background: var(--branco);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .botao-icone:hover { background: var(--creme); }
+  .botao-icone:active { transform: scale(0.94); }
+  .botao-icone svg { width: 16px; height: 16px; }
+  .botao-icone.girando svg { animation: girar 0.7s linear; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  .botao-sair {
+    font-family: var(--fonte-ui);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--vermelho);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .botao-sair:hover { text-decoration: underline; }
+
+  /* ============ CABEÇALHO DA PÁGINA ============ */
+
+  .cabecalho-pagina {
+    padding: 26px 26px 0;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .cabecalho-pagina h1 {
+    font-family: var(--fonte-titulo);
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  .cabecalho-pagina p {
+    font-size: 13.5px;
+    color: var(--texto-suave);
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .abas-pagina {
+    display: flex;
+    gap: 6px;
+    margin: 20px 0 0;
+    border-bottom: 1px solid var(--borda);
+  }
+  .aba-pagina {
+    padding: 10px 4px;
+    margin-right: 22px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--texto-suave);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+  .aba-pagina.ativa { color: var(--vermelho); border-bottom-color: var(--vermelho); }
+
+  /* ============ QUADRO KANBAN ============ */
+
+  .quadro {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 22px 26px 60px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .coluna { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+  .coluna-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 800;
+    padding: 0 2px;
+  }
+  .contagem-coluna {
+    font-size: 11.5px;
+    font-weight: 800;
+    background: var(--borda);
+    color: var(--texto);
+    padding: 1px 8px;
+    border-radius: 100px;
+  }
+  .coluna[data-status="pendente"] .coluna-cabecalho { color: var(--vermelho); }
+  .coluna[data-status="pendente"] .contagem-coluna { background: var(--vermelho-claro); color: var(--vermelho); }
+  .coluna[data-status="preparando"] .coluna-cabecalho { color: var(--dourado); }
+  .coluna[data-status="preparando"] .contagem-coluna { background: var(--dourado-claro); color: #a37000; }
+  .coluna[data-status="procurando_entregador"] .coluna-cabecalho { color: var(--verde); }
+  .coluna[data-status="procurando_entregador"] .contagem-coluna { background: var(--verde-claro); color: var(--verde); }
+
+  .lista-coluna { display: flex; flex-direction: column; gap: 10px; min-height: 40px; }
+
+  .mensagem-vazia {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    padding: 18px 12px;
+    text-align: center;
+    background: var(--branco);
+    border: 1.5px dashed var(--borda);
+    border-radius: 12px;
+  }
+
+  /* ---- cartão de pedido ---- */
+  .cartao-pedido {
+    background: var(--branco);
+    border: 1.5px solid var(--borda);
+    border-radius: 14px;
+    padding: 14px 16px;
+    animation: entrar-cartao 0.3s ease;
+  }
+  @keyframes entrar-cartao { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .cartao-pedido[data-status="pendente"] { border-color: #f6c9d0; }
+
+  .linha-topo-cartao {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .codigo-pedido {
+    font-family: var(--fonte-titulo);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .nome-cliente {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    margin-top: 2px;
+  }
+  .tempo-pedido {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--texto-suave);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .resumo-itens {
+    margin: 10px 0 0;
+    font-size: 12.5px;
+    color: var(--texto);
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  .rodape-cartao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--borda);
+  }
+  .total-cartao { font-family: var(--fonte-titulo); font-size: 14.5px; font-weight: 700; }
+
+  .grupo-botoes { display: flex; gap: 8px; margin-top: 12px; }
+  .botao-acao {
+    flex: 1;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: none;
+    font-family: var(--fonte-ui);
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  .botao-acao:active { transform: scale(0.97); }
+  .botao-acao:disabled { opacity: 0.55; cursor: not-allowed; }
+  .botao-aceitar { background: var(--verde); color: var(--branco); }
+  .botao-recusar { background: var(--vermelho-claro); color: var(--vermelho); }
+  .botao-pronto { background: var(--vermelho); color: var(--branco); }
+
+  /* ---- área expandida do cartão ---- */
+  .detalhe-pedido {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--borda);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: entrar-cartao 0.2s ease;
+  }
+  .bloco-detalhe { font-size: 12.5px; }
+  .bloco-detalhe strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-suave); margin-bottom: 3px; }
+  .item-detalhe { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+  .item-detalhe .qtd { color: var(--texto-suave); font-weight: 700; margin-right: 4px; }
+  .obs-item { font-style: italic; color: var(--texto-suave); font-size: 11.5px; margin-top: 1px; }
+
+  .linha-valores { display: flex; justify-content: space-between; font-size: 12.5px; padding: 2px 0; }
+  .linha-valores.total-final { font-weight: 800; font-size: 13.5px; border-top: 1px solid var(--borda); margin-top: 4px; padding-top: 6px; }
+
+  .selo-codigo-retirada {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--dourado-claro);
+    color: #a37000;
+    font-weight: 800;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 8px;
+    width: fit-content;
+  }
+
+  .campo-motivo {
+    display: none;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .campo-motivo.visivel { display: flex; flex-direction: column; }
+  .campo-motivo textarea {
+    font-family: var(--fonte-ui);
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1.5px solid var(--borda);
+    resize: vertical;
+    min-height: 50px;
+  }
+  .campo-motivo .linha-confirmar { display: flex; gap: 8px; }
+
+  .seletor-entregador {
+    display: none;
+    margin-top: 10px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .seletor-entregador.visivel { display: flex; }
+  .seletor-entregador select {
+    font-family: var(--fonte-ui);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1.5px solid var(--borda);
+    background: var(--branco);
+  }
+  .seletor-entregador .linha-confirmar { display: flex; gap: 8px; }
+
+  /* ---- chat do pedido ---- */
+  .chat-pedido { display: flex; flex-direction: column; gap: 8px; }
+  .lista-mensagens {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+  .bolha-mensagem {
+    max-width: 82%;
+    padding: 7px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .bolha-mensagem.minha { align-self: flex-end; background: var(--vermelho); color: var(--branco); border-bottom-right-radius: 3px; }
+  .bolha-mensagem.outra { align-self: flex-start; background: var(--creme); border: 1px solid var(--borda); border-bottom-left-radius: 3px; }
+  .linha-envio-chat { display: flex; gap: 6px; }
+  .linha-envio-chat input {
+    flex: 1;
+    font-family: var(--fonte-ui);
+    font-size: 12.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1.5px solid var(--borda);
+  }
+  .botao-enviar-chat {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--vermelho);
+    color: var(--branco);
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .status-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 100px;
+    width: fit-content;
+  }
+  .status-pill.entregue { background: var(--verde-claro); color: var(--verde); }
+  .status-pill.cancelado { background: var(--vermelho-claro); color: var(--vermelho); }
+
+  /* ---- histórico ---- */
+  .lista-historico {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 22px 26px 60px;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .lista-historico.ativa { display: flex; }
+
+  /* ============ TELA DE CARREGAMENTO / MENSAGENS GLOBAIS ============ */
+  .estado-global {
+    max-width: 1400px;
+    margin: 60px auto;
+    text-align: center;
+    color: var(--texto-suave);
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  @media (max-width: 1080px) {
+    .quadro { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="barra-topo">
+    <div class="marca-topo">
+      <div class="espaco-logo">
+        <img
+          id="imagem-logo"
+          src="../img/logo.png"
+          alt="Logo do restaurante"
+          onerror="this.style.display='none'; document.getElementById('icone-logo-padrao').style.display='flex';"
+        />
+        <div id="icone-logo-padrao" class="icone-logo-padrao">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="nome-topo">
+        <span id="nome-usuario-topo">Portal do Restaurante</span>
+        Pedidos
+      </div>
+    </div>
+    <div class="acoes-topo">
+      <div class="indicador-atualizacao"><span class="ponto-vivo"></span><span id="texto-atualizacao">atualizando...</span></div>
+      <button class="botao-icone" id="botao-atualizar" title="Atualizar agora">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1c1b1a" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="botao-sair" id="botao-sair">Sair</button>
+    </div>
+  </div>
+
+  <div class="cabecalho-pagina">
+    <h1>Pedidos</h1>
+    <p>Acompanhe e gerencie os pedidos do seu restaurante em tempo real.</p>
+
+    <div class="abas-pagina">
+      <button class="aba-pagina ativa" id="aba-ativos" data-aba="ativos">Em andamento</button>
+      <button class="aba-pagina" id="aba-historico" data-aba="historico">Histórico</button>
+    </div>
+  </div>
+
+  <div id="estado-carregando" class="estado-global">Carregando pedidos...</div>
+  <div id="estado-erro" class="estado-global" style="display:none; color: var(--vermelho);"></div>
+
+  <div class="quadro" id="quadro-kanban" style="display:none">
+    <div class="coluna" data-status="pendente">
+      <div class="coluna-cabecalho">Novos pedidos <span class="contagem-coluna" id="contagem-pendente">0</span></div>
+      <div class="lista-coluna" id="lista-pendente"></div>
+    </div>
+    <div class="coluna" data-status="preparando">
+      <div class="coluna-cabecalho">Em preparo <span class="contagem-coluna" id="contagem-preparando">0</span></div>
+      <div class="lista-coluna" id="lista-preparando"></div>
+    </div>
+    <div class="coluna" data-status="procurando_entregador">
+      <div class="coluna-cabecalho">Prontos <span class="contagem-coluna" id="contagem-pronto">0</span></div>
+      <div class="lista-coluna" id="lista-pronto"></div>
+    </div>
+  </div>
+
+  <div class="lista-historico" id="lista-historico"></div>
+
+  <script>
+// ===================================================================
+// Painel do Restaurante — Pedidos
+//
+// Rotas do backend usadas (todas exigem Authorization: Bearer <token>
+// de uma conta role=restaurant, ver /api/tenant em tenant.routes.js):
+//   GET   /api/tenant/orders                      -> lista pedidos pagos/estornados
+//   PATCH /api/tenant/orders/:id/accept            -> pendente -> preparando
+//   PATCH /api/tenant/orders/:id/reject  {reason}  -> pendente -> cancelado
+//   PATCH /api/tenant/orders/:id/ready {delivererId?} -> preparando -> procurando_entregador
+//   GET   /api/tenant/deliverers                   -> entregadores da casa
+//   GET   /api/tenant/orders/:id/messages          -> chat do pedido
+//   POST  /api/tenant/orders/:id/messages {message}-> enviar mensagem
+//
+// Autenticação: lê o token salvo pelo login.html (restauranteToken).
+// Sem token -> manda de volta pro login.
+// ===================================================================
+
+const INTERVALO_ATUALIZACAO_MS = 12000;
+
+const token = localStorage.getItem('restauranteToken');
+const usuarioBruto = localStorage.getItem('restauranteUsuario');
+
+if (!token || !usuarioBruto) {
+  window.location.href = './login.html';
+}
+
+let usuario = null;
+try { usuario = JSON.parse(usuarioBruto); } catch (e) { /* ignora, cai no guard abaixo */ }
+if (!usuario || usuario.role !== 'restaurant') {
+  window.location.href = './login.html';
+}
+
+// ---- elementos ----
+const estadoCarregando = document.getElementById('estado-carregando');
+const estadoErro = document.getElementById('estado-erro');
+const quadroKanban = document.getElementById('quadro-kanban');
+const listaHistorico = document.getElementById('lista-historico');
+const textoAtualizacao = document.getElementById('texto-atualizacao');
+const botaoAtualizar = document.getElementById('botao-atualizar');
+const botaoSair = document.getElementById('botao-sair');
+const nomeUsuarioTopo = document.getElementById('nome-usuario-topo');
+const abaAtivos = document.getElementById('aba-ativos');
+const abaHistorico = document.getElementById('aba-historico');
+
+nomeUsuarioTopo.textContent = usuario.name || 'Portal do Restaurante';
+
+// ---- estado em memória ----
+let pedidos = [];
+let entregadoresDaCasa = [];
+let pedidosExpandidos = new Set();
+let mensagensCarregadasPorPedido = {};
+let abaAtual = 'ativos';
+let cronometroAtualizacao = null;
+
+// ===================================================================
+// Chamadas à API
+// ===================================================================
+
+async function chamarApi(caminho, options = {}) {
+  const resposta = await fetch(caminho, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  if (resposta.status === 401) {
+    localStorage.removeItem('restauranteToken');
+    localStorage.removeItem('restauranteUsuario');
+    window.location.href = './login.html';
+    throw new Error('Sessão expirada');
+  }
+
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(dados.error || `Erro ${resposta.status}`);
+  return dados;
+}
+
+// ===================================================================
+// Carregamento e renderização
+// ===================================================================
+
+async function carregarPedidos(mostrarSpinnerBotao) {
+  if (mostrarSpinnerBotao) botaoAtualizar.classList.add('girando');
+  try {
+    const [listaPedidos, listaEntregadores] = await Promise.all([
+      chamarApi('/api/tenant/orders'),
+      entregadoresDaCasa.length ? Promise.resolve(entregadoresDaCasa) : chamarApi('/api/tenant/deliverers').catch(() => []),
+    ]);
+    pedidos = listaPedidos;
+    entregadoresDaCasa = listaEntregadores;
+
+    estadoCarregando.style.display = 'none';
+    estadoErro.style.display = 'none';
+    quadroKanban.style.display = abaAtual === 'ativos' ? 'grid' : 'none';
+
+    renderizarQuadro();
+    renderizarHistorico();
+    textoAtualizacao.textContent = 'atualizado agora';
+    setTimeout(() => { textoAtualizacao.textContent = 'ao vivo'; }, 2000);
+  } catch (erro) {
+    estadoCarregando.style.display = 'none';
+    estadoErro.style.display = 'block';
+    estadoErro.textContent = 'Não foi possível carregar os pedidos: ' + erro.message;
+  } finally {
+    if (mostrarSpinnerBotao) setTimeout(() => botaoAtualizar.classList.remove('girando'), 400);
+  }
+}
+
+function formatarMoeda(valor) {
+  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatarTempoDecorrido(dataIso) {
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(dataIso).getTime()) / 60000));
+  if (minutos < 1) return 'agora';
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  return `${horas}h ${minutos % 60}min`;
+}
+
+function renderizarQuadro() {
+  const grupos = { pendente: [], preparando: [], procurando_entregador: [] };
+  for (const pedido of pedidos) {
+    if (grupos[pedido.status]) grupos[pedido.status].push(pedido);
+  }
+
+  document.getElementById('contagem-pendente').textContent = grupos.pendente.length;
+  document.getElementById('contagem-preparando').textContent = grupos.preparando.length;
+  document.getElementById('contagem-pronto').textContent = grupos.procurando_entregador.length;
+
+  preencherColuna('lista-pendente', grupos.pendente);
+  preencherColuna('lista-preparando', grupos.preparando);
+  preencherColuna('lista-pronto', grupos.procurando_entregador);
+}
+
+function preencherColuna(idLista, listaPedidos) {
+  const container = document.getElementById(idLista);
+  if (listaPedidos.length === 0) {
+    container.innerHTML = '<div class="mensagem-vazia">Nenhum pedido aqui agora.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  listaPedidos.forEach((pedido) => container.appendChild(montarCartaoPedido(pedido)));
+}
+
+function renderizarHistorico() {
+  const historico = pedidos
+    .filter((p) => p.status === 'entregue' || p.status === 'cancelado')
+    .slice(0, 40);
+
+  if (historico.length === 0) {
+    listaHistorico.innerHTML = '<div class="mensagem-vazia">Nenhum pedido no histórico ainda.</div>';
+    return;
+  }
+  listaHistorico.innerHTML = '';
+  historico.forEach((pedido) => listaHistorico.appendChild(montarCartaoPedido(pedido, true)));
+}
+
+// ===================================================================
+// Cartão de pedido
+// ===================================================================
+
+function montarCartaoPedido(pedido, ehHistorico) {
+  const cartao = document.createElement('div');
+  cartao.className = 'cartao-pedido';
+  cartao.dataset.status = pedido.status;
+  cartao.dataset.pedidoId = pedido.id;
+
+  const resumoItens = (pedido.items || [])
+    .map((item) => `${item.qty}x ${item.name}`)
+    .join(', ');
+
+  const pillHistorico = ehHistorico
+    ? `<span class="status-pill ${pedido.status}">${pedido.status === 'entregue' ? 'Entregue' : 'Cancelado'}</span>`
+    : '';
+
+  cartao.innerHTML = `
+    <div class="linha-topo-cartao" data-acao="alternar">
+      <div>
+        <div class="codigo-pedido">#${(pedido.pickupCode || pedido.id).toString().slice(-5)}</div>
+        <div class="nome-cliente">${pedido.clientName || 'Cliente'}</div>
+      </div>
+      <div class="tempo-pedido">${formatarTempoDecorrido(pedido.createdAt)}</div>
+    </div>
+    ${pillHistorico ? `<div style="margin-top:8px">${pillHistorico}</div>` : ''}
+    <div class="resumo-itens">${resumoItens || 'Sem itens'}</div>
+    <div class="rodape-cartao">
+      <div class="total-cartao">${formatarMoeda(pedido.total)}</div>
+    </div>
+    <div class="area-acoes"></div>
+    <div class="area-detalhe"></div>
+  `;
+
+  cartao.querySelector('[data-acao="alternar"]').addEventListener('click', () => alternarDetalhe(pedido, cartao));
+
+  const areaAcoes = cartao.querySelector('.area-acoes');
+  if (!ehHistorico) montarBotoesAcao(pedido, cartao, areaAcoes);
+
+  if (pedidosExpandidos.has(pedido.id)) {
+    montarDetalhe(pedido, cartao);
+  }
+
+  return cartao;
+}
+
+function montarBotoesAcao(pedido, cartao, areaAcoes) {
+  if (pedido.status === 'pendente') {
+    const grupo = document.createElement('div');
+    grupo.className = 'grupo-botoes';
+    grupo.innerHTML = `
+      <button class="botao-acao botao-recusar" data-acao="recusar">Recusar</button>
+      <button class="botao-acao botao-aceitar" data-acao="aceitar">Aceitar</button>
+    `;
+    grupo.querySelector('[data-acao="aceitar"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      aceitarPedido(pedido.id, e.target);
+    });
+    grupo.querySelector('[data-acao="recusar"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      alternarCampoMotivo(cartao, pedido.id);
+    });
+    areaAcoes.appendChild(grupo);
+
+    const campoMotivo = document.createElement('div');
+    campoMotivo.className = 'campo-motivo';
+    campoMotivo.innerHTML = `
+      <textarea placeholder="Motivo da recusa (opcional)"></textarea>
+      <div class="linha-confirmar">
+        <button class="botao-acao botao-recusar" data-acao="cancelar-motivo">Voltar</button>
+        <button class="botao-acao botao-aceitar" data-acao="confirmar-recusa">Confirmar recusa</button>
+      </div>
+    `;
+    campoMotivo.querySelector('[data-acao="cancelar-motivo"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      campoMotivo.classList.remove('visivel');
+    });
+    campoMotivo.querySelector('[data-acao="confirmar-recusa"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const motivo = campoMotivo.querySelector('textarea').value.trim();
+      recusarPedido(pedido.id, motivo, e.target);
+    });
+    areaAcoes.appendChild(campoMotivo);
+  }
+
+  if (pedido.status === 'preparando') {
+    const grupo = document.createElement('div');
+    grupo.className = 'grupo-botoes';
+    grupo.innerHTML = `<button class="botao-acao botao-pronto" data-acao="marcar-pronto">Marcar como pronto</button>`;
+    grupo.querySelector('[data-acao="marcar-pronto"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      alternarSeletorEntregador(cartao);
+    });
+    areaAcoes.appendChild(grupo);
+
+    const opcoesEntregadores = entregadoresDaCasa
+      .map((d) => `<option value="${d.id}">${d.name}${d.isOnline ? ' • online' : ''}</option>`)
+      .join('');
+
+    const seletor = document.createElement('div');
+    seletor.className = 'seletor-entregador';
+    seletor.innerHTML = `
+      <select>
+        <option value="">Enviar pro radar de entregadores (qualquer um pode aceitar)</option>
+        ${opcoesEntregadores}
+      </select>
+      <div class="linha-confirmar">
+        <button class="botao-acao botao-recusar" data-acao="cancelar-pronto">Voltar</button>
+        <button class="botao-acao botao-pronto" data-acao="confirmar-pronto">Confirmar</button>
+      </div>
+    `;
+    seletor.querySelector('[data-acao="cancelar-pronto"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      seletor.classList.remove('visivel');
+    });
+    seletor.querySelector('[data-acao="confirmar-pronto"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const delivererId = seletor.querySelector('select').value || undefined;
+      marcarPronto(pedido.id, delivererId, e.target);
+    });
+    areaAcoes.appendChild(seletor);
+  }
+
+  if (pedido.status === 'procurando_entregador') {
+    const info = document.createElement('div');
+    info.style.cssText = 'margin-top:10px; font-size:12px; font-weight:700; color: var(--texto-suave);';
+    info.textContent = pedido.delivererName
+      ? `Entregador: ${pedido.delivererName}`
+      : 'Aguardando um entregador aceitar...';
+    areaAcoes.appendChild(info);
+  }
+}
+
+function alternarCampoMotivo(cartao, pedidoId) {
+  const campo = cartao.querySelector('.campo-motivo');
+  if (campo) campo.classList.toggle('visivel');
+}
+
+function alternarSeletorEntregador(cartao) {
+  const seletor = cartao.querySelector('.seletor-entregador');
+  if (seletor) seletor.classList.toggle('visivel');
+}
+
+function alternarDetalhe(pedido, cartao) {
+  const area = cartao.querySelector('.area-detalhe');
+  if (pedidosExpandidos.has(pedido.id)) {
+    pedidosExpandidos.delete(pedido.id);
+    area.innerHTML = '';
+  } else {
+    pedidosExpandidos.add(pedido.id);
+    montarDetalhe(pedido, cartao);
+  }
+}
+
+function montarDetalhe(pedido, cartao) {
+  const area = cartao.querySelector('.area-detalhe');
+  const endereco = pedido.street
+    ? `${pedido.street}, ${pedido.number || 's/n'}${pedido.complement ? ' - ' + pedido.complement : ''} · ${pedido.neighborhood || ''}, ${pedido.city || ''}`
+    : 'Endereço não informado';
+
+  const itensHtml = (pedido.items || [])
+    .map(
+      (item) => `
+        <div class="item-detalhe">
+          <span><span class="qtd">${item.qty}x</span>${item.name}</span>
+          <span>${formatarMoeda(item.price * item.qty)}</span>
+        </div>
+        ${item.notes ? `<div class="obs-item">"${item.notes}"</div>` : ''}
+      `
+    )
+    .join('');
+
+  const div = document.createElement('div');
+  div.className = 'detalhe-pedido';
+  div.innerHTML = `
+    <div class="selo-codigo-retirada">Código de retirada: ${pedido.pickupCode || '—'}</div>
+
+    <div class="bloco-detalhe">
+      <strong>Itens</strong>
+      ${itensHtml || 'Sem itens.'}
+    </div>
+
+    <div class="bloco-detalhe">
+      <strong>Entrega</strong>
+      ${endereco}
+    </div>
+
+    <div class="bloco-detalhe">
+      <strong>Contato do cliente</strong>
+      ${pedido.clientPhone ? `<a href="tel:${pedido.clientPhone}">${pedido.clientPhone}</a>` : 'Não informado'}
+    </div>
+
+    <div class="bloco-detalhe">
+      <div class="linha-valores"><span>Subtotal</span><span>${formatarMoeda(pedido.subtotal)}</span></div>
+      <div class="linha-valores"><span>Taxa de entrega</span><span>${formatarMoeda(pedido.deliveryFee)}</span></div>
+      <div class="linha-valores total-final"><span>Total</span><span>${formatarMoeda(pedido.total)}</span></div>
+    </div>
+
+    <div class="bloco-detalhe chat-pedido">
+      <strong>Conversa com o cliente</strong>
+      <div class="lista-mensagens" id="mensagens-${pedido.id}"></div>
+      <div class="linha-envio-chat">
+        <input type="text" placeholder="Escreva uma mensagem..." id="campo-msg-${pedido.id}" />
+        <button class="botao-enviar-chat" data-acao="enviar-msg">Enviar</button>
+      </div>
+    </div>
+  `;
+
+  div.querySelector('[data-acao="enviar-msg"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    enviarMensagem(pedido.id);
+  });
+  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('click', (e) => e.stopPropagation());
+  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') enviarMensagem(pedido.id);
+  });
+
+  area.innerHTML = '';
+  area.appendChild(div);
+  carregarMensagens(pedido.id);
+}
+
+// ===================================================================
+// Ações sobre pedidos
+// ===================================================================
+
+async function aceitarPedido(id, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/accept`, { method: 'PATCH' });
+    await carregarPedidos(false);
+  } catch (erro) {
+    alert('Não foi possível aceitar: ' + erro.message);
+    botao.disabled = false;
+  }
+}
+
+async function recusarPedido(id, motivo, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/reject`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason: motivo || undefined }),
+    });
+    await carregarPedidos(false);
+  } catch (erro) {
+    alert('Não foi possível recusar: ' + erro.message);
+    botao.disabled = false;
+  }
+}
+
+async function marcarPronto(id, delivererId, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/ready`, {
+      method: 'PATCH',
+      body: JSON.stringify({ delivererId: delivererId || undefined }),
+    });
+    await carregarPedidos(false);
+  } catch (erro) {
+    alert('Não foi possível marcar como pronto: ' + erro.message);
+    botao.disabled = false;
+  }
+}
+
+// ===================================================================
+// Chat do pedido
+// ===================================================================
+
+async function carregarMensagens(pedidoId) {
+  const container = document.getElementById(`mensagens-${pedidoId}`);
+  if (!container) return;
+  container.innerHTML = '<div class="mensagem-vazia">Carregando conversa...</div>';
+  try {
+    const mensagens = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`);
+    mensagensCarregadasPorPedido[pedidoId] = mensagens;
+    renderizarMensagens(pedidoId);
+  } catch (erro) {
+    container.innerHTML = '<div class="mensagem-vazia">Não foi possível carregar a conversa.</div>';
+  }
+}
+
+function renderizarMensagens(pedidoId) {
+  const container = document.getElementById(`mensagens-${pedidoId}`);
+  if (!container) return;
+  const mensagens = mensagensCarregadasPorPedido[pedidoId] || [];
+  if (mensagens.length === 0) {
+    container.innerHTML = '<div class="mensagem-vazia">Nenhuma mensagem ainda.</div>';
+    return;
+  }
+  container.innerHTML = mensagens
+    .map(
+      (m) => `<div class="bolha-mensagem ${m.senderRole === 'restaurant' ? 'minha' : 'outra'}">${m.message}</div>`
+    )
+    .join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+async function enviarMensagem(pedidoId) {
+  const campo = document.getElementById(`campo-msg-${pedidoId}`);
+  const texto = campo.value.trim();
+  if (!texto) return;
+  campo.value = '';
+  try {
+    const salva = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ message: texto }),
+    });
+    mensagensCarregadasPorPedido[pedidoId] = [...(mensagensCarregadasPorPedido[pedidoId] || []), salva];
+    renderizarMensagens(pedidoId);
+  } catch (erro) {
+    alert('Não foi possível enviar: ' + erro.message);
+    campo.value = texto;
+  }
+}
+
+// ===================================================================
+// Abas (em andamento / histórico)
+// ===================================================================
+
+function trocarAba(nomeAba) {
+  abaAtual = nomeAba;
+  abaAtivos.classList.toggle('ativa', nomeAba === 'ativos');
+  abaHistorico.classList.toggle('ativa', nomeAba === 'historico');
+  quadroKanban.style.display = nomeAba === 'ativos' ? 'grid' : 'none';
+  listaHistorico.classList.toggle('ativa', nomeAba === 'historico');
+}
+
+abaAtivos.addEventListener('click', () => trocarAba('ativos'));
+abaHistorico.addEventListener('click', () => trocarAba('historico'));
+
+// ===================================================================
+// Inicialização
+// ===================================================================
+
+botaoAtualizar.addEventListener('click', () => carregarPedidos(true));
+botaoSair.addEventListener('click', () => {
+  localStorage.removeItem('restauranteToken');
+  localStorage.removeItem('restauranteUsuario');
+  window.location.href = './login.html';
+});
+
+carregarPedidos(false);
+cronometroAtualizacao = setInterval(() => carregarPedidos(false), INTERVALO_ATUALIZACAO_MS);
+  </script>
+</body>
+</html>
