@@ -41,6 +41,10 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 // erro de "Acesso negado" ao tentar carregar os dados.
 app.use('/admin', express.static(path.join(__dirname, '..', 'public')));
 
+// Pasta de imagens públicas (ex: logo do restaurante usado no
+// /restaurante/login.html, que referencia "../img/logo.png").
+app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img')));
+
 // Portal web do restaurante (login + futuramente o painel de gestão).
 // Fica em pasta própria, separada do /admin acima, porque o login aqui
 // usa autenticação normal (JWT de usuário) e não a chave de admin.
@@ -69,11 +73,9 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/addresses', addressesRoutes);
 app.use('/api/tenant', tenantRoutes);
 app.use('/api/deliverer', delivererRoutes);
-// Sem authenticate/authorize — é chamada pelo Mercado Pago (webhook) e
-// pela própria página de retorno do checkout.
+
 app.use('/api/payments', paymentsRoutes);
-// Protegida por chave simples (ADMIN_API_KEY), não pelo login normal --
-// ver admin.routes.js.
+
 app.use('/api/admin', adminRoutes);
 
 app.use((req, res) => {
