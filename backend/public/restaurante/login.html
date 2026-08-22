@@ -8,97 +8,87 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
   rel="stylesheet"
 />
 
 <style>
   :root {
-    /* ---- Paleta ---- */
-    --tinta: #10201b;
-    --tinta-2: #17322a;
     --vermelho: #e4002b;
-    --vermelho-brilho: #ff4d6d;
-    --verde: #1f6f5c;
-    --verde-brilho: #3fcda6;
-    --dourado: #ffb400;
-    --creme: #fffbf7;
+    --vermelho-2: #ff2d51;
+    --vermelho-escuro: #8f0019;
+    --tinta: #16100e;
     --texto: #1c1b1a;
     --texto-suave: #8a8580;
-    --borda: #f0e6df;
     --branco: #ffffff;
+    --creme: #fcfaf8;
+    --borda: #e9e4de;
+    --verde: #1f6f5c;
+    --dourado: #ffb400;
 
-    /* ---- Tipografia ---- */
-    --fonte-vitrine: "Fraunces", serif;
-    --fonte-ui: "Plus Jakarta Sans", sans-serif;
-    --fonte-codigo: "JetBrains Mono", monospace;
+    --fonte-titulo: "Sora", sans-serif;
+    --fonte-ui: "Manrope", sans-serif;
   }
 
   * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: var(--creme);
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
     font-family: var(--fonte-ui);
     color: var(--texto);
+    background: var(--creme);
   }
 
   .tela {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 1.05fr 1fr;
+    grid-template-columns: minmax(360px, 42%) 1fr;
   }
 
-  /* ============ PAINEL ESQUERDO — VITRINE ANIMADA ============ */
+  /* ============ PAINEL ESQUERDO — MARCA ============ */
 
-  .painel-vitrine {
+  .painel-marca {
     position: relative;
     overflow: hidden;
-    background:
-      radial-gradient(120% 100% at 15% 0%, rgba(228, 0, 43, 0.28), transparent 55%),
-      radial-gradient(120% 100% at 85% 100%, rgba(63, 205, 166, 0.22), transparent 55%),
-      linear-gradient(160deg, var(--tinta) 0%, var(--tinta-2) 100%);
+    background: linear-gradient(155deg, var(--vermelho) 0%, var(--vermelho-escuro) 100%);
+    color: var(--branco);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 48px 44px;
-    color: var(--branco);
+    padding: 52px 48px;
   }
 
-  /* blobs ambientes, devagar, tipo calor de cozinha à noite */
-  .painel-vitrine::before,
-  .painel-vitrine::after {
+  /* varredura de luz bem sutil, contínua */
+  .painel-marca::before {
     content: "";
     position: absolute;
-    width: 420px;
-    height: 420px;
-    border-radius: 50%;
-    filter: blur(90px);
-    opacity: 0.5;
+    inset: -20%;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.10) 45%, transparent 60%);
+    animation: varredura-luz 9s ease-in-out infinite;
     pointer-events: none;
   }
-  .painel-vitrine::before {
-    background: var(--vermelho);
-    top: -140px;
-    left: -120px;
-    animation: flutuar-blob-a 24s ease-in-out infinite alternate;
-  }
-  .painel-vitrine::after {
-    background: var(--verde);
-    bottom: -160px;
-    right: -100px;
-    animation: flutuar-blob-b 28s ease-in-out infinite alternate;
+  @keyframes varredura-luz {
+    0%   { transform: translateX(-30%); }
+    50%  { transform: translateX(30%); }
+    100% { transform: translateX(-30%); }
   }
 
-  @keyframes flutuar-blob-a {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(60px, 40px) scale(1.15); }
+  /* círculo geométrico grande, só forma, sem ilustração */
+  .forma-circulo {
+    position: absolute;
+    width: 620px;
+    height: 620px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    bottom: -320px;
+    right: -220px;
+    pointer-events: none;
   }
-  @keyframes flutuar-blob-b {
-    from { transform: translate(0, 0) scale(1); }
-    to   { transform: translate(-50px, -30px) scale(1.1); }
+  .forma-circulo::after {
+    content: "";
+    position: absolute;
+    inset: 60px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   /* ---- marca / logo ---- */
@@ -107,142 +97,113 @@
     z-index: 2;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
   }
-
   .espaco-logo {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    position: relative;
     flex-shrink: 0;
   }
-  /* anel pulsando devagar atrás do espaço reservado do logo */
-  .espaco-logo::before {
-    content: "";
-    position: absolute;
-    inset: -10px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 77, 109, 0.55);
-    animation: pulso-anel 3.6s ease-in-out infinite;
-  }
-  @keyframes pulso-anel {
-    0%   { transform: scale(0.94); opacity: 0.7; }
-    50%  { transform: scale(1.08); opacity: 0.15; }
-    100% { transform: scale(0.94); opacity: 0.7; }
-  }
-  .espaco-logo svg { width: 26px; height: 26px; opacity: 0.85; }
+
+  .espaco-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+  .icone-logo-padrao { display: none; align-items: center; justify-content: center; width: 100%; height: 100%; }
+  .icone-logo-padrao svg { width: 24px; height: 24px; }
 
   .nome-marca {
-    font-family: var(--fonte-vitrine);
-    font-size: 21px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    line-height: 1.15;
+    font-family: var(--fonte-titulo);
+    font-size: 16.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
   .nome-marca span {
     display: block;
     font-family: var(--fonte-ui);
     font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
+    font-weight: 700;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.6);
     margin-top: 3px;
   }
 
-  /* ---- esteira de pedidos (elemento-assinatura) ---- */
-  .esteira {
+  /* ---- selo "ao vivo" — único elemento de status, sem ilustração ---- */
+  .selo-tempo-real {
     position: relative;
     z-index: 2;
-    flex: 1;
-    margin: 40px 0;
-    display: flex;
-    gap: 16px;
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
-    mask-image: linear-gradient(to bottom, transparent, black 18%, black 82%, transparent);
-  }
-
-  .trilha {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-  }
-  .trilha-conteudo {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    animation: subir-trilha var(--duracao, 26s) linear infinite;
-  }
-  .trilha--b .trilha-conteudo {
-    animation-direction: normal;
-    opacity: 0.7;
-    transform: scale(0.94);
-  }
-
-  @keyframes subir-trilha {
-    from { transform: translateY(0); }
-    to   { transform: translateY(-50%); }
-  }
-
-  .cartao-pedido {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 14px;
-    padding: 14px 16px;
-    backdrop-filter: blur(6px);
-  }
-  .cartao-pedido__topo {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .cartao-pedido__codigo {
-    font-family: var(--fonte-codigo);
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.5);
-    letter-spacing: 0.03em;
-  }
-  .etiqueta {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 3px 8px;
+    gap: 8px;
+    width: fit-content;
+    padding: 7px 14px 7px 11px;
     border-radius: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
   }
-  .etiqueta--novo    { background: rgba(228, 0, 43, 0.22); color: #ff9daf; }
-  .etiqueta--preparo { background: rgba(255, 180, 0, 0.2); color: #ffd27a; }
-  .etiqueta--pronto  { background: rgba(63, 205, 166, 0.22); color: #8fe8cf; }
-
-  .cartao-pedido__item {
-    font-size: 14px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.92);
+  .ponto-vivo {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #6ef0c2;
+    box-shadow: 0 0 0 0 rgba(110, 240, 194, 0.6);
+    animation: pulsar-ponto 2s ease-out infinite;
+  }
+  @keyframes pulsar-ponto {
+    0%   { box-shadow: 0 0 0 0 rgba(110, 240, 194, 0.55); }
+    70%  { box-shadow: 0 0 0 9px rgba(110, 240, 194, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(110, 240, 194, 0); }
   }
 
-  .frase-vitrine {
+  /* ---- headline tipográfica — o elemento-assinatura da tela ---- */
+  .headline-marca {
     position: relative;
     z-index: 2;
-    font-family: var(--fonte-vitrine);
-    font-size: 22px;
-    font-weight: 450;
-    line-height: 1.35;
-    max-width: 380px;
-    color: rgba(255, 255, 255, 0.94);
+  }
+  .headline-marca h2 {
+    font-family: var(--fonte-titulo);
+    font-weight: 800;
+    font-size: clamp(34px, 4.4vw, 54px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    margin: 18px 0 14px;
+  }
+  .headline-marca h2 em {
+    font-style: normal;
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .headline-marca p {
+    font-size: 15px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 360px;
+    line-height: 1.6;
     margin: 0;
   }
-  .frase-vitrine em {
-    font-style: normal;
-    color: var(--vermelho-brilho);
+
+  .rodape-marca {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 28px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .rodape-marca strong {
+    display: block;
+    font-family: var(--fonte-titulo);
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--branco);
+    margin-bottom: 2px;
   }
 
   /* ============ PAINEL DIREITO — FORMULÁRIO ============ */
@@ -252,199 +213,187 @@
     align-items: center;
     justify-content: center;
     padding: 40px 32px;
+    background: var(--branco);
   }
 
   .cartao-login {
     width: 100%;
     max-width: 380px;
-    position: relative;
-    min-height: 420px;
   }
 
+  /*
+    As etapas ficam no fluxo normal (não usam mais position:absolute).
+    Só a etapa ativa fica visível -- a classe .oculto vira "display:none"
+    nas outras -- então o cartão sempre assume a altura de quem está
+    realmente aparecendo. Antes, com position:absolute + inset:0, o
+    conteúdo do cadastro (bem mais longo) vazava pra fora de uma altura
+    fixa e "esticava" a página inteira pra baixo.
+  */
   .etapa {
-    position: absolute;
-    inset: 0;
     display: flex;
     flex-direction: column;
-    animation: entrar-etapa 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: entrar-etapa 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .etapa.oculto { display: none; }
 
+  /* regra genérica -- sem isso, divs comuns (que não são .etapa) que
+     recebem a classe "oculto" via JS não ficavam escondidos de verdade,
+     por isso o bloco de código aparecia junto com o de e-mail.
+     Usa !important de propósito: garante que "oculto" sempre vence,
+     não importa a ordem das outras classes no arquivo (foi exatamente
+     isso que quebrou na correção anterior). */
+  .oculto { display: none !important; }
+
+  .bloco-formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
   @keyframes entrar-etapa {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
   .etapa h1 {
-    font-family: var(--fonte-vitrine);
-    font-size: 32px;
-    font-weight: 600;
+    font-family: var(--fonte-titulo);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     margin: 0 0 6px;
   }
   .subtitulo {
     color: var(--texto-suave);
-    font-size: 14.5px;
-    margin: 0 0 28px;
-    line-height: 1.5;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 26px;
+    line-height: 1.55;
   }
-  .subtitulo strong { color: var(--texto); font-weight: 600; }
+  .subtitulo strong { color: var(--texto); font-weight: 700; }
 
-  form { display: flex; flex-direction: column; gap: 16px; }
+  form { display: flex; flex-direction: column; gap: 15px; }
 
   label {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 12.5px;
+    font-weight: 700;
     color: var(--texto);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   input {
     font-family: var(--fonte-ui);
     font-size: 15px;
-    padding: 13px 14px;
-    border-radius: 12px;
+    font-weight: 600;
+    padding: 12px 13px;
+    border-radius: 9px;
     border: 1.5px solid var(--borda);
     background: var(--branco);
     color: var(--texto);
     outline: none;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
+  input::placeholder { color: #c7c0b8; font-weight: 500; }
   input:focus {
-    border-color: var(--verde);
-    box-shadow: 0 0 0 4px rgba(31, 111, 92, 0.13);
-  }
-  input.campo-invalido {
     border-color: var(--vermelho);
+    box-shadow: 0 0 0 3.5px rgba(228, 0, 43, 0.12);
   }
 
   input.campo-codigo {
-    font-family: var(--fonte-codigo);
     letter-spacing: 0.5em;
     text-align: center;
-    font-size: 20px;
-    padding-left: 10px;
+    font-size: 19px;
+    padding-left: 8px;
   }
 
   .botao-principal {
-    margin-top: 4px;
+    margin-top: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
-    padding: 14px 18px;
+    padding: 13.5px 18px;
     border: none;
-    border-radius: 12px;
+    border-radius: 9px;
     background: var(--vermelho);
     color: var(--branco);
     font-family: var(--fonte-ui);
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 14.5px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: transform 0.12s ease, background 0.18s ease, box-shadow 0.18s ease;
-    box-shadow: 0 10px 24px -10px rgba(228, 0, 43, 0.55);
+    transition: transform 0.12s ease, background 0.15s ease;
   }
-  .botao-principal:hover { background: #c50026; }
+  .botao-principal:hover { background: var(--vermelho-escuro); }
   .botao-principal:active { transform: scale(0.98); }
-  .botao-principal:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-    transform: none;
-  }
+  .botao-principal:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
   .spinner {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4);
     border-top-color: var(--branco);
     animation: girar 0.7s linear infinite;
     display: none;
   }
   .carregando .spinner { display: inline-block; }
-  .carregando .texto-botao { opacity: 0.85; }
-
   @keyframes girar { to { transform: rotate(360deg); } }
 
   .link-secundario {
-    background: none;
-    border: none;
-    padding: 0;
-    margin-top: 18px;
-    color: var(--verde);
-    font-family: var(--fonte-ui);
-    font-size: 13.5px;
-    font-weight: 600;
-    text-align: left;
-    cursor: pointer;
-    align-self: flex-start;
+    background: none; border: none; padding: 0; margin-top: 16px;
+    color: var(--verde); font-family: var(--fonte-ui); font-size: 13px;
+    font-weight: 700; text-align: left; cursor: pointer; align-self: flex-start;
   }
   .link-secundario:hover { text-decoration: underline; }
-  .link-secundario:disabled {
-    color: var(--texto-suave);
-    cursor: not-allowed;
-    text-decoration: none;
-  }
+  .link-secundario:disabled { color: var(--texto-suave); cursor: not-allowed; text-decoration: none; }
 
-  .linha-acoes {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 18px;
-  }
+  .linha-acoes { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
 
-  .mensagem {
-    font-size: 13.5px;
-    font-weight: 600;
-    margin: 14px 0 0;
-    min-height: 18px;
-  }
+  .mensagem { font-size: 13px; font-weight: 700; margin: 12px 0 0; min-height: 17px; }
   .mensagem--erro { color: var(--vermelho); }
   .mensagem--ok { color: var(--verde); }
 
-  /* ---- etapa de sucesso ---- */
-  .etapa-sucesso {
-    align-items: flex-start;
-    justify-content: center;
+  .rodape-etapa {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--borda);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto-suave);
   }
+  .link-inline {
+    background: none; border: none; padding: 0; font: inherit;
+    font-weight: 800; color: var(--vermelho); cursor: pointer;
+  }
+  .link-inline:hover { text-decoration: underline; }
+
+  .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ---- sucesso ---- */
+  .etapa-sucesso { align-items: flex-start; justify-content: center; }
   .marca-sucesso {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--verde);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 22px;
-    animation: aparecer-selo 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 50px; height: 50px; border-radius: 10px; background: var(--verde);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+    animation: aparecer-selo 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  @keyframes aparecer-selo {
-    from { transform: scale(0.6); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
-  .marca-sucesso svg { width: 26px; height: 26px; }
+  @keyframes aparecer-selo { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .marca-sucesso svg { width: 24px; height: 24px; }
 
   /* ============ RESPONSIVO ============ */
-
-  @media (max-width: 900px) {
+  @media (max-width: 920px) {
     .tela { grid-template-columns: 1fr; }
-    .painel-vitrine {
-      padding: 32px 28px;
-      min-height: 260px;
-    }
-    .esteira { margin: 20px 0; }
-    .frase-vitrine { font-size: 18px; }
-    .cartao-login { min-height: 380px; }
+    .painel-marca { padding: 36px 28px; min-height: 260px; }
+    .headline-marca h2 { font-size: 30px; }
+    .rodape-marca { display: none; }
+    .forma-circulo { width: 380px; height: 380px; bottom: -220px; right: -160px; }
+  }
+  @media (max-width: 480px) {
+    .linha-dupla { grid-template-columns: 1fr; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .painel-vitrine::before,
-    .painel-vitrine::after,
-    .espaco-logo::before,
-    .trilha-conteudo,
-    .spinner,
-    .marca-sucesso {
+    .painel-marca::before, .ponto-vivo, .spinner, .marca-sucesso {
       animation: none !important;
     }
   }
@@ -453,33 +402,43 @@
 <body>
   <div class="tela">
 
-    <!-- ===== painel esquerdo: vitrine animada ===== -->
-    <section class="painel-vitrine">
-      <div class="marca">
-        <div class="espaco-logo" title="Espaço reservado para o logo do restaurante">
-          <!-- troque este ícone pela <img> do logo do restaurante quando tiver -->
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.6">
-            <path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+    <!-- ===== painel esquerdo: marca ===== -->
+    <section class="painel-marca">
+      <div class="forma-circulo" aria-hidden="true"></div>
+
+      <div>
+        <div class="marca">
+          <div class="espaco-logo" title="Logo do restaurante">
+            <!-- coloque um arquivo "logo.png" nesta mesma pasta para ele aparecer aqui -->
+            <img
+              id="imagem-logo"
+              src="../img/logo.png"
+              alt="Logo do restaurante"
+              onerror="this.style.display='none'; document.getElementById('icone-logo-padrao').style.display='flex';"
+            />
+            <div id="icone-logo-padrao" class="icone-logo-padrao">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+                <path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="nome-marca">
+            Portal do Restaurante
+            <span>Espaço do parceiro</span>
+          </div>
         </div>
-        <div class="nome-marca">
-          Portal do Restaurante
-          <span>Espaço do parceiro</span>
+
+        <div class="headline-marca">
+          <span class="selo-tempo-real"><span class="ponto-vivo"></span>Pedidos em tempo real</span>
+          <h2>Sua cozinha, <em>conectada</em> a cada pedido.</h2>
+          <p>Gerencie cardápio, acompanhe vendas e receba seus repasses num só lugar.</p>
         </div>
       </div>
 
-      <div class="esteira" aria-hidden="true">
-        <div class="trilha trilha--a">
-          <div class="trilha-conteudo" style="--duracao:24s"></div>
-        </div>
-        <div class="trilha trilha--b">
-          <div class="trilha-conteudo" style="--duracao:32s"></div>
-        </div>
+      <div class="rodape-marca">
+        <div><strong>+12mil</strong>restaurantes parceiros</div>
+        <div><strong>24/7</strong>suporte disponível</div>
       </div>
-
-      <p class="frase-vitrine">
-        Onde os pedidos <em>chegam até você</em>, em tempo real.
-      </p>
     </section>
 
     <!-- ===== painel direito: formulário ===== -->
@@ -489,16 +448,16 @@
         <!-- ETAPA 1: e-mail + senha -->
         <form id="etapa-login" class="etapa" novalidate>
           <h1>Entrar</h1>
-          <p class="subtitulo">Acesse o painel do seu restaurante com o e-mail e a senha cadastrados.</p>
+          <p class="subtitulo">Acesse com o e-mail e a senha cadastrados.</p>
 
           <label for="campo-email">
             E-mail
-            <input type="email" id="campo-email" autocomplete="email" required />
+            <input type="email" id="campo-email" autocomplete="email" required placeholder="voce@restaurante.com" />
           </label>
 
           <label for="campo-senha">
             Senha
-            <input type="password" id="campo-senha" autocomplete="current-password" required />
+            <input type="password" id="campo-senha" autocomplete="current-password" required placeholder="••••••••" />
           </label>
 
           <button type="submit" class="botao-principal" id="botao-entrar">
@@ -509,6 +468,10 @@
           <button type="button" class="link-secundario" id="botao-ir-esqueci">Esqueci minha senha</button>
 
           <p class="mensagem mensagem--erro" id="mensagem-login" role="alert"></p>
+
+          <p class="rodape-etapa">
+            Ainda não tem conta? <button type="button" class="link-inline" id="botao-ir-cadastro">Cadastre seu restaurante</button>
+          </p>
         </form>
 
         <!-- ETAPA 2: código de verificação -->
@@ -518,15 +481,7 @@
 
           <label for="campo-codigo">
             Código de verificação
-            <input
-              type="text"
-              id="campo-codigo"
-              class="campo-codigo"
-              inputmode="numeric"
-              maxlength="6"
-              autocomplete="one-time-code"
-              required
-            />
+            <input type="text" id="campo-codigo" class="campo-codigo" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required />
           </label>
 
           <button type="submit" class="botao-principal" id="botao-confirmar-codigo">
@@ -554,7 +509,7 @@
             </label>
           </div>
 
-          <div id="bloco-esqueci-redefinir" class="oculto" style="display:flex; flex-direction:column; gap:16px;">
+          <div id="bloco-esqueci-redefinir" class="oculto bloco-formulario">
             <label for="campo-codigo-esqueci">
               Código recebido por e-mail
               <input type="text" id="campo-codigo-esqueci" class="campo-codigo" inputmode="numeric" maxlength="6" />
@@ -575,10 +530,64 @@
           <p class="mensagem" id="mensagem-esqueci" role="alert"></p>
         </form>
 
-        <!-- ETAPA 4: sucesso -->
+        <!-- ETAPA 4: cadastro de restaurante -->
+        <form id="etapa-cadastro" class="etapa oculto" novalidate>
+          <h1>Cadastre seu restaurante</h1>
+          <p class="subtitulo">Leva menos de um minuto. Depois de criar a conta, você já entra direto.</p>
+
+          <div class="linha-dupla">
+            <label for="campo-nome-responsavel">
+              Seu nome
+              <input type="text" id="campo-nome-responsavel" autocomplete="name" required />
+            </label>
+            <label for="campo-telefone">
+              Telefone
+              <input type="tel" id="campo-telefone" autocomplete="tel" placeholder="(00) 00000-0000" />
+            </label>
+          </div>
+
+          <label for="campo-nome-restaurante">
+            Nome do restaurante
+            <input type="text" id="campo-nome-restaurante" autocomplete="organization" required />
+          </label>
+
+          <label for="campo-cnpj">
+            CNPJ
+            <input type="text" id="campo-cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" required />
+          </label>
+
+          <label for="campo-email-cadastro">
+            E-mail
+            <input type="email" id="campo-email-cadastro" autocomplete="email" required />
+          </label>
+
+          <div class="linha-dupla">
+            <label for="campo-senha-cadastro">
+              Senha
+              <input type="password" id="campo-senha-cadastro" autocomplete="new-password" required />
+            </label>
+            <label for="campo-confirmar-senha">
+              Confirmar
+              <input type="password" id="campo-confirmar-senha" autocomplete="new-password" required />
+            </label>
+          </div>
+
+          <button type="submit" class="botao-principal" id="botao-cadastrar">
+            <span class="spinner"></span>
+            <span class="texto-botao">Criar conta</span>
+          </button>
+
+          <p class="mensagem mensagem--erro" id="mensagem-cadastro" role="alert"></p>
+
+          <p class="rodape-etapa">
+            Já tem conta? <button type="button" class="link-inline" id="botao-ir-login">Entrar</button>
+          </p>
+        </form>
+
+        <!-- ETAPA 5: sucesso -->
         <div id="etapa-sucesso" class="etapa etapa-sucesso oculto">
           <div class="marca-sucesso">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.6">
               <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
@@ -596,33 +605,31 @@
 // Portal do Restaurante — tela de login
 //
 // Fluxo de autenticação (já existe no backend, em /api/auth):
-//   1) POST /api/auth/login          { email, senha }      -> envia código de 6 dígitos por e-mail
-//   2) POST /api/auth/login/verify-code { email, codigo }  -> devolve { token, usuario }
+//   1) POST /api/auth/login             { email, senha } -> envia código de 6 dígitos por e-mail
+//   2) POST /api/auth/login/verify-code { email, codigo } -> devolve { token, usuario }
+//   3) POST /api/auth/register          (cadastro de restaurante) -> devolve { token, usuario } direto
 //
-// Esse arquivo cuida só do LOGIN. O painel de gestão (pedidos, cardápio,
-// faturamento etc.) é outra tela, que vai ler o token salvo aqui.
+// Esse arquivo cuida só do LOGIN/CADASTRO. O painel de gestão (pedidos,
+// cardápio, faturamento etc.) é outra tela, que vai ler o token salvo aqui.
 // ===================================================================
 
-// ---- elementos das etapas ----
 const etapaLogin = document.getElementById('etapa-login');
 const etapaCodigo = document.getElementById('etapa-codigo');
 const etapaEsqueci = document.getElementById('etapa-esqueci');
+const etapaCadastro = document.getElementById('etapa-cadastro');
 const etapaSucesso = document.getElementById('etapa-sucesso');
 
-// ---- campos da etapa de login ----
 const campoEmail = document.getElementById('campo-email');
 const campoSenha = document.getElementById('campo-senha');
 const botaoEntrar = document.getElementById('botao-entrar');
 const mensagemLogin = document.getElementById('mensagem-login');
 
-// ---- campos da etapa de código ----
 const emailMostrado = document.getElementById('email-mostrado');
 const campoCodigo = document.getElementById('campo-codigo');
 const botaoConfirmarCodigo = document.getElementById('botao-confirmar-codigo');
 const botaoReenviarCodigo = document.getElementById('botao-reenviar-codigo');
 const mensagemCodigo = document.getElementById('mensagem-codigo');
 
-// ---- campos da etapa "esqueci minha senha" ----
 const blocoEsqueciEmail = document.getElementById('bloco-esqueci-email');
 const blocoEsqueciRedefinir = document.getElementById('bloco-esqueci-redefinir');
 const campoEmailEsqueci = document.getElementById('campo-email-esqueci');
@@ -632,10 +639,19 @@ const botaoAcaoEsqueci = document.getElementById('botao-acao-esqueci');
 const subtituloEsqueci = document.getElementById('subtitulo-esqueci');
 const mensagemEsqueci = document.getElementById('mensagem-esqueci');
 
-// ---- estado da tela (só existe enquanto a aba estiver aberta) ----
+const campoNomeResponsavel = document.getElementById('campo-nome-responsavel');
+const campoTelefone = document.getElementById('campo-telefone');
+const campoNomeRestaurante = document.getElementById('campo-nome-restaurante');
+const campoCnpj = document.getElementById('campo-cnpj');
+const campoEmailCadastro = document.getElementById('campo-email-cadastro');
+const campoSenhaCadastro = document.getElementById('campo-senha-cadastro');
+const campoConfirmarSenha = document.getElementById('campo-confirmar-senha');
+const botaoCadastrar = document.getElementById('botao-cadastrar');
+const mensagemCadastro = document.getElementById('mensagem-cadastro');
+
 let emailEmUso = '';
-let senhaEmUso = ''; // guardada só em memória, pra poder reenviar o código sem pedir a senha de novo
-let aguardandoRedefinicao = false; // controla a etapa "esqueci senha": true = já pediu o código, falta digitar
+let senhaEmUso = '';
+let aguardandoRedefinicao = false;
 let cronometroReenvio = null;
 
 // ===================================================================
@@ -643,7 +659,7 @@ let cronometroReenvio = null;
 // ===================================================================
 
 function trocarEtapa(etapaAlvo) {
-  [etapaLogin, etapaCodigo, etapaEsqueci, etapaSucesso].forEach((etapa) => {
+  [etapaLogin, etapaCodigo, etapaEsqueci, etapaCadastro, etapaSucesso].forEach((etapa) => {
     etapa.classList.add('oculto');
   });
   etapaAlvo.classList.remove('oculto');
@@ -660,9 +676,6 @@ function alternarCarregando(botao, carregando) {
   botao.classList.toggle('carregando', carregando);
 }
 
-// Chama a API sempre no mesmo formato: método, corpo em JSON, e devolve
-// o corpo já parseado. Se a resposta não for "ok", lança um erro com a
-// mensagem que o backend mandou (AppError sempre devolve { error: "..." }).
 async function chamarApi(caminho, corpo) {
   const resposta = await fetch(caminho, {
     method: 'POST',
@@ -742,7 +755,7 @@ async function confirmarCodigo(evento) {
     }
 
     salvarSessao(resultado.token, resultado.user);
-    senhaEmUso = ''; // não precisa mais guardar a senha em memória
+    senhaEmUso = '';
     trocarEtapa(etapaSucesso);
   } catch (erro) {
     mostrarMensagem(mensagemCodigo, erro.message, 'erro');
@@ -752,8 +765,6 @@ async function confirmarCodigo(evento) {
 }
 
 function salvarSessao(token, usuario) {
-  // O futuro painel de gestão lê esses dois itens do localStorage pra
-  // saber que o restaurante já está logado.
   localStorage.setItem('restauranteToken', token);
   localStorage.setItem('restauranteUsuario', JSON.stringify(usuario));
 }
@@ -819,7 +830,6 @@ async function tratarFormularioEsqueci(evento) {
 
   try {
     if (!aguardandoRedefinicao) {
-      // ---- passo A: pedir o código de redefinição ----
       const email = campoEmailEsqueci.value.trim();
       if (!email) {
         mostrarMensagem(mensagemEsqueci, 'Informe seu e-mail.', 'erro');
@@ -835,7 +845,6 @@ async function tratarFormularioEsqueci(evento) {
       botaoAcaoEsqueci.querySelector('.texto-botao').textContent = 'Redefinir senha';
       mostrarMensagem(mensagemEsqueci, 'Código enviado! Confira seu e-mail.', 'ok');
     } else {
-      // ---- passo B: confirmar código + nova senha ----
       const codigo = campoCodigoEsqueci.value.trim();
       const novaSenha = campoNovaSenha.value;
 
@@ -870,42 +879,74 @@ async function tratarFormularioEsqueci(evento) {
 }
 
 // ===================================================================
-// Esteira de pedidos — só decoração, sem chamada de API
+// Etapa 4 — cadastro de restaurante
 // ===================================================================
 
-const PEDIDOS_DECORATIVOS = [
-  { codigo: '#0231', item: 'X-Burguer Duplo', etiqueta: 'novo' },
-  { codigo: '#0230', item: 'Pizza Margherita G', etiqueta: 'preparo' },
-  { codigo: '#0229', item: 'Combo Temaki 20un', etiqueta: 'pronto' },
-  { codigo: '#0228', item: 'Yakisoba de Frango', etiqueta: 'preparo' },
-  { codigo: '#0227', item: 'Açaí 500ml', etiqueta: 'novo' },
-  { codigo: '#0226', item: 'Marmita Fitness', etiqueta: 'pronto' },
-];
-
-const TEXTO_ETIQUETA = { novo: 'Novo', preparo: 'Em preparo', pronto: 'Pronto' };
-
-function montarCartaoPedido(pedido) {
-  const cartao = document.createElement('div');
-  cartao.className = 'cartao-pedido';
-  cartao.innerHTML = `
-    <div class="cartao-pedido__topo">
-      <span class="cartao-pedido__codigo">${pedido.codigo}</span>
-      <span class="etiqueta etiqueta--${pedido.etiqueta}">${TEXTO_ETIQUETA[pedido.etiqueta]}</span>
-    </div>
-    <div class="cartao-pedido__item">${pedido.item}</div>
-  `;
-  return cartao;
+function abrirCadastro() {
+  mostrarMensagem(mensagemCadastro, '', null);
+  trocarEtapa(etapaCadastro);
+  campoNomeResponsavel.focus();
 }
 
-function montarEsteiraDePedidos() {
-  document.querySelectorAll('.trilha-conteudo').forEach((trilha, indice) => {
-    // ordens levemente diferentes em cada trilha, pra não parecerem espelhadas
-    const lista = indice === 0 ? PEDIDOS_DECORATIVOS : [...PEDIDOS_DECORATIVOS].reverse();
-    // duplica a lista pra criar o loop contínuo (anima até -50% e volta ao início sem corte)
-    [...lista, ...lista].forEach((pedido) => {
-      trilha.appendChild(montarCartaoPedido(pedido));
+function formatarCnpjEnquantoDigita() {
+  let digitos = campoCnpj.value.replace(/\D/g, '').slice(0, 14);
+  let formatado = digitos;
+  if (digitos.length > 12) formatado = digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})$/, '$1.$2.$3/$4-$5');
+  else if (digitos.length > 8) formatado = digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})$/, '$1.$2.$3/$4');
+  else if (digitos.length > 5) formatado = digitos.replace(/^(\d{2})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+  else if (digitos.length > 2) formatado = digitos.replace(/^(\d{2})(\d{1,3})$/, '$1.$2');
+  campoCnpj.value = formatado;
+}
+
+function validarCadastro(dados) {
+  if (dados.name.length < 2) return 'Digite seu nome completo.';
+  if (dados.businessName.length < 2) return 'Digite o nome do restaurante.';
+  if (dados.cnpj.replace(/\D/g, '').length !== 14) return 'CNPJ inválido — confira os 14 dígitos.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) return 'Digite um e-mail válido.';
+  if (dados.password.length < 6) return 'A senha precisa ter pelo menos 6 caracteres.';
+  if (dados.password !== dados.confirmarSenha) return 'As senhas digitadas não são iguais.';
+  return null;
+}
+
+async function cadastrar(evento) {
+  evento.preventDefault();
+  mostrarMensagem(mensagemCadastro, '', null);
+
+  const dados = {
+    name: campoNomeResponsavel.value.trim(),
+    phone: campoTelefone.value.trim() || undefined,
+    businessName: campoNomeRestaurante.value.trim(),
+    cnpj: campoCnpj.value.trim(),
+    email: campoEmailCadastro.value.trim(),
+    password: campoSenhaCadastro.value,
+    confirmarSenha: campoConfirmarSenha.value,
+  };
+
+  const erroDeValidacao = validarCadastro(dados);
+  if (erroDeValidacao) {
+    mostrarMensagem(mensagemCadastro, erroDeValidacao, 'erro');
+    return;
+  }
+
+  alternarCarregando(botaoCadastrar, true);
+  try {
+    const resultado = await chamarApi('/api/auth/register', {
+      role: 'restaurant',
+      name: dados.name,
+      phone: dados.phone,
+      businessName: dados.businessName,
+      cnpj: dados.cnpj,
+      email: dados.email,
+      password: dados.password,
     });
-  });
+
+    salvarSessao(resultado.token, resultado.user);
+    trocarEtapa(etapaSucesso);
+  } catch (erro) {
+    mostrarMensagem(mensagemCadastro, erro.message, 'erro');
+  } finally {
+    alternarCarregando(botaoCadastrar, false);
+  }
 }
 
 // ===================================================================
@@ -915,20 +956,21 @@ function montarEsteiraDePedidos() {
 etapaLogin.addEventListener('submit', autenticar);
 etapaCodigo.addEventListener('submit', confirmarCodigo);
 etapaEsqueci.addEventListener('submit', tratarFormularioEsqueci);
+etapaCadastro.addEventListener('submit', cadastrar);
 
 document.getElementById('botao-ir-esqueci').addEventListener('click', abrirEsqueciSenha);
 document.getElementById('botao-cancelar-esqueci').addEventListener('click', voltarParaLogin);
 document.getElementById('botao-voltar-login').addEventListener('click', voltarParaLogin);
+document.getElementById('botao-ir-cadastro').addEventListener('click', abrirCadastro);
+document.getElementById('botao-ir-login').addEventListener('click', voltarParaLogin);
 botaoReenviarCodigo.addEventListener('click', reenviarCodigo);
+campoCnpj.addEventListener('input', formatarCnpjEnquantoDigita);
 
-// só aceita dígitos nos campos de código
 [campoCodigo, campoCodigoEsqueci].forEach((campo) => {
   campo.addEventListener('input', () => {
     campo.value = campo.value.replace(/\D/g, '').slice(0, 6);
   });
 });
-
-montarEsteiraDePedidos();
   </script>
 </body>
 </html>
