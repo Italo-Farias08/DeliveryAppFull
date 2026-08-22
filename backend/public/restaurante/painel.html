@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pedidos — Portal do Restaurante</title>
+<title>Painel — Portal do Restaurante</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,76 +38,106 @@
     color: var(--texto);
     background: var(--creme);
   }
+  button, input, select, textarea { font-family: inherit; }
+  .oculto { display: none !important; }
 
-  /* ============ BARRA SUPERIOR ============ */
-
-  .barra-topo {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 26px;
-    background: var(--branco);
-    border-bottom: 1px solid var(--borda);
+  /* ============ TELA DE CARREGAMENTO INICIAL ============ */
+  .tela-boot {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    color: var(--texto-suave); font-weight: 600; font-size: 14px;
   }
 
-  .marca-topo { display: flex; align-items: center; gap: 12px; }
+  /* ============ ONBOARDING (criar restaurante) ============ */
+  .tela-onboarding {
+    min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
+    padding: 60px 20px;
+  }
+  .cartao-onboarding { width: 100%; max-width: 460px; }
+  .onboarding-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .onboarding-eyebrow { font-size: 11px; color: var(--texto-suave); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .onboarding-titulo { font-family: var(--fonte-titulo); font-size: 22px; font-weight: 800; margin: 4px 0 2px; }
+  .onboarding-sub { color: var(--texto-suave); font-size: 13.5px; margin: 0; }
 
+  /* ============ LAYOUT GERAL ============ */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ---- barra lateral ---- */
+  .barra-lateral {
+    width: 244px; flex-shrink: 0;
+    background: var(--branco);
+    border-right: 1px solid var(--borda);
+    display: flex; flex-direction: column;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .marca-lateral {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 18px; border-bottom: 1px solid var(--borda);
+  }
   .espaco-logo {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 40px; height: 40px; border-radius: 12px;
     background: var(--vermelho);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; overflow: hidden;
   }
   .espaco-logo img { width: 100%; height: 100%; object-fit: cover; }
   .icone-logo-padrao { display: none; align-items: center; justify-content: center; width: 100%; height: 100%; }
   .icone-logo-padrao svg { width: 20px; height: 20px; }
+  .nome-lateral { font-family: var(--fonte-titulo); font-size: 14.5px; font-weight: 700; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-  .nome-topo {
-    font-family: var(--fonte-titulo);
-    font-size: 15px;
-    font-weight: 700;
+  .nav-lateral { flex: 1; overflow-y: auto; padding: 14px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .item-nav {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 12px; border-radius: 12px;
+    border: none; background: none; cursor: pointer;
+    font-size: 13.5px; font-weight: 700; color: var(--texto-suave);
+    text-align: left; width: 100%;
   }
-  .nome-topo span {
-    display: block;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--texto-suave);
+  .item-nav:hover { background: var(--creme); }
+  .item-nav.ativo { background: var(--vermelho-claro); color: var(--vermelho); }
+  .item-nav svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .item-nav span.rotulo { flex: 1; }
+  .badge-nav {
+    min-width: 19px; height: 19px; border-radius: 10px; padding: 0 5px;
+    background: var(--vermelho); color: var(--branco);
+    font-size: 10.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
   }
+  .item-nav.ativo .badge-nav { background: var(--vermelho); }
 
-  .acoes-topo { display: flex; align-items: center; gap: 14px; }
+  .rodape-lateral { padding: 12px 10px 16px; border-top: 1px solid var(--borda); }
+  .item-sair {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 11px 12px; border-radius: 12px; border: none; background: none; cursor: pointer;
+    font-size: 13.5px; font-weight: 700; color: var(--vermelho);
+  }
+  .item-sair:hover { background: var(--vermelho-claro); }
+  .item-sair svg { width: 18px; height: 18px; }
 
+  /* ---- área principal ---- */
+  .area-principal { flex: 1; min-width: 0; }
+  .topo-secao {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 18px 30px; background: rgba(252, 250, 248, 0.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--borda);
+  }
+  .topo-secao h1 { font-family: var(--fonte-titulo); font-size: 21px; font-weight: 800; margin: 0 0 3px; }
+  .topo-secao p { font-size: 13px; color: var(--texto-suave); margin: 0; font-weight: 500; }
+  .acoes-topo { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .indicador-atualizacao {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--texto-suave);
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--texto-suave);
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
   }
-  .ponto-vivo {
-    width: 6px; height: 6px; border-radius: 50%; background: var(--verde);
-    animation: pulsar 2s ease-out infinite;
-  }
+  .ponto-vivo { width: 6px; height: 6px; border-radius: 50%; background: var(--verde); animation: pulsar 2s ease-out infinite; }
   @keyframes pulsar {
     0%   { box-shadow: 0 0 0 0 rgba(31, 111, 92, 0.5); }
     70%  { box-shadow: 0 0 0 7px rgba(31, 111, 92, 0); }
     100% { box-shadow: 0 0 0 0 rgba(31, 111, 92, 0); }
   }
-
   .botao-icone {
-    width: 34px; height: 34px; border-radius: 9px;
-    border: 1.5px solid var(--borda);
-    background: var(--branco);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
+    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+    border: 1.5px solid var(--borda); background: var(--branco);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
     transition: background 0.15s ease, transform 0.1s ease;
   }
   .botao-icone:hover { background: var(--creme); }
@@ -116,442 +146,615 @@
   .botao-icone.girando svg { animation: girar 0.7s linear; }
   @keyframes girar { to { transform: rotate(360deg); } }
 
-  .botao-sair {
-    font-family: var(--fonte-ui);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--vermelho);
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  .botao-sair:hover { text-decoration: underline; }
+  #conteudo { max-width: 1200px; margin: 0 auto; padding: 24px 30px 70px; }
 
-  /* ============ CABEÇALHO DA PÁGINA ============ */
+  .estado-global { max-width: 1200px; margin: 60px auto; text-align: center; color: var(--texto-suave); font-weight: 600; font-size: 14px; }
+  .estado-erro-inline { color: var(--vermelho); font-weight: 600; font-size: 13.5px; margin-top: 10px; }
+  .estado-ok-inline { color: var(--verde); font-weight: 600; font-size: 13.5px; margin-top: 10px; }
 
-  .cabecalho-pagina {
-    padding: 26px 26px 0;
-    max-width: 1400px;
-    margin: 0 auto;
+  /* ============ COMPONENTES REUTILIZÁVEIS ============ */
+  .cartao { background: var(--branco); border-radius: 18px; padding: 20px; border: 1px solid var(--borda); }
+  .cartao + .cartao { margin-top: 16px; }
+  .titulo-cartao { font-family: var(--fonte-titulo); font-size: 15.5px; font-weight: 700; margin: 0 0 14px; }
+
+  .rotulo-campo { display: block; font-size: 12px; font-weight: 700; color: var(--texto-suave); margin: 14px 0 6px; }
+  .rotulo-campo:first-child { margin-top: 0; }
+  .campo-texto {
+    width: 100%; border: 1.5px solid var(--borda); border-radius: 12px;
+    padding: 11px 13px; font-size: 14px; color: var(--texto); background: var(--creme);
+    font-family: inherit;
   }
-  .cabecalho-pagina h1 {
-    font-family: var(--fonte-titulo);
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0 0 4px;
+  .campo-texto:focus { outline: none; border-color: var(--vermelho); background: var(--branco); }
+  textarea.campo-texto { resize: vertical; min-height: 70px; }
+  .linha-campos { display: flex; gap: 12px; }
+  .linha-campos > div { flex: 1; min-width: 0; }
+
+  .grupo-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pilula {
+    border: 1.5px solid var(--borda); border-radius: 100px; padding: 8px 14px;
+    background: var(--creme); font-size: 12.5px; font-weight: 700; color: var(--texto);
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
   }
-  .cabecalho-pagina p {
-    font-size: 13.5px;
-    color: var(--texto-suave);
-    margin: 0;
-    font-weight: 500;
+  .pilula.ativa { background: var(--vermelho); border-color: var(--vermelho); color: var(--branco); }
+  .pilula .fechar-pilula { display: flex; }
+  .pilula .fechar-pilula svg { width: 12px; height: 12px; }
+
+  .botao-primario {
+    background: var(--vermelho); color: var(--branco); border: none; border-radius: 13px;
+    padding: 13px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .botao-primario:hover { background: var(--vermelho-escuro); }
+  .botao-primario:disabled { opacity: 0.55; cursor: default; }
+  .botao-secundario {
+    background: var(--branco); color: var(--texto); border: 1.5px solid var(--borda); border-radius: 13px;
+    padding: 13px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .botao-secundario:hover { background: var(--creme); }
+  .botao-perigo { color: var(--vermelho); }
+  .botao-pequeno { padding: 8px 14px; font-size: 12.5px; border-radius: 10px; }
+  .linha-botoes { display: flex; gap: 10px; margin-top: 18px; }
+  .linha-botoes .botao-primario, .linha-botoes .botao-secundario { flex: 1; }
+
+  .caixa-vazia {
+    text-align: center; padding: 40px 20px; color: var(--texto-suave);
+    background: var(--branco); border: 1.5px dashed var(--borda); border-radius: 16px;
+  }
+  .caixa-vazia .icone-vazio { margin-bottom: 10px; opacity: 0.55; }
+  .caixa-vazia .icone-vazio svg { width: 34px; height: 34px; }
+  .caixa-vazia strong { display: block; color: var(--texto); font-size: 14px; margin-bottom: 3px; }
+  .caixa-vazia span { font-size: 12.5px; }
+
+  .banner-info {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--verde-claro); border-radius: 14px; padding: 13px 15px;
+    font-size: 12.5px; color: var(--texto); line-height: 1.5; margin-bottom: 18px;
+  }
+  .banner-info svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--verde); margin-top: 1px; }
+
+  .interruptor { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+  .interruptor input { opacity: 0; width: 0; height: 0; }
+  .trilho-interruptor {
+    position: absolute; cursor: pointer; inset: 0; background: var(--borda);
+    border-radius: 100px; transition: 0.2s;
+  }
+  .trilho-interruptor::before {
+    content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px;
+    background: var(--branco); border-radius: 50%; transition: 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .interruptor input:checked + .trilho-interruptor { background: var(--verde); }
+  .interruptor input:checked + .trilho-interruptor::before { transform: translateX(18px); }
+  .interruptor.perigo input:checked + .trilho-interruptor { background: var(--vermelho); }
+
+  .spinner {
+    width: 17px; height: 17px; border-radius: 50%;
+    border: 2.5px solid rgba(255,255,255,0.4); border-top-color: var(--branco);
+    animation: girar 0.7s linear infinite; display: inline-block;
+  }
+  .spinner.escuro { border-color: rgba(0,0,0,0.15); border-top-color: var(--texto-suave); }
+
+  /* overlay modal genérico */
+  .sobreposicao-modal {
+    position: fixed; inset: 0; background: rgba(28, 27, 26, 0.5);
+    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .cartao-modal {
+    background: var(--branco); border-radius: 22px; padding: 24px;
+    width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
+  }
+  .cabecalho-modal { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .cabecalho-modal h2 { font-family: var(--fonte-titulo); font-size: 18px; font-weight: 700; margin: 0; }
+  .fechar-modal {
+    width: 30px; height: 30px; border-radius: 10px; border: none; background: var(--creme);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .fechar-modal svg { width: 15px; height: 15px; }
+  .divisor-modal { height: 1px; background: var(--borda); margin: 18px 0 4px; }
+
+  /* ============ DASHBOARD ============ */
+  .banner-publicar {
+    display: flex; gap: 12px; background: var(--dourado-claro); border: 1px solid #f5d68a;
+    border-radius: 16px; padding: 16px; margin-bottom: 18px;
+  }
+  .banner-publicar-icone {
+    width: 36px; height: 36px; border-radius: 12px; background: #fce9be;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .banner-publicar-icone svg { width: 18px; height: 18px; color: #8a5a00; }
+  .banner-publicar strong { display: block; color: #5c3b00; font-size: 14px; }
+  .banner-publicar p { color: #8a5a00; font-size: 12.5px; margin: 3px 0 10px; line-height: 1.5; }
+  .banner-publicar button {
+    background: #8a5a00; color: var(--branco); border: none; border-radius: 12px;
+    padding: 9px 16px; font-weight: 700; font-size: 12.5px; cursor: pointer;
   }
 
-  .abas-pagina {
-    display: flex;
-    gap: 6px;
-    margin: 20px 0 0;
-    border-bottom: 1px solid var(--borda);
+  .cartao-hero {
+    background: linear-gradient(155deg, var(--vermelho) 0%, var(--vermelho-escuro) 100%);
+    border-radius: 22px; padding: 22px 24px; color: var(--branco);
   }
+  .hero-linha-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .hero-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.75); margin-bottom: 6px; }
+  .hero-status-linha { display: flex; align-items: center; gap: 9px; }
+  .ponto-status { width: 9px; height: 9px; border-radius: 50%; }
+  .hero-status-titulo { font-size: 19px; font-weight: 800; }
+  .hero-status-sub { color: rgba(255,255,255,0.8); font-size: 12.5px; margin-top: 5px; }
+  .hero-divisor { height: 1px; background: rgba(255,255,255,0.2); margin: 18px 0; }
+  .hero-stats { display: flex; align-items: center; gap: 14px; }
+  .hero-stat-item { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .hero-stat-icone { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .hero-stat-icone svg { width: 15px; height: 15px; }
+  .hero-stat-valor { font-size: 16px; font-weight: 800; }
+  .hero-stat-rotulo { font-size: 10.5px; color: rgba(255,255,255,0.75); font-weight: 600; margin-top: 1px; }
+  .hero-stat-divisor { width: 1px; height: 30px; background: rgba(255,255,255,0.2); }
+
+  .grade-atalhos { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-top: 18px; }
+  .atalho {
+    background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 16px;
+    cursor: pointer; text-align: left; position: relative;
+  }
+  .atalho:hover { border-color: var(--vermelho); }
+  .atalho-icone { width: 36px; height: 36px; border-radius: 12px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+  .atalho-icone svg { width: 17px; height: 17px; color: var(--vermelho); }
+  .atalho-titulo { font-family: var(--fonte-titulo); font-size: 14px; font-weight: 700; }
+  .atalho-sub { color: var(--texto-suave); font-size: 11.5px; margin-top: 2px; }
+  .atalho-badge {
+    position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; border-radius: 10px; padding: 0 5px;
+    background: var(--vermelho); color: var(--branco); font-size: 10.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ============ PEDIDOS ============ */
+  .abas-pagina { display: flex; gap: 6px; margin: 4px 0 20px; border-bottom: 1px solid var(--borda); }
   .aba-pagina {
-    padding: 10px 4px;
-    margin-right: 22px;
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--texto-suave);
-    background: none;
-    border: none;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
+    padding: 10px 4px; margin-right: 22px; font-size: 13.5px; font-weight: 700; color: var(--texto-suave);
+    background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer;
   }
   .aba-pagina.ativa { color: var(--vermelho); border-bottom-color: var(--vermelho); }
 
-  /* ============ QUADRO KANBAN ============ */
-
-  .quadro {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 22px 26px 60px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-    align-items: start;
-  }
-
+  .quadro { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: start; }
   .coluna { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-
-  .coluna-cabecalho {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13.5px;
-    font-weight: 800;
-    padding: 0 2px;
-  }
-  .contagem-coluna {
-    font-size: 11.5px;
-    font-weight: 800;
-    background: var(--borda);
-    color: var(--texto);
-    padding: 1px 8px;
-    border-radius: 100px;
-  }
+  .coluna-cabecalho { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 800; padding: 0 2px; }
+  .contagem-coluna { font-size: 11.5px; font-weight: 800; background: var(--borda); color: var(--texto); padding: 1px 8px; border-radius: 100px; }
   .coluna[data-status="pendente"] .coluna-cabecalho { color: var(--vermelho); }
   .coluna[data-status="pendente"] .contagem-coluna { background: var(--vermelho-claro); color: var(--vermelho); }
   .coluna[data-status="preparando"] .coluna-cabecalho { color: var(--dourado); }
   .coluna[data-status="preparando"] .contagem-coluna { background: var(--dourado-claro); color: #a37000; }
   .coluna[data-status="procurando_entregador"] .coluna-cabecalho { color: var(--verde); }
   .coluna[data-status="procurando_entregador"] .contagem-coluna { background: var(--verde-claro); color: var(--verde); }
-
   .lista-coluna { display: flex; flex-direction: column; gap: 10px; min-height: 40px; }
+  .mensagem-vazia { font-size: 12.5px; font-weight: 600; color: var(--texto-suave); padding: 18px 12px; text-align: center; background: var(--branco); border: 1.5px dashed var(--borda); border-radius: 12px; }
 
-  .mensagem-vazia {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--texto-suave);
-    padding: 18px 12px;
-    text-align: center;
-    background: var(--branco);
-    border: 1.5px dashed var(--borda);
-    border-radius: 12px;
-  }
-
-  /* ---- cartão de pedido ---- */
-  .cartao-pedido {
-    background: var(--branco);
-    border: 1.5px solid var(--borda);
-    border-radius: 14px;
-    padding: 14px 16px;
-    animation: entrar-cartao 0.3s ease;
-  }
+  .cartao-pedido { background: var(--branco); border: 1.5px solid var(--borda); border-radius: 14px; padding: 14px 16px; animation: entrar-cartao 0.3s ease; }
   @keyframes entrar-cartao { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-
   .cartao-pedido[data-status="pendente"] { border-color: #f6c9d0; }
-
-  .linha-topo-cartao {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    cursor: pointer;
-  }
-  .codigo-pedido {
-    font-family: var(--fonte-titulo);
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .nome-cliente {
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--texto-suave);
-    margin-top: 2px;
-  }
-  .tempo-pedido {
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--texto-suave);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .resumo-itens {
-    margin: 10px 0 0;
-    font-size: 12.5px;
-    color: var(--texto);
-    font-weight: 500;
-    line-height: 1.5;
-  }
-
-  .rodape-cartao {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--borda);
-  }
-  .total-cartao { font-family: var(--fonte-titulo); font-size: 14.5px; font-weight: 700; }
+  .linha-topo-cartao { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; cursor: pointer; }
+  .codigo-pedido { font-family: var(--fonte-titulo); font-size: 15px; font-weight: 700; }
+  .nome-cliente { font-size: 12.5px; font-weight: 600; color: var(--texto-suave); margin-top: 2px; }
+  .tempo-pedido { font-size: 11.5px; color: var(--texto-suave); font-weight: 600; white-space: nowrap; }
+  .resumo-itens { font-size: 12.5px; color: var(--texto-suave); margin-top: 8px; line-height: 1.5; }
+  .rodape-cartao { display: flex; justify-content: flex-end; margin-top: 10px; }
+  .total-cartao { font-weight: 800; font-size: 14px; }
 
   .grupo-botoes { display: flex; gap: 8px; margin-top: 12px; }
-  .botao-acao {
-    flex: 1;
-    padding: 9px 10px;
-    border-radius: 9px;
-    border: none;
-    font-family: var(--fonte-ui);
-    font-size: 12.5px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: transform 0.1s ease, opacity 0.15s ease;
-  }
-  .botao-acao:active { transform: scale(0.97); }
-  .botao-acao:disabled { opacity: 0.55; cursor: not-allowed; }
-  .botao-aceitar { background: var(--verde); color: var(--branco); }
-  .botao-recusar { background: var(--vermelho-claro); color: var(--vermelho); }
-  .botao-pronto { background: var(--vermelho); color: var(--branco); }
+  .botao-acao { flex: 1; border: none; border-radius: 10px; padding: 9px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .botao-recusar { background: var(--creme); color: var(--texto); }
+  .botao-aceitar, .botao-pronto { background: var(--vermelho); color: var(--branco); }
+  .botao-acao:disabled { opacity: 0.55; }
 
-  /* ---- área expandida do cartão ---- */
-  .detalhe-pedido {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--borda);
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    animation: entrar-cartao 0.2s ease;
+  .campo-motivo, .seletor-entregador { display: none; margin-top: 10px; }
+  .campo-motivo.visivel, .seletor-entregador.visivel { display: block; }
+  .campo-motivo textarea, .seletor-entregador select {
+    width: 100%; border: 1.5px solid var(--borda); border-radius: 10px; padding: 9px 10px;
+    font-size: 12.5px; font-family: inherit; background: var(--creme);
   }
-  .bloco-detalhe { font-size: 12.5px; }
-  .bloco-detalhe strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-suave); margin-bottom: 3px; }
-  .item-detalhe { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
-  .item-detalhe .qtd { color: var(--texto-suave); font-weight: 700; margin-right: 4px; }
-  .obs-item { font-style: italic; color: var(--texto-suave); font-size: 11.5px; margin-top: 1px; }
+  .linha-confirmar { display: flex; gap: 8px; margin-top: 8px; }
 
-  .linha-valores { display: flex; justify-content: space-between; font-size: 12.5px; padding: 2px 0; }
-  .linha-valores.total-final { font-weight: 800; font-size: 13.5px; border-top: 1px solid var(--borda); margin-top: 4px; padding-top: 6px; }
+  .info-radar { display: flex; align-items: center; gap: 8px; margin-top: 12px; background: var(--verde-claro); color: var(--verde); font-size: 12px; font-weight: 700; padding: 9px 11px; border-radius: 10px; }
 
-  .selo-codigo-retirada {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--dourado-claro);
-    color: #a37000;
-    font-weight: 800;
-    font-size: 12.5px;
-    padding: 5px 10px;
-    border-radius: 8px;
-    width: fit-content;
-  }
-
-  .campo-motivo {
-    display: none;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .campo-motivo.visivel { display: flex; flex-direction: column; }
-  .campo-motivo textarea {
-    font-family: var(--fonte-ui);
-    font-size: 12.5px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1.5px solid var(--borda);
-    resize: vertical;
-    min-height: 50px;
-  }
-  .campo-motivo .linha-confirmar { display: flex; gap: 8px; }
-
-  .seletor-entregador {
-    display: none;
-    margin-top: 10px;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .seletor-entregador.visivel { display: flex; }
-  .seletor-entregador select {
-    font-family: var(--fonte-ui);
-    font-size: 12.5px;
-    font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1.5px solid var(--borda);
-    background: var(--branco);
-  }
-  .seletor-entregador .linha-confirmar { display: flex; gap: 8px; }
-
-  /* ---- chat do pedido ---- */
-  .chat-pedido { display: flex; flex-direction: column; gap: 8px; }
-  .lista-mensagens {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 160px;
-    overflow-y: auto;
-    padding-right: 2px;
-  }
-  .bolha-mensagem {
-    max-width: 82%;
-    padding: 7px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.4;
-  }
-  .bolha-mensagem.minha { align-self: flex-end; background: var(--vermelho); color: var(--branco); border-bottom-right-radius: 3px; }
-  .bolha-mensagem.outra { align-self: flex-start; background: var(--creme); border: 1px solid var(--borda); border-bottom-left-radius: 3px; }
-  .linha-envio-chat { display: flex; gap: 6px; }
-  .linha-envio-chat input {
-    flex: 1;
-    font-family: var(--fonte-ui);
-    font-size: 12.5px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1.5px solid var(--borda);
-  }
-  .botao-enviar-chat {
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: none;
-    background: var(--vermelho);
-    color: var(--branco);
-    font-weight: 800;
-    font-size: 12px;
-    cursor: pointer;
-  }
-
-  .status-pill {
-    font-size: 11px;
-    font-weight: 800;
-    padding: 4px 10px;
-    border-radius: 100px;
-    width: fit-content;
-  }
+  .status-pill { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 100px; width: fit-content; }
   .status-pill.entregue { background: var(--verde-claro); color: var(--verde); }
   .status-pill.cancelado { background: var(--vermelho-claro); color: var(--vermelho); }
 
-  /* ---- histórico ---- */
-  .lista-historico {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 22px 26px 60px;
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .lista-historico.ativa { display: flex; }
+  .lista-historico { display: flex; flex-direction: column; gap: 10px; }
 
-  /* ============ TELA DE CARREGAMENTO / MENSAGENS GLOBAIS ============ */
-  .estado-global {
-    max-width: 1400px;
-    margin: 60px auto;
-    text-align: center;
-    color: var(--texto-suave);
-    font-weight: 600;
-    font-size: 14px;
+  .detalhe-pedido { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--borda); }
+  .selo-codigo-retirada { display: inline-block; background: var(--creme); border-radius: 8px; padding: 5px 10px; font-size: 11.5px; font-weight: 800; margin-bottom: 12px; }
+  .bloco-detalhe { font-size: 12.5px; margin-bottom: 12px; line-height: 1.6; }
+  .bloco-detalhe strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-suave); margin-bottom: 4px; }
+  .bloco-detalhe a { color: var(--vermelho); font-weight: 700; text-decoration: none; }
+  .item-detalhe { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; }
+  .item-detalhe .qtd { color: var(--vermelho); font-weight: 700; margin-right: 4px; }
+  .obs-item { color: var(--texto-suave); font-style: italic; font-size: 11.5px; padding-left: 4px; margin-bottom: 4px; }
+  .linha-valores { display: flex; justify-content: space-between; font-size: 12.5px; padding: 3px 0; color: var(--texto-suave); }
+  .linha-valores.total-final { color: var(--texto); font-weight: 800; font-size: 13.5px; border-top: 1px solid var(--borda); margin-top: 4px; padding-top: 8px; }
+
+  .chat-pedido .lista-mensagens { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .bolha-mensagem { max-width: 80%; padding: 8px 11px; border-radius: 12px; font-size: 12.5px; line-height: 1.4; }
+  .bolha-mensagem.minha { align-self: flex-end; background: var(--vermelho); color: var(--branco); border-bottom-right-radius: 3px; }
+  .bolha-mensagem.outra { align-self: flex-start; background: var(--creme); border-bottom-left-radius: 3px; }
+  .linha-envio-chat { display: flex; gap: 8px; }
+  .linha-envio-chat input { flex: 1; border: 1.5px solid var(--borda); border-radius: 10px; padding: 8px 11px; font-size: 12.5px; font-family: inherit; }
+  .botao-enviar-chat { background: var(--vermelho); color: var(--branco); border: none; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+  /* ============ CARDÁPIO ============ */
+  .barra-acao-secao { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  .linha-nova-categoria { display: flex; gap: 10px; margin: 14px 0 20px; }
+  .linha-nova-categoria .campo-texto { flex: 1; }
+  .botao-quadrado {
+    width: 46px; height: 46px; border-radius: 13px; background: var(--vermelho); color: var(--branco);
+    border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   }
+  .botao-quadrado svg { width: 19px; height: 19px; }
+  .botao-quadrado:disabled { opacity: 0.6; }
+
+  .linha-item-cardapio {
+    display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda);
+    border-radius: 15px; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .miniatura { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; background: var(--creme); flex-shrink: 0; }
+  .miniatura-vazia { display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--borda); color: var(--texto-suave); }
+  .miniatura-vazia svg { width: 18px; height: 18px; }
+  .info-item-cardapio { flex: 1; min-width: 0; }
+  .nome-item-cardapio { font-weight: 700; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta-item-cardapio { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .preco-item-cardapio { color: var(--verde); font-weight: 800; font-size: 13px; }
+  .tag-categoria-item { background: var(--creme); border-radius: 8px; padding: 2px 8px; font-size: 10.5px; font-weight: 700; color: var(--texto-suave); }
+  .acoes-item-cardapio { display: flex; gap: 6px; flex-shrink: 0; }
+  .botao-icone-pequeno {
+    width: 32px; height: 32px; border-radius: 10px; background: var(--creme); border: none;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .botao-icone-pequeno svg { width: 14px; height: 14px; }
+  .botao-icone-pequeno.perigo svg { color: var(--vermelho); }
+  .botao-icone-pequeno.editar svg { color: var(--verde); }
+
+  .seletor-imagem {
+    display: flex; align-items: center; gap: 12px; border: 1.5px dashed var(--borda); border-radius: 14px;
+    padding: 10px; cursor: pointer; background: var(--creme); margin-top: 4px;
+  }
+  .seletor-imagem img { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; }
+  .seletor-imagem-texto { font-weight: 700; font-size: 13px; }
+  .seletor-imagem-sub { color: var(--texto-suave); font-size: 11px; margin-top: 2px; }
+
+  .linha-adicional {
+    display: flex; align-items: center; gap: 8px; border: 1px solid var(--borda); border-radius: 12px;
+    padding: 9px 12px; margin-bottom: 8px; background: var(--creme);
+  }
+  .linha-adicional .nome-adicional { flex: 1; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .linha-adicional .preco-adicional { color: var(--texto-suave); font-size: 11.5px; display: block; margin-top: 1px; }
+  .linha-nova-adicional { display: flex; gap: 8px; margin-top: 4px; }
+  .linha-nova-adicional input:last-child { width: 90px; flex: none; }
+
+  /* ============ ESGOTADOS ============ */
+  .cartao-resumo-esgotados { display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 15px; margin-bottom: 20px; }
+  .cartao-resumo-esgotados .icone { width: 40px; height: 40px; border-radius: 20px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .cartao-resumo-esgotados .icone svg { width: 19px; height: 19px; color: var(--vermelho); }
+  .titulo-secao-esgotados { font-family: var(--fonte-titulo); font-weight: 700; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); margin: 22px 0 10px; }
+  .linha-esgotado { display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 13px; padding: 10px; margin-bottom: 8px; }
+  .linha-esgotado .nome-esgotavel.riscado { text-decoration: line-through; color: var(--texto-suave); }
+
+  /* ============ ENTREGADORES ============ */
+  .cartao-codigo { background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 22px; text-align: center; margin-bottom: 24px; }
+  .texto-codigo { font-size: 30px; font-weight: 800; letter-spacing: 6px; color: var(--vermelho); font-family: var(--fonte-titulo); }
+  .dica-codigo { color: var(--texto-suave); font-size: 12px; margin-top: 10px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto; }
+  .acoes-codigo { display: flex; gap: 10px; margin-top: 14px; justify-content: center; }
+  .botao-contorno {
+    display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--vermelho); color: var(--vermelho);
+    background: none; border-radius: 12px; padding: 9px 15px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+  }
+  .botao-contorno svg { width: 14px; height: 14px; }
+
+  .cartao-entregador { display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .ponto-entregador { width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; }
+  .nome-entregador { font-weight: 700; font-size: 14px; }
+  .sub-entregador { color: var(--texto-suave); font-size: 12px; margin-top: 2px; }
+
+  /* ============ HORÁRIO ============ */
+  .cartao-dia { background: var(--branco); border: 1px solid var(--borda); border-radius: 15px; padding: 14px; margin-bottom: 10px; }
+  .linha-cabecalho-dia { display: flex; justify-content: space-between; align-items: center; }
+  .nome-dia { font-weight: 700; font-size: 13.5px; }
+  .direita-cabecalho-dia { display: flex; align-items: center; gap: 10px; }
+  .rotulo-toggle-dia { font-size: 11.5px; color: var(--texto-suave); font-weight: 700; }
+  .linha-horarios { display: flex; align-items: flex-end; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .grupo-horario { display: flex; flex-direction: column; gap: 4px; }
+  .rotulo-horario { font-size: 10px; color: var(--texto-suave); font-weight: 700; text-transform: uppercase; }
+  .campo-horario { border: 1px solid var(--borda); border-radius: 10px; padding: 8px 10px; font-size: 13.5px; font-weight: 700; width: 100px; background: var(--creme); }
+  .botao-aplicar-todos { margin-left: auto; display: flex; align-items: center; gap: 4px; background: none; border: none; color: var(--vermelho); font-size: 11.5px; font-weight: 700; cursor: pointer; }
+  .botao-aplicar-todos svg { width: 13px; height: 13px; }
+
+  /* ============ LOCALIZAÇÃO ============ */
+  .cartao-endereco-salvo { display: flex; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 16px; }
+  .icone-endereco-salvo { width: 38px; height: 38px; border-radius: 12px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .icone-endereco-salvo svg { width: 17px; height: 17px; color: var(--vermelho); }
+  .linha1-endereco { font-weight: 700; font-size: 14.5px; }
+  .linha2-endereco { color: var(--texto-suave); font-size: 12.5px; margin-top: 3px; }
+
+  .caixa-busca { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--borda); border-radius: 12px; padding: 0 12px; background: var(--creme); }
+  .caixa-busca input { flex: 1; border: none; background: none; padding: 11px 0; font-size: 14px; outline: none; font-family: inherit; }
+  .caixa-busca svg { width: 16px; height: 16px; color: var(--texto-suave); flex-shrink: 0; }
+  .caixa-sugestoes { margin-top: 6px; border: 1px solid var(--borda); border-radius: 12px; background: var(--branco); max-height: 260px; overflow-y: auto; }
+  .linha-sugestao { display: flex; gap: 8px; padding: 11px 12px; border-bottom: 1px solid var(--borda); cursor: pointer; align-items: flex-start; }
+  .linha-sugestao:last-child { border-bottom: none; }
+  .linha-sugestao:hover { background: var(--creme); }
+  .linha-sugestao svg { width: 14px; height: 14px; color: var(--vermelho); flex-shrink: 0; margin-top: 2px; }
+  .sugestao-principal { font-size: 13px; font-weight: 700; }
+  .sugestao-secundaria { font-size: 11px; color: var(--texto-suave); margin-top: 1px; }
+
+  .botao-localizacao-atual {
+    display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%;
+    border: 1.5px solid var(--vermelho); color: var(--vermelho); background: none; border-radius: 12px;
+    padding: 12px; margin-top: 14px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  }
+  .botao-localizacao-atual svg { width: 15px; height: 15px; }
+  .confirmado-endereco { display: flex; align-items: center; gap: 6px; color: var(--verde); font-size: 12px; font-weight: 700; margin-top: 14px; }
+  .confirmado-endereco svg { width: 14px; height: 14px; }
+
+  /* ============ VENDAS ============ */
+  .abas-periodo { display: flex; background: var(--branco); border: 1px solid var(--borda); border-radius: 14px; padding: 4px; gap: 4px; }
+  .aba-periodo { flex: 1; padding: 9px; border-radius: 10px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--texto-suave); background: none; border: none; cursor: pointer; }
+  .aba-periodo.ativa { background: var(--vermelho); color: var(--branco); }
+
+  .linha-stats-vendas { display: flex; gap: 10px; margin-top: 16px; }
+  .cartao-stat-venda { flex: 1; background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 13px; }
+  .cartao-stat-venda svg { width: 16px; height: 16px; color: var(--vermelho); }
+  .valor-stat-venda { font-weight: 800; font-size: 15px; margin-top: 8px; }
+  .rotulo-stat-venda { color: var(--texto-suave); font-size: 10.5px; font-weight: 600; margin-top: 2px; }
+
+  .grafico-barras { display: flex; align-items: flex-end; justify-content: space-between; height: 160px; gap: 6px; }
+  .coluna-grafico { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .valor-barra { font-size: 9px; color: var(--texto-suave); font-weight: 700; }
+  .trilho-barra { height: 120px; display: flex; align-items: flex-end; width: 100%; justify-content: center; }
+  .barra { width: 60%; min-width: 8px; border-radius: 6px 6px 2px 2px; background: var(--borda); }
+  .barra.com-valor { background: var(--vermelho); }
+  .rotulo-barra { font-size: 10.5px; color: var(--texto-suave); font-weight: 600; }
+
+  .linha-historico-vendas { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--borda); }
+  .linha-historico-vendas:first-child { border-top: none; }
+  .rotulo-historico { font-weight: 700; font-size: 13.5px; }
+  .sub-historico { color: var(--texto-suave); font-size: 11.5px; margin-top: 1px; }
+  .valor-historico { font-weight: 800; font-size: 13.5px; color: var(--vermelho); flex-shrink: 0; }
+  .circulo-rank { width: 24px; height: 24px; border-radius: 12px; background: var(--vermelho-claro); color: var(--vermelho); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; flex-shrink: 0; }
+
+  /* ============ CONFIGURAÇÃO ============ */
+  .linha-fotos { display: flex; gap: 16px; }
+  .seletor-logo, .seletor-banner { text-align: center; cursor: pointer; position: relative; }
+  .seletor-logo { flex-shrink: 0; }
+  .seletor-banner { flex: 1; }
+  .img-logo { width: 68px; height: 68px; border-radius: 18px; object-fit: cover; background: var(--creme); }
+  .img-banner { width: 100%; height: 68px; border-radius: 18px; object-fit: cover; background: var(--creme); }
+  .placeholder-img { display: flex; align-items: center; justify-content: center; border: 1.5px dashed var(--borda); color: var(--texto-suave); flex-direction: column; gap: 3px; }
+  .placeholder-img svg { width: 20px; height: 20px; }
+  .placeholder-img span { font-size: 9.5px; font-weight: 600; }
+  .legenda-foto { font-size: 10.5px; color: var(--texto-suave); font-weight: 600; margin-top: 6px; }
+  .selo-editar-foto {
+    position: absolute; bottom: 20px; right: -4px; width: 22px; height: 22px; border-radius: 11px;
+    background: var(--verde); border: 2px solid var(--branco); display: flex; align-items: center; justify-content: center;
+  }
+  .selo-editar-foto svg { width: 11px; height: 11px; color: var(--branco); }
+
+  .linha-dados { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--borda); font-size: 13px; }
+  .linha-dados:last-child { border-bottom: none; }
+  .rotulo-dados { color: var(--texto-suave); }
+  .valor-dados { font-weight: 700; }
+
+  .cabecalho-cartao-config { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cabecalho-cartao-config-esq { display: flex; align-items: center; gap: 10px; }
+  .icone-secao-config { width: 30px; height: 30px; border-radius: 10px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; }
+  .icone-secao-config svg { width: 15px; height: 15px; color: var(--vermelho); }
+
+  .linha-sair-conta { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--borda); background: none; border-left: none; border-right: none; border-bottom: none; cursor: pointer; color: var(--vermelho); font-weight: 700; font-size: 13.5px; width: 100%; text-align: left; }
+  .linha-excluir-conta { display: flex; align-items: center; gap: 8px; margin-top: 12px; background: none; border: none; cursor: pointer; color: var(--vermelho); font-weight: 600; font-size: 12px; }
+  .linha-sair-conta svg, .linha-excluir-conta svg { width: 15px; height: 15px; }
 
   @media (max-width: 1080px) {
     .quadro { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 880px) {
+    .barra-lateral { width: 74px; }
+    .nome-lateral, .item-nav span.rotulo, .item-sair span { display: none; }
+    .marca-lateral { justify-content: center; padding: 18px 10px; }
+    .item-nav, .item-sair { justify-content: center; padding: 12px; }
+    .badge-nav { position: absolute; margin-left: 18px; margin-top: -18px; }
   }
 </style>
 </head>
 <body>
 
-  <div class="barra-topo">
-    <div class="marca-topo">
-      <div class="espaco-logo">
-        <img
-          id="imagem-logo"
-          src="../img/logo.png"
-          alt="Logo do restaurante"
-          onerror="this.style.display='none'; document.getElementById('icone-logo-padrao').style.display='flex';"
-        />
-        <div id="icone-logo-padrao" class="icone-logo-padrao">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+  <div id="tela-boot" class="tela-boot">Carregando painel...</div>
+
+  <!-- ============ ONBOARDING: criar restaurante ============ -->
+  <div id="tela-onboarding" class="tela-onboarding oculto">
+    <div class="cartao-onboarding">
+      <div class="onboarding-topo">
+        <div>
+          <div class="onboarding-eyebrow">Painel do restaurante</div>
+          <h1 class="onboarding-titulo" id="onboarding-ola">Olá!</h1>
+          <p class="onboarding-sub">Vamos criar seu restaurante para começar.</p>
+        </div>
+        <button class="botao-icone" id="botao-sair-onboarding" title="Sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e4002b" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <form id="form-onboarding" class="cartao">
+        <label class="rotulo-campo">Nome do restaurante</label>
+        <input class="campo-texto" id="ob-nome" placeholder="Ex: Brasa &amp; Cia" required />
+
+        <label class="rotulo-campo">Categoria</label>
+        <div class="grupo-pills" id="ob-categorias"></div>
+
+        <label class="rotulo-campo">Taxa de entrega (R$)</label>
+        <input class="campo-texto" id="ob-taxa" placeholder="Ex: 6.90" inputmode="decimal" required />
+
+        <div class="linha-campos">
+          <div>
+            <label class="rotulo-campo">Tempo mín. (min)</label>
+            <input class="campo-texto" id="ob-tempo-min" value="25" inputmode="numeric" required />
+          </div>
+          <div>
+            <label class="rotulo-campo">Tempo máx. (min)</label>
+            <input class="campo-texto" id="ob-tempo-max" value="40" inputmode="numeric" required />
+          </div>
+        </div>
+
+        <div id="onboarding-erro" class="estado-erro-inline oculto"></div>
+
+        <button type="submit" class="botao-primario" id="botao-criar-restaurante" style="width:100%; margin-top:18px;">
+          <span class="texto-botao">Criar restaurante</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ APP PRINCIPAL ============ -->
+  <div id="app" class="layout oculto">
+    <aside class="barra-lateral">
+      <div class="marca-lateral">
+        <div class="espaco-logo">
+          <img id="imagem-logo" src="../img/logo.png" alt="Logo do restaurante"
+               onerror="this.style.display='none'; document.getElementById('icone-logo-padrao').style.display='flex';" />
+          <div id="icone-logo-padrao" class="icone-logo-padrao">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="nome-lateral" id="nome-restaurante-lateral">Painel</div>
+      </div>
+
+      <nav class="nav-lateral" id="nav-lateral"></nav>
+
+      <div class="rodape-lateral">
+        <button class="item-sair" id="botao-sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Sair</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="area-principal">
+      <div class="topo-secao">
+        <div>
+          <h1 id="titulo-secao">Início</h1>
+          <p id="subtitulo-secao">Painel do restaurante</p>
+        </div>
+        <div class="acoes-topo">
+          <div class="indicador-atualizacao"><span class="ponto-vivo"></span><span id="texto-atualizacao">ao vivo</span></div>
+          <button class="botao-icone" id="botao-atualizar" title="Atualizar agora">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1c1b1a" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
       </div>
-      <div class="nome-topo">
-        <span id="nome-usuario-topo">Portal do Restaurante</span>
-        Pedidos
+
+      <div id="conteudo"></div>
+    </main>
+  </div>
+
+  <!-- ============ MODAL: item do cardápio ============ -->
+  <div id="modal-item" class="sobreposicao-modal oculto">
+    <div class="cartao-modal">
+      <div class="cabecalho-modal">
+        <h2 id="titulo-modal-item">Novo item</h2>
+        <button class="fechar-modal" id="fechar-modal-item"><svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
       </div>
-    </div>
-    <div class="acoes-topo">
-      <div class="indicador-atualizacao"><span class="ponto-vivo"></span><span id="texto-atualizacao">atualizando...</span></div>
-      <button class="botao-icone" id="botao-atualizar" title="Atualizar agora">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#1c1b1a" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="botao-sair" id="botao-sair">Sair</button>
+      <form id="form-item-cardapio">
+        <label class="rotulo-campo">Nome</label>
+        <input class="campo-texto" id="mi-nome" placeholder="Ex: Cheeseburger Duplo" required />
+
+        <label class="rotulo-campo">Descrição (opcional)</label>
+        <input class="campo-texto" id="mi-descricao" placeholder="Ex: Dois blends, queijo cheddar" />
+
+        <label class="rotulo-campo">Preço (R$)</label>
+        <input class="campo-texto" id="mi-preco" placeholder="Ex: 28.90" inputmode="decimal" required />
+
+        <div id="mi-bloco-categorias">
+          <label class="rotulo-campo">Categoria</label>
+          <div class="grupo-pills" id="mi-categorias"></div>
+        </div>
+
+        <label class="rotulo-campo">Foto do item (opcional)</label>
+        <div class="seletor-imagem" id="mi-seletor-imagem">
+          <img id="mi-preview-imagem" class="oculto" />
+          <div id="mi-placeholder-imagem" class="miniatura miniatura-vazia" style="width:52px;height:52px;border-radius:12px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div style="flex:1">
+            <div class="seletor-imagem-texto" id="mi-texto-imagem">Escolher foto do item</div>
+            <div class="seletor-imagem-sub">Formatos: jpg, png ou webp</div>
+          </div>
+          <div id="mi-spinner-imagem" class="spinner escuro oculto"></div>
+        </div>
+        <input type="file" id="mi-arquivo-imagem" accept="image/*" class="oculto" />
+
+        <div id="mi-bloco-adicionais" class="oculto">
+          <div class="divisor-modal"></div>
+          <label class="rotulo-campo">Adicionais</label>
+          <div id="mi-lista-adicionais"></div>
+          <div class="linha-nova-adicional">
+            <input class="campo-texto" id="mi-nome-adicional" placeholder="Nome (ex: Bacon extra)" />
+            <input class="campo-texto" id="mi-preco-adicional" placeholder="R$" inputmode="decimal" />
+          </div>
+          <div class="linha-botoes" style="margin-top:8px;">
+            <button type="button" class="botao-secundario oculto" id="mi-cancelar-adicional">Cancelar</button>
+            <button type="button" class="botao-primario" id="mi-salvar-adicional" style="flex:1;">Adicionar</button>
+          </div>
+        </div>
+
+        <div id="mi-erro" class="estado-erro-inline oculto"></div>
+
+        <div class="linha-botoes">
+          <button type="button" class="botao-secundario" id="mi-cancelar">Cancelar</button>
+          <button type="submit" class="botao-primario" id="mi-salvar" style="flex:2;">Salvar</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div class="cabecalho-pagina">
-    <h1>Pedidos</h1>
-    <p>Acompanhe e gerencie os pedidos do seu restaurante em tempo real.</p>
-
-    <div class="abas-pagina">
-      <button class="aba-pagina ativa" id="aba-ativos" data-aba="ativos">Em andamento</button>
-      <button class="aba-pagina" id="aba-historico" data-aba="historico">Histórico</button>
+  <!-- ============ MODAL: excluir conta ============ -->
+  <div id="modal-excluir-conta" class="sobreposicao-modal oculto">
+    <div class="cartao-modal" style="max-width:420px;">
+      <div class="cabecalho-modal">
+        <h2>Excluir conta do restaurante</h2>
+        <button class="fechar-modal" id="fechar-modal-excluir"><svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
+      </div>
+      <p style="font-size:12.5px; color:var(--texto-suave); line-height:1.6; margin-top:6px;">
+        Isso vai acontecer:
+      </p>
+      <ul style="font-size:12.5px; color:var(--texto-suave); line-height:1.7; padding-left:18px; margin:0;">
+        <li>Sua loja sai do ar e some da busca do cliente na hora.</li>
+        <li>Novos pedidos deixam de ser aceitos, mas o histórico de vendas é preservado.</li>
+        <li>Seus dados pessoais de acesso serão apagados e não será possível desfazer.</li>
+      </ul>
+      <form id="form-excluir-conta">
+        <label class="rotulo-campo">Confirme sua senha</label>
+        <input class="campo-texto" id="excluir-senha" type="password" required />
+        <div id="excluir-erro" class="estado-erro-inline oculto"></div>
+        <div class="linha-botoes">
+          <button type="button" class="botao-secundario" id="excluir-cancelar">Cancelar</button>
+          <button type="submit" class="botao-primario botao-perigo" id="excluir-confirmar" style="flex:2; background:var(--vermelho);">Excluir conta</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <div id="estado-carregando" class="estado-global">Carregando pedidos...</div>
-  <div id="estado-erro" class="estado-global" style="display:none; color: var(--vermelho);"></div>
-
-  <div class="quadro" id="quadro-kanban" style="display:none">
-    <div class="coluna" data-status="pendente">
-      <div class="coluna-cabecalho">Novos pedidos <span class="contagem-coluna" id="contagem-pendente">0</span></div>
-      <div class="lista-coluna" id="lista-pendente"></div>
-    </div>
-    <div class="coluna" data-status="preparando">
-      <div class="coluna-cabecalho">Em preparo <span class="contagem-coluna" id="contagem-preparando">0</span></div>
-      <div class="lista-coluna" id="lista-preparando"></div>
-    </div>
-    <div class="coluna" data-status="procurando_entregador">
-      <div class="coluna-cabecalho">Prontos <span class="contagem-coluna" id="contagem-pronto">0</span></div>
-      <div class="lista-coluna" id="lista-pronto"></div>
-    </div>
-  </div>
-
-  <div class="lista-historico" id="lista-historico"></div>
-
-  <script>
+<script>
 // ===================================================================
-// Painel do Restaurante — Pedidos
-//
-// Rotas do backend usadas (todas exigem Authorization: Bearer <token>
-// de uma conta role=restaurant, ver /api/tenant em tenant.routes.js):
-//   GET   /api/tenant/orders                      -> lista pedidos pagos/estornados
-//   PATCH /api/tenant/orders/:id/accept            -> pendente -> preparando
-//   PATCH /api/tenant/orders/:id/reject  {reason}  -> pendente -> cancelado
-//   PATCH /api/tenant/orders/:id/ready {delivererId?} -> preparando -> procurando_entregador
-//   GET   /api/tenant/deliverers                   -> entregadores da casa
-//   GET   /api/tenant/orders/:id/messages          -> chat do pedido
-//   POST  /api/tenant/orders/:id/messages {message}-> enviar mensagem
-//
-// Autenticação: lê o token salvo pelo login.html (restauranteToken).
-// Sem token -> manda de volta pro login.
+// Painel do Restaurante — estado global e utilidades de API
 // ===================================================================
-
-const INTERVALO_ATUALIZACAO_MS = 12000;
 
 const token = localStorage.getItem('restauranteToken');
 const usuarioBruto = localStorage.getItem('restauranteUsuario');
-
-if (!token || !usuarioBruto) {
-  window.location.href = './login.html';
-}
-
+if (!token || !usuarioBruto) window.location.href = './login.html';
 let usuario = null;
-try { usuario = JSON.parse(usuarioBruto); } catch (e) { /* ignora, cai no guard abaixo */ }
-if (!usuario || usuario.role !== 'restaurant') {
+try { usuario = JSON.parse(usuarioBruto); } catch (e) { /* cai no guard abaixo */ }
+if (!usuario || usuario.role !== 'restaurant') window.location.href = './login.html';
+
+function sair() {
+  localStorage.removeItem('restauranteToken');
+  localStorage.removeItem('restauranteUsuario');
   window.location.href = './login.html';
 }
-
-// ---- elementos ----
-const estadoCarregando = document.getElementById('estado-carregando');
-const estadoErro = document.getElementById('estado-erro');
-const quadroKanban = document.getElementById('quadro-kanban');
-const listaHistorico = document.getElementById('lista-historico');
-const textoAtualizacao = document.getElementById('texto-atualizacao');
-const botaoAtualizar = document.getElementById('botao-atualizar');
-const botaoSair = document.getElementById('botao-sair');
-const nomeUsuarioTopo = document.getElementById('nome-usuario-topo');
-const abaAtivos = document.getElementById('aba-ativos');
-const abaHistorico = document.getElementById('aba-historico');
-
-nomeUsuarioTopo.textContent = usuario.name || 'Portal do Restaurante';
-
-// ---- estado em memória ----
-let pedidos = [];
-let entregadoresDaCasa = [];
-let pedidosExpandidos = new Set();
-let mensagensCarregadasPorPedido = {};
-let abaAtual = 'ativos';
-let cronometroAtualizacao = null;
-
-// ===================================================================
-// Chamadas à API
-// ===================================================================
 
 async function chamarApi(caminho, options = {}) {
   const resposta = await fetch(caminho, {
@@ -562,445 +765,267 @@ async function chamarApi(caminho, options = {}) {
       ...(options.headers || {}),
     },
   });
-
-  if (resposta.status === 401) {
-    localStorage.removeItem('restauranteToken');
-    localStorage.removeItem('restauranteUsuario');
-    window.location.href = './login.html';
-    throw new Error('Sessão expirada');
-  }
-
+  if (resposta.status === 401) { sair(); throw new Error('Sessão expirada'); }
   const dados = await resposta.json().catch(() => ({}));
   if (!resposta.ok) throw new Error(dados.error || `Erro ${resposta.status}`);
   return dados;
 }
 
-// ===================================================================
-// Carregamento e renderização
-// ===================================================================
-
-async function carregarPedidos(mostrarSpinnerBotao) {
-  if (mostrarSpinnerBotao) botaoAtualizar.classList.add('girando');
-  try {
-    const [listaPedidos, listaEntregadores] = await Promise.all([
-      chamarApi('/api/tenant/orders'),
-      entregadoresDaCasa.length ? Promise.resolve(entregadoresDaCasa) : chamarApi('/api/tenant/deliverers').catch(() => []),
-    ]);
-    pedidos = listaPedidos;
-    entregadoresDaCasa = listaEntregadores;
-
-    estadoCarregando.style.display = 'none';
-    estadoErro.style.display = 'none';
-    quadroKanban.style.display = abaAtual === 'ativos' ? 'grid' : 'none';
-
-    renderizarQuadro();
-    renderizarHistorico();
-    textoAtualizacao.textContent = 'atualizado agora';
-    setTimeout(() => { textoAtualizacao.textContent = 'ao vivo'; }, 2000);
-  } catch (erro) {
-    estadoCarregando.style.display = 'none';
-    estadoErro.style.display = 'block';
-    estadoErro.textContent = 'Não foi possível carregar os pedidos: ' + erro.message;
-  } finally {
-    if (mostrarSpinnerBotao) setTimeout(() => botaoAtualizar.classList.remove('girando'), 400);
-  }
+// Upload de imagem (logo, banner, foto de item) -- multipart/form-data,
+// sem setar Content-Type na mão (o navegador monta o boundary sozinho).
+async function chamarApiUpload(caminho, formData) {
+  const resposta = await fetch(caminho, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (resposta.status === 401) { sair(); throw new Error('Sessão expirada'); }
+  const dados = await resposta.json().catch(() => ({}));
+  if (!resposta.ok) throw new Error(dados.error || `Erro ${resposta.status}`);
+  return dados;
 }
 
 function formatarMoeda(valor) {
-  return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
-
-function formatarTempoDecorrido(dataIso) {
-  const minutos = Math.max(0, Math.round((Date.now() - new Date(dataIso).getTime()) / 60000));
-  if (minutos < 1) return 'agora';
-  if (minutos < 60) return `${minutos} min`;
-  const horas = Math.floor(minutos / 60);
-  return `${horas}h ${minutos % 60}min`;
+function numeroDecimal(texto) {
+  return Number(String(texto ?? '').trim().replace(',', '.'));
 }
-
-function renderizarQuadro() {
-  const grupos = { pendente: [], preparando: [], procurando_entregador: [] };
-  for (const pedido of pedidos) {
-    if (grupos[pedido.status]) grupos[pedido.status].push(pedido);
-  }
-
-  document.getElementById('contagem-pendente').textContent = grupos.pendente.length;
-  document.getElementById('contagem-preparando').textContent = grupos.preparando.length;
-  document.getElementById('contagem-pronto').textContent = grupos.procurando_entregador.length;
-
-  preencherColuna('lista-pendente', grupos.pendente);
-  preencherColuna('lista-preparando', grupos.preparando);
-  preencherColuna('lista-pronto', grupos.procurando_entregador);
-}
-
-function preencherColuna(idLista, listaPedidos) {
-  const container = document.getElementById(idLista);
-  if (listaPedidos.length === 0) {
-    container.innerHTML = '<div class="mensagem-vazia">Nenhum pedido aqui agora.</div>';
-    return;
-  }
-  container.innerHTML = '';
-  listaPedidos.forEach((pedido) => container.appendChild(montarCartaoPedido(pedido)));
-}
-
-function renderizarHistorico() {
-  const historico = pedidos
-    .filter((p) => p.status === 'entregue' || p.status === 'cancelado')
-    .slice(0, 40);
-
-  if (historico.length === 0) {
-    listaHistorico.innerHTML = '<div class="mensagem-vazia">Nenhum pedido no histórico ainda.</div>';
-    return;
-  }
-  listaHistorico.innerHTML = '';
-  historico.forEach((pedido) => listaHistorico.appendChild(montarCartaoPedido(pedido, true)));
-}
-
-// ===================================================================
-// Cartão de pedido
-// ===================================================================
-
-function montarCartaoPedido(pedido, ehHistorico) {
-  const cartao = document.createElement('div');
-  cartao.className = 'cartao-pedido';
-  cartao.dataset.status = pedido.status;
-  cartao.dataset.pedidoId = pedido.id;
-
-  const resumoItens = (pedido.items || [])
-    .map((item) => `${item.qty}x ${item.name}`)
-    .join(', ');
-
-  const pillHistorico = ehHistorico
-    ? `<span class="status-pill ${pedido.status}">${pedido.status === 'entregue' ? 'Entregue' : 'Cancelado'}</span>`
-    : '';
-
-  cartao.innerHTML = `
-    <div class="linha-topo-cartao" data-acao="alternar">
-      <div>
-        <div class="codigo-pedido">#${(pedido.pickupCode || pedido.id).toString().slice(-5)}</div>
-        <div class="nome-cliente">${pedido.clientName || 'Cliente'}</div>
-      </div>
-      <div class="tempo-pedido">${formatarTempoDecorrido(pedido.createdAt)}</div>
-    </div>
-    ${pillHistorico ? `<div style="margin-top:8px">${pillHistorico}</div>` : ''}
-    <div class="resumo-itens">${resumoItens || 'Sem itens'}</div>
-    <div class="rodape-cartao">
-      <div class="total-cartao">${formatarMoeda(pedido.total)}</div>
-    </div>
-    <div class="area-acoes"></div>
-    <div class="area-detalhe"></div>
-  `;
-
-  cartao.querySelector('[data-acao="alternar"]').addEventListener('click', () => alternarDetalhe(pedido, cartao));
-
-  const areaAcoes = cartao.querySelector('.area-acoes');
-  if (!ehHistorico) montarBotoesAcao(pedido, cartao, areaAcoes);
-
-  if (pedidosExpandidos.has(pedido.id)) {
-    montarDetalhe(pedido, cartao);
-  }
-
-  return cartao;
-}
-
-function montarBotoesAcao(pedido, cartao, areaAcoes) {
-  if (pedido.status === 'pendente') {
-    const grupo = document.createElement('div');
-    grupo.className = 'grupo-botoes';
-    grupo.innerHTML = `
-      <button class="botao-acao botao-recusar" data-acao="recusar">Recusar</button>
-      <button class="botao-acao botao-aceitar" data-acao="aceitar">Aceitar</button>
-    `;
-    grupo.querySelector('[data-acao="aceitar"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      aceitarPedido(pedido.id, e.target);
-    });
-    grupo.querySelector('[data-acao="recusar"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      alternarCampoMotivo(cartao, pedido.id);
-    });
-    areaAcoes.appendChild(grupo);
-
-    const campoMotivo = document.createElement('div');
-    campoMotivo.className = 'campo-motivo';
-    campoMotivo.innerHTML = `
-      <textarea placeholder="Motivo da recusa (opcional)"></textarea>
-      <div class="linha-confirmar">
-        <button class="botao-acao botao-recusar" data-acao="cancelar-motivo">Voltar</button>
-        <button class="botao-acao botao-aceitar" data-acao="confirmar-recusa">Confirmar recusa</button>
-      </div>
-    `;
-    campoMotivo.querySelector('[data-acao="cancelar-motivo"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      campoMotivo.classList.remove('visivel');
-    });
-    campoMotivo.querySelector('[data-acao="confirmar-recusa"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const motivo = campoMotivo.querySelector('textarea').value.trim();
-      recusarPedido(pedido.id, motivo, e.target);
-    });
-    areaAcoes.appendChild(campoMotivo);
-  }
-
-  if (pedido.status === 'preparando') {
-    const grupo = document.createElement('div');
-    grupo.className = 'grupo-botoes';
-    grupo.innerHTML = `<button class="botao-acao botao-pronto" data-acao="marcar-pronto">Marcar como pronto</button>`;
-    grupo.querySelector('[data-acao="marcar-pronto"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      alternarSeletorEntregador(cartao);
-    });
-    areaAcoes.appendChild(grupo);
-
-    const opcoesEntregadores = entregadoresDaCasa
-      .map((d) => `<option value="${d.id}">${d.name}${d.isOnline ? ' • online' : ''}</option>`)
-      .join('');
-
-    const seletor = document.createElement('div');
-    seletor.className = 'seletor-entregador';
-    seletor.innerHTML = `
-      <select>
-        <option value="">Enviar pro radar de entregadores (qualquer um pode aceitar)</option>
-        ${opcoesEntregadores}
-      </select>
-      <div class="linha-confirmar">
-        <button class="botao-acao botao-recusar" data-acao="cancelar-pronto">Voltar</button>
-        <button class="botao-acao botao-pronto" data-acao="confirmar-pronto">Confirmar</button>
-      </div>
-    `;
-    seletor.querySelector('[data-acao="cancelar-pronto"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      seletor.classList.remove('visivel');
-    });
-    seletor.querySelector('[data-acao="confirmar-pronto"]').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const delivererId = seletor.querySelector('select').value || undefined;
-      marcarPronto(pedido.id, delivererId, e.target);
-    });
-    areaAcoes.appendChild(seletor);
-  }
-
-  if (pedido.status === 'procurando_entregador') {
-    const info = document.createElement('div');
-    info.style.cssText = 'margin-top:10px; font-size:12px; font-weight:700; color: var(--texto-suave);';
-    info.textContent = pedido.delivererName
-      ? `Entregador: ${pedido.delivererName}`
-      : 'Aguardando um entregador aceitar...';
-    areaAcoes.appendChild(info);
-  }
-}
-
-function alternarCampoMotivo(cartao, pedidoId) {
-  const campo = cartao.querySelector('.campo-motivo');
-  if (campo) campo.classList.toggle('visivel');
-}
-
-function alternarSeletorEntregador(cartao) {
-  const seletor = cartao.querySelector('.seletor-entregador');
-  if (seletor) seletor.classList.toggle('visivel');
-}
-
-function alternarDetalhe(pedido, cartao) {
-  const area = cartao.querySelector('.area-detalhe');
-  if (pedidosExpandidos.has(pedido.id)) {
-    pedidosExpandidos.delete(pedido.id);
-    area.innerHTML = '';
-  } else {
-    pedidosExpandidos.add(pedido.id);
-    montarDetalhe(pedido, cartao);
-  }
-}
-
-function montarDetalhe(pedido, cartao) {
-  const area = cartao.querySelector('.area-detalhe');
-  const endereco = pedido.street
-    ? `${pedido.street}, ${pedido.number || 's/n'}${pedido.complement ? ' - ' + pedido.complement : ''} · ${pedido.neighborhood || ''}, ${pedido.city || ''}`
-    : 'Endereço não informado';
-
-  const itensHtml = (pedido.items || [])
-    .map(
-      (item) => `
-        <div class="item-detalhe">
-          <span><span class="qtd">${item.qty}x</span>${item.name}</span>
-          <span>${formatarMoeda(item.price * item.qty)}</span>
-        </div>
-        ${item.notes ? `<div class="obs-item">"${item.notes}"</div>` : ''}
-      `
-    )
-    .join('');
-
+function el(html) {
   const div = document.createElement('div');
-  div.className = 'detalhe-pedido';
-  div.innerHTML = `
-    <div class="selo-codigo-retirada">Código de retirada: ${pedido.pickupCode || '—'}</div>
+  div.innerHTML = html.trim();
+  return div.firstElementChild;
+}
 
-    <div class="bloco-detalhe">
-      <strong>Itens</strong>
-      ${itensHtml || 'Sem itens.'}
-    </div>
+// ---- estado em memória ----
+let restaurant = null;
+let categoriasLoja = [];       // categorias de tipo de loja (Pizza, Japonesa...)
+let menuItems = [];
+let menuCategorias = [];
+let pedidos = [];
+let entregadoresDaCasa = [];
+let secaoAtual = 'dashboard';
+let pedidosCarregados = false;
+let abaPedidosAtual = 'ativos';
+let pedidosExpandidos = new Set();
+let mensagensPorPedido = {};
+let cronometroPedidos = null;
 
-    <div class="bloco-detalhe">
-      <strong>Entrega</strong>
-      ${endereco}
-    </div>
+const INTERVALO_ATUALIZACAO_MS = 15000;
 
-    <div class="bloco-detalhe">
-      <strong>Contato do cliente</strong>
-      ${pedido.clientPhone ? `<a href="tel:${pedido.clientPhone}">${pedido.clientPhone}</a>` : 'Não informado'}
-    </div>
+// ===================================================================
+// Navegação lateral
+// ===================================================================
 
-    <div class="bloco-detalhe">
-      <div class="linha-valores"><span>Subtotal</span><span>${formatarMoeda(pedido.subtotal)}</span></div>
-      <div class="linha-valores"><span>Taxa de entrega</span><span>${formatarMoeda(pedido.deliveryFee)}</span></div>
-      <div class="linha-valores total-final"><span>Total</span><span>${formatarMoeda(pedido.total)}</span></div>
-    </div>
+const ITENS_NAV = [
+  { id: 'dashboard', rotulo: 'Início', titulo: 'Início', sub: 'Painel do restaurante',
+    icone: '<path d="M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id: 'pedidos', rotulo: 'Pedidos', titulo: 'Pedidos', sub: 'Acompanhe e gerencie os pedidos em tempo real.',
+    icone: '<path d="M6 2h9l3 3v17H6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9h6M9 13h6M9 17h3" stroke-linecap="round"/>' },
+  { id: 'vendas', rotulo: 'Vendas', titulo: 'Vendas', sub: 'Registro de faturamento.',
+    icone: '<path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/>' },
+  { id: 'cardapio', rotulo: 'Cardápio', titulo: 'Cardápio', sub: '',
+    icone: '<path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id: 'esgotados', rotulo: 'Esgotados', titulo: 'Esgotados', sub: 'Marque o que acabou no seu cardápio.',
+    icone: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6" stroke-linecap="round"/>' },
+  { id: 'localizacao', rotulo: 'Localização', titulo: 'Localização', sub: 'Endereço da loja.',
+    icone: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.3"/>' },
+  { id: 'horario', rotulo: 'Horário', titulo: 'Horário de funcionamento', sub: '',
+    icone: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id: 'entregadores', rotulo: 'Meus entregadores', titulo: 'Meus entregadores', sub: 'Entregadores exclusivos da sua loja.',
+    icone: '<circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 8h4l4 9M10 8 8 13h7" stroke-linecap="round" stroke-linejoin="round"/>' },
+  { id: 'configuracao', rotulo: 'Configuração', titulo: 'Configuração', sub: 'Fotos e dados da loja.',
+    icone: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke-linejoin="round"/>' },
+];
 
-    <div class="bloco-detalhe chat-pedido">
-      <strong>Conversa com o cliente</strong>
-      <div class="lista-mensagens" id="mensagens-${pedido.id}"></div>
-      <div class="linha-envio-chat">
-        <input type="text" placeholder="Escreva uma mensagem..." id="campo-msg-${pedido.id}" />
-        <button class="botao-enviar-chat" data-acao="enviar-msg">Enviar</button>
-      </div>
-    </div>
-  `;
-
-  div.querySelector('[data-acao="enviar-msg"]').addEventListener('click', (e) => {
-    e.stopPropagation();
-    enviarMensagem(pedido.id);
+function montarNavLateral() {
+  const nav = document.getElementById('nav-lateral');
+  nav.innerHTML = '';
+  ITENS_NAV.forEach((item) => {
+    const botao = el(`
+      <button class="item-nav" data-secao="${item.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">${item.icone}</svg>
+        <span class="rotulo">${item.rotulo}</span>
+        <span class="badge-nav oculto" id="badge-nav-${item.id}">0</span>
+      </button>
+    `);
+    botao.addEventListener('click', () => irPara(item.id));
+    nav.appendChild(botao);
   });
-  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('click', (e) => e.stopPropagation());
-  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') enviarMensagem(pedido.id);
+}
+
+function irPara(secaoId) {
+  secaoAtual = secaoId;
+  document.querySelectorAll('.item-nav').forEach((b) => b.classList.toggle('ativo', b.dataset.secao === secaoId));
+  const item = ITENS_NAV.find((i) => i.id === secaoId);
+  document.getElementById('titulo-secao').textContent = item.titulo;
+  document.getElementById('subtitulo-secao').textContent = item.sub || restaurant?.name || '';
+
+  if (secaoId === 'pedidos') {
+    if (!cronometroPedidos) cronometroPedidos = setInterval(() => carregarPedidos(false), INTERVALO_ATUALIZACAO_MS);
+  } else if (cronometroPedidos) {
+    clearInterval(cronometroPedidos);
+    cronometroPedidos = null;
+  }
+
+  const renders = {
+    dashboard: renderizarDashboard,
+    pedidos: renderizarSecaoPedidos,
+    vendas: renderizarVendas,
+    cardapio: renderizarCardapio,
+    esgotados: renderizarEsgotados,
+    localizacao: renderizarLocalizacao,
+    horario: renderizarHorario,
+    entregadores: renderizarEntregadores,
+    configuracao: renderizarConfiguracao,
+  };
+  (renders[secaoId] || (() => {}))();
+}
+
+function atualizarBadgePendentes() {
+  const pendentes = pedidos.filter((p) => p.status === 'pendente').length;
+  const badge = document.getElementById('badge-nav-pedidos');
+  if (!badge) return;
+  badge.textContent = pendentes;
+  badge.classList.toggle('oculto', pendentes === 0);
+}
+
+// ===================================================================
+// Inicialização / bootstrap
+// ===================================================================
+
+async function iniciar() {
+  document.getElementById('nome-usuario-topo-inicial');
+  try {
+    const [cats, restaurantes] = await Promise.all([
+      chamarApi('/api/categories'),
+      chamarApi('/api/tenant/restaurants'),
+    ]);
+    categoriasLoja = cats;
+    document.getElementById('tela-boot').classList.add('oculto');
+
+    if (restaurantes.length === 0) {
+      mostrarOnboarding();
+      return;
+    }
+
+    restaurant = restaurantes[0];
+    await mostrarApp();
+  } catch (erro) {
+    document.getElementById('tela-boot').textContent = 'Não foi possível carregar o painel: ' + erro.message;
+  }
+}
+
+function mostrarOnboarding() {
+  document.getElementById('onboarding-ola').textContent = `Olá, ${usuario.name || ''}`;
+  const container = document.getElementById('ob-categorias');
+  container.innerHTML = '';
+  let categoriaEscolhida = null;
+  categoriasLoja.forEach((c) => {
+    const pill = el(`<button type="button" class="pilula">${c.name}</button>`);
+    pill.addEventListener('click', () => {
+      categoriaEscolhida = c.id;
+      container.querySelectorAll('.pilula').forEach((p) => p.classList.remove('ativa'));
+      pill.classList.add('ativa');
+    });
+    container.appendChild(pill);
   });
 
-  area.innerHTML = '';
-  area.appendChild(div);
-  carregarMensagens(pedido.id);
+  document.getElementById('tela-onboarding').classList.remove('oculto');
+
+  document.getElementById('form-onboarding').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const erroEl = document.getElementById('onboarding-erro');
+    erroEl.classList.add('oculto');
+
+    const nome = document.getElementById('ob-nome').value.trim();
+    const taxa = numeroDecimal(document.getElementById('ob-taxa').value);
+    const tempoMin = parseInt(document.getElementById('ob-tempo-min').value, 10);
+    const tempoMax = parseInt(document.getElementById('ob-tempo-max').value, 10);
+
+    if (!nome || !categoriaEscolhida) {
+      erroEl.textContent = 'Preencha o nome e escolha uma categoria.';
+      erroEl.classList.remove('oculto');
+      return;
+    }
+    if (Number.isNaN(taxa) || taxa < 0) {
+      erroEl.textContent = 'Informe uma taxa de entrega válida.';
+      erroEl.classList.remove('oculto');
+      return;
+    }
+    if (!tempoMin || !tempoMax || tempoMin <= 0 || tempoMax <= 0) {
+      erroEl.textContent = 'Informe o tempo mínimo e máximo de entrega.';
+      erroEl.classList.remove('oculto');
+      return;
+    }
+
+    const botao = document.getElementById('botao-criar-restaurante');
+    botao.disabled = true;
+    botao.querySelector('.texto-botao').textContent = 'Criando...';
+    try {
+      restaurant = await chamarApi('/api/tenant/restaurants', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: nome,
+          categoryId: categoriaEscolhida,
+          deliveryFee: taxa,
+          deliveryTimeMin: tempoMin,
+          deliveryTimeMax: tempoMax,
+          isOpen: true,
+        }),
+      });
+      document.getElementById('tela-onboarding').classList.add('oculto');
+      await mostrarApp();
+    } catch (erro) {
+      erroEl.textContent = erro.message;
+      erroEl.classList.remove('oculto');
+    } finally {
+      botao.disabled = false;
+      botao.querySelector('.texto-botao').textContent = 'Criar restaurante';
+    }
+  });
+
+  document.getElementById('botao-sair-onboarding').addEventListener('click', sair);
 }
 
-// ===================================================================
-// Ações sobre pedidos
-// ===================================================================
+async function mostrarApp() {
+  document.getElementById('app').classList.remove('oculto');
+  document.getElementById('nome-restaurante-lateral').textContent = restaurant.name;
+  if (restaurant.image) document.getElementById('imagem-logo').src = restaurant.image;
+  montarNavLateral();
 
-async function aceitarPedido(id, botao) {
-  botao.disabled = true;
-  try {
-    await chamarApi(`/api/tenant/orders/${id}/accept`, { method: 'PATCH' });
-    await carregarPedidos(false);
-  } catch (erro) {
-    alert('Não foi possível aceitar: ' + erro.message);
-    botao.disabled = false;
-  }
+  await Promise.all([
+    carregarMenuECategorias(),
+    carregarPedidos(false),
+  ]);
+
+  irPara('dashboard');
+
+  document.getElementById('botao-sair').addEventListener('click', sair);
+  document.getElementById('botao-atualizar').addEventListener('click', () => atualizarSecaoAtual(true));
 }
 
-async function recusarPedido(id, motivo, botao) {
-  botao.disabled = true;
-  try {
-    await chamarApi(`/api/tenant/orders/${id}/reject`, {
-      method: 'PATCH',
-      body: JSON.stringify({ reason: motivo || undefined }),
-    });
-    await carregarPedidos(false);
-  } catch (erro) {
-    alert('Não foi possível recusar: ' + erro.message);
-    botao.disabled = false;
-  }
+async function carregarMenuECategorias() {
+  const [items, cats] = await Promise.all([
+    chamarApi(`/api/tenant/restaurants/${restaurant.id}/menu-items`),
+    chamarApi(`/api/tenant/restaurants/${restaurant.id}/menu-categories`),
+  ]);
+  menuItems = items;
+  menuCategorias = cats;
 }
 
-async function marcarPronto(id, delivererId, botao) {
-  botao.disabled = true;
-  try {
-    await chamarApi(`/api/tenant/orders/${id}/ready`, {
-      method: 'PATCH',
-      body: JSON.stringify({ delivererId: delivererId || undefined }),
-    });
-    await carregarPedidos(false);
-  } catch (erro) {
-    alert('Não foi possível marcar como pronto: ' + erro.message);
-    botao.disabled = false;
-  }
+function atualizarSecaoAtual(mostrarSpinner) {
+  const botao = document.getElementById('botao-atualizar');
+  if (mostrarSpinner) botao.classList.add('girando');
+  const tarefas = [carregarPedidos(false)];
+  if (['dashboard', 'cardapio', 'esgotados'].includes(secaoAtual)) tarefas.push(carregarMenuECategorias());
+  Promise.all(tarefas).finally(() => {
+    irPara(secaoAtual);
+    if (mostrarSpinner) setTimeout(() => botao.classList.remove('girando'), 400);
+  });
 }
 
-// ===================================================================
-// Chat do pedido
-// ===================================================================
-
-async function carregarMensagens(pedidoId) {
-  const container = document.getElementById(`mensagens-${pedidoId}`);
-  if (!container) return;
-  container.innerHTML = '<div class="mensagem-vazia">Carregando conversa...</div>';
-  try {
-    const mensagens = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`);
-    mensagensCarregadasPorPedido[pedidoId] = mensagens;
-    renderizarMensagens(pedidoId);
-  } catch (erro) {
-    container.innerHTML = '<div class="mensagem-vazia">Não foi possível carregar a conversa.</div>';
-  }
-}
-
-function renderizarMensagens(pedidoId) {
-  const container = document.getElementById(`mensagens-${pedidoId}`);
-  if (!container) return;
-  const mensagens = mensagensCarregadasPorPedido[pedidoId] || [];
-  if (mensagens.length === 0) {
-    container.innerHTML = '<div class="mensagem-vazia">Nenhuma mensagem ainda.</div>';
-    return;
-  }
-  container.innerHTML = mensagens
-    .map(
-      (m) => `<div class="bolha-mensagem ${m.senderRole === 'restaurant' ? 'minha' : 'outra'}">${m.message}</div>`
-    )
-    .join('');
-  container.scrollTop = container.scrollHeight;
-}
-
-async function enviarMensagem(pedidoId) {
-  const campo = document.getElementById(`campo-msg-${pedidoId}`);
-  const texto = campo.value.trim();
-  if (!texto) return;
-  campo.value = '';
-  try {
-    const salva = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`, {
-      method: 'POST',
-      body: JSON.stringify({ message: texto }),
-    });
-    mensagensCarregadasPorPedido[pedidoId] = [...(mensagensCarregadasPorPedido[pedidoId] || []), salva];
-    renderizarMensagens(pedidoId);
-  } catch (erro) {
-    alert('Não foi possível enviar: ' + erro.message);
-    campo.value = texto;
-  }
-}
-
-// ===================================================================
-// Abas (em andamento / histórico)
-// ===================================================================
-
-function trocarAba(nomeAba) {
-  abaAtual = nomeAba;
-  abaAtivos.classList.toggle('ativa', nomeAba === 'ativos');
-  abaHistorico.classList.toggle('ativa', nomeAba === 'historico');
-  quadroKanban.style.display = nomeAba === 'ativos' ? 'grid' : 'none';
-  listaHistorico.classList.toggle('ativa', nomeAba === 'historico');
-}
-
-abaAtivos.addEventListener('click', () => trocarAba('ativos'));
-abaHistorico.addEventListener('click', () => trocarAba('historico'));
-
-// ===================================================================
-// Inicialização
-// ===================================================================
-
-botaoAtualizar.addEventListener('click', () => carregarPedidos(true));
-botaoSair.addEventListener('click', () => {
-  localStorage.removeItem('restauranteToken');
-  localStorage.removeItem('restauranteUsuario');
-  window.location.href = './login.html';
-});
-
-carregarPedidos(false);
-cronometroAtualizacao = setInterval(() => carregarPedidos(false), INTERVALO_ATUALIZACAO_MS);
-  </script>
+iniciar();
+</script>
 </body>
 </html>
