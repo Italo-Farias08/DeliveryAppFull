@@ -169,7 +169,13 @@ export interface Order {
   // status do pagamento no Mercado Pago -- independente do status do
   // pedido em si (ver OrderStatus acima)
   paymentStatus?: 'pendente' | 'pago' | 'recusado' | 'estornado';
-  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | null;
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'pix_entrega' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | null;
+  // 'online' = pago dentro do app (Mercado Pago); 'entrega' = cobrado na
+  // hora da entrega (dinheiro, cartão ou Pix com o entregador)
+  paymentTiming?: 'online' | 'entrega';
+  // quanto o cliente vai pagar em dinheiro (pra saber o troco) -- só
+  // preenchido quando paymentMethod é 'dinheiro' e o valor não é exato
+  changeFor?: number | null;
   paidAt?: string | null;
   createdAt: string;
   acceptedAt?: string | null;

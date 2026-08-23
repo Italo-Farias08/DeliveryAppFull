@@ -9,6 +9,7 @@ const TENANT_ORDER_SELECT = `
          o.deliverer_id AS "delivererId", o.status, o.subtotal, o.delivery_fee AS "deliveryFee",
          o.total, o.pickup_code AS "pickupCode",
          o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod",
+         o.payment_timing AS "paymentTiming", o.change_for AS "changeFor",
          o.commission_amount AS "commissionAmount",
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
@@ -320,12 +321,15 @@ async function deleteAddon(db, addonId) {
 async function listOrders(db, tenantId) {
   // Pedido só entra na fila do restaurante depois de PAGO (ou, se já foi
   // pago e depois estornado por cancelamento, continua aparecendo pra
-  // manter o histórico) -- pedido ainda aguardando pagamento não aparece
-  // aqui, mesmo em rede (defesa extra além de simplesmente não emitir o
-  // evento de socket na criação).
+  // manter o histórico) -- pedido ainda aguardando pagamento no app não
+  // aparece aqui, mesmo em rede (defesa extra além de simplesmente não
+  // emitir o evento de socket na criação).
+  // Pedidos com pagamento na ENTREGA (dinheiro, cartão ou Pix cobrado pelo
+  // entregador) entram direto, independente do payment_status -- não tem
+  // confirmação online nenhuma pra esperar nesses casos.
   const ordersResult = await db.query(
     `${TENANT_ORDER_SELECT}
-     WHERE o.tenant_id = $1 AND o.payment_status IN ('pago', 'estornado')
+     WHERE o.tenant_id = $1 AND (o.payment_status IN ('pago', 'estornado') OR o.payment_timing = 'entrega')
      ORDER BY o.created_at DESC`,
     [tenantId]
   );
@@ -347,11 +351,13 @@ async function listOrders(db, tenantId) {
 
 // Restaurante aceita o pedido: pendente -> preparando
 async function acceptOrder(db, tenantId, orderId) {
-  // payment_status = 'pago' aqui é defesa extra -- na prática o pedido só
-  // chega até o restaurante (listOrders/socket) depois de pago mesmo.
+  // payment_status = 'pago' (ou payment_timing = 'entrega', pra pagamento
+  // na entrega) aqui é defesa extra -- na prática o pedido só chega até o
+  // restaurante (listOrders/socket) nesses casos mesmo.
   const result = await db.query(
     `UPDATE orders SET status = 'preparando', accepted_at = now()
-     WHERE id = $1 AND tenant_id = $2 AND status = 'pendente' AND payment_status = 'pago'
+     WHERE id = $1 AND tenant_id = $2 AND status = 'pendente'
+       AND (payment_status = 'pago' OR payment_timing = 'entrega')
      RETURNING id, status, client_id AS "clientId"`,
     [orderId, tenantId]
   );

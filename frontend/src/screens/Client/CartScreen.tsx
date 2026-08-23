@@ -19,8 +19,9 @@ import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { PixPaymentModal } from '../../components/PixPaymentModal';
 import { useCart } from '../../context/CartContext';
-import { Address, createAddress, listAddresses } from '../../services/addressService';
-import { createOrder, payOrderPix, PixPayment } from '../../services/orderService';
+import { createAddress, listAddresses } from '../../services/addressService';
+import type { Address } from '../../services/addressService';
+import { createOrder, payOrderPix, PaymentMethod, PixPayment } from '../../services/orderService';
 import { getRestaurantById } from '../../services/restaurantService';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
@@ -31,6 +32,21 @@ import { distanceMeters } from '../../utils/geo';
 // Distância máxima (em metros) entre o GPS atual e o endereço principal
 // pra considerar que a pessoa "está" no endereço cadastrado.
 const MAX_ADDRESS_DISTANCE_M = 200;
+
+const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { value: 'pix_app', label: 'Pix no app', icon: 'qr-code-outline' },
+  { value: 'pix_entrega', label: 'Pix na entrega', icon: 'flash-outline' },
+  { value: 'dinheiro', label: 'Dinheiro', icon: 'cash-outline' },
+  { value: 'cartao_credito', label: 'Cartão de crédito', icon: 'card-outline' },
+  { value: 'cartao_debito', label: 'Cartão de débito', icon: 'card-outline' },
+];
+
+const PAYMENT_LABELS: Record<Exclude<PaymentMethod, 'pix_app'>, string> = {
+  pix_entrega: 'Pix',
+  dinheiro: 'dinheiro',
+  cartao_credito: 'cartão de crédito',
+  cartao_debito: 'cartão de débito',
+};
 
 function addressLabel(a: Address) {
   const line = [a.street, a.number].filter(Boolean).join(', ');
@@ -57,6 +73,9 @@ export default function CartScreen() {
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [pixModalVisible, setPixModalVisible] = useState(false);
   const [pixOrderId, setPixOrderId] = useState<string | null>(null);
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pix_app');
+  const [changeForText, setChangeForText] = useState('');
 
   const loadAddresses = useCallback(async () => {
     setLoadingAddresses(true);
@@ -111,6 +130,7 @@ export default function CartScreen() {
   const belowMinimum = minOrderValue > 0 && subtotal < minOrderValue;
   const missingForMinimum = Math.max(0, minOrderValue - subtotal);
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
+  const changeForValue = changeForText.trim() ? Number(changeForText.replace(',', '.')) : undefined;
 
   async function handleUseCurrentLocation() {
     setCapturingLocation(true);
@@ -198,6 +218,13 @@ export default function CartScreen() {
       setPickerVisible(true);
       return;
     }
+    if (paymentMethod === 'dinheiro' && changeForValue != null && changeForValue < total) {
+      Alert.alert(
+        'Troco inválido',
+        `O valor para troco deve ser maior ou igual ao total do pedido (R$ ${total.toFixed(2)}).`
+      );
+      return;
+    }
     if (selectedAddress) {
       const ok = await confirmMatchesCurrentLocation(selectedAddress);
       if (!ok) return;
@@ -207,6 +234,8 @@ export default function CartScreen() {
       const order = await createOrder({
         restaurantId,
         addressId: selectedAddressId,
+        paymentMethod,
+        changeFor: paymentMethod === 'dinheiro' ? changeForValue : undefined,
         items: items.map((ci) => ({
           menuItemId: ci.item.id,
           qty: ci.qty,
@@ -215,6 +244,21 @@ export default function CartScreen() {
         })),
       });
       clear();
+
+      if (paymentMethod !== 'pix_app') {
+        // Pagamento na ENTREGA (dinheiro, cartão ou Pix com o entregador) --
+        // não tem nada pra pagar agora dentro do app, o restaurante já foi
+        // avisado e vai começar a preparar o pedido.
+        navigation.navigate('Orders');
+        Alert.alert(
+          'Pedido enviado!',
+          `Seu pedido foi enviado ao restaurante. Pague em ${PAYMENT_LABELS[paymentMethod]} na entrega.` +
+            (paymentMethod === 'dinheiro' && changeForValue
+              ? ` Troco para R$ ${changeForValue.toFixed(2)}.`
+              : '')
+        );
+        return;
+      }
 
       // Pedido criado, mas ainda não pago -- gera o Pix direto (QR code +
       // copia-e-cola) dentro do próprio app. O restaurante só vê o pedido
@@ -349,6 +393,41 @@ export default function CartScreen() {
             </Text>
           </View>
         )}
+
+        <Text style={styles.paymentTitle}>Forma de pagamento</Text>
+        <View style={styles.paymentOptions}>
+          {PAYMENT_OPTIONS.map((opt) => {
+            const selected = paymentMethod === opt.value;
+            return (
+              <PressableScale
+                key={opt.value}
+                style={[styles.paymentOption, selected && styles.paymentOptionSelected]}
+                onPress={() => setPaymentMethod(opt.value)}
+                scaleTo={0.96}
+              >
+                <Ionicons name={opt.icon} size={16} color={selected ? colors.primary : colors.textMuted} />
+                <Text style={[styles.paymentOptionText, selected && styles.paymentOptionTextSelected]}>
+                  {opt.label}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </View>
+
+        {paymentMethod === 'dinheiro' && (
+          <View style={styles.changeForRow}>
+            <Ionicons name="cash-outline" size={16} color={colors.textMuted} />
+            <TextInput
+              style={styles.changeForInput}
+              placeholder="Precisa de troco para quanto? (opcional)"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="numeric"
+              value={changeForText}
+              onChangeText={setChangeForText}
+            />
+          </View>
+        )}
+
         <Button
           label="Ir para pagamento"
           onPress={handleCheckout}
@@ -475,6 +554,22 @@ function createStyles(colors: ThemeColors) {
     paddingHorizontal: 10, paddingVertical: 8, marginTop: 8,
   },
   minOrderWarningText: { color: colors.danger, fontSize: 12, flex: 1, fontWeight: '600' },
+  paymentTitle: { ...typography.bodyBold, color: colors.text, marginTop: 14, marginBottom: 8 },
+  paymentOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  paymentOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9,
+  },
+  paymentOptionSelected: { borderColor: colors.primary, backgroundColor: colors.secondaryLight },
+  paymentOptionText: { color: colors.textMuted, fontSize: 12.5, fontWeight: '600' },
+  paymentOptionTextSelected: { color: colors.primary },
+  changeForRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 10, marginTop: 10,
+  },
+  changeForInput: { flex: 1, fontSize: 13.5, color: colors.text, padding: 0 },
   emptyWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 30 },
   emptyTitle: { ...typography.h2, color: colors.text, marginTop: 8 },
   emptySub: { color: colors.textMuted, textAlign: 'center' },

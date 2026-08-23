@@ -26,6 +26,14 @@ import { typography } from '../../theme/typography';
 import { shadows } from '../../theme/shadows';
 import { Order, OrderStatus } from '../../types';
 
+// Rótulo curto pra dizer ao cliente o que ele vai pagar na entrega
+const ENTREGA_PAYMENT_LABEL: Record<string, string> = {
+  pix_entrega: 'no Pix',
+  dinheiro: 'em dinheiro',
+  cartao_credito: 'no cartão de crédito',
+  cartao_debito: 'no cartão de débito',
+};
+
 // Status com cor + ícone próprios — usados tanto no badge (fundo suave,
 // texto colorido) quanto pra decidir se ainda vale mostrar o código de
 // entrega, etc.
@@ -305,8 +313,23 @@ export default function OrdersScreen() {
                 {/* Enquanto o pedido está "pendente" (restaurante ainda não
                     viu), o status do pagamento é a informação que mais
                     importa pro cliente -- é o que decide se o pedido vai
-                    ou não avançar. */}
-                {item.status === 'pendente' && item.paymentStatus !== 'pago' && (
+                    ou não avançar. Isso só se aplica a pagamento feito no
+                    app (Pix no app / Mercado Pago) -- pedidos com
+                    pagamento na entrega já foram enviados ao restaurante
+                    na hora, então mostram só um aviso do que vai pagar. */}
+                {item.status === 'pendente' && item.paymentTiming === 'entrega' && (
+                  <View style={styles.paymentBanner}>
+                    <Ionicons name="cash-outline" size={16} color="#B5760A" />
+                    <Text style={styles.paymentBannerText}>
+                      Pague {ENTREGA_PAYMENT_LABEL[item.paymentMethod || ''] || ''} na entrega
+                      {item.paymentMethod === 'dinheiro' && item.changeFor
+                        ? ` · troco p/ R$ ${Number(item.changeFor).toFixed(2)}`
+                        : ''}
+                    </Text>
+                  </View>
+                )}
+
+                {item.status === 'pendente' && item.paymentTiming !== 'entrega' && item.paymentStatus !== 'pago' && (
                   <View
                     style={[
                       styles.paymentBanner,

@@ -62,6 +62,19 @@ const statusIcon: Record<OrderStatus, keyof typeof Ionicons.glyphMap> = {
   cancelado: 'close-circle',
 };
 
+// Rótulo da forma de pagamento -- cobre tanto pedidos pagos no app
+// (Mercado Pago, gravados como 'pix'/'credit_card'/'debit_card') quanto os
+// cobrados na entrega pelo restaurante/entregador.
+const paymentMethodLabel: Record<string, string> = {
+  pix: 'Pix (pago no app)',
+  credit_card: 'Cartão de crédito (pago no app)',
+  debit_card: 'Cartão de débito (pago no app)',
+  pix_entrega: 'Pix na entrega',
+  dinheiro: 'Dinheiro na entrega',
+  cartao_credito: 'Cartão de crédito na entrega',
+  cartao_debito: 'Cartão de débito na entrega',
+};
+
 export default function RestaurantOrdersScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -170,6 +183,19 @@ export default function RestaurantOrdersScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.orderId}>Pedido #{order.id.slice(-5)}</Text>
                     <Text style={styles.orderTotal}>R$ {Number(order.total).toFixed(2)}</Text>
+                    {!!order.paymentMethod && (
+                      <Text style={styles.paymentMethodText}>
+                        {paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod}
+                      </Text>
+                    )}
+                    {order.paymentMethod === 'dinheiro' && !!order.changeFor && (
+                      <View style={styles.changeForBadge}>
+                        <Ionicons name="cash-outline" size={12} color={colors.star} />
+                        <Text style={styles.changeForBadgeText}>
+                          Troco para R$ {Number(order.changeFor).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: `${sColor}1A`, borderColor: `${sColor}40` }]}>
                     <Ionicons name={statusIcon[order.status] ?? 'ellipse'} size={12} color={sColor} />
@@ -443,6 +469,13 @@ function createStyles(colors: ThemeColors) {
   orderCardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   orderId: { ...typography.bodyBold, color: colors.text },
   orderTotal: { color: colors.textMuted, fontSize: 12.5, marginTop: 2, fontWeight: '600' },
+  paymentMethodText: { color: colors.textMuted, fontSize: 11.5, marginTop: 2 },
+  changeForBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+    backgroundColor: `${colors.star}1A`, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3, marginTop: 4,
+  },
+  changeForBadgeText: { color: colors.star, fontSize: 11, fontWeight: '700' },
 
   clientInfoBox: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12,

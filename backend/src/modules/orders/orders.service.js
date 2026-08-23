@@ -3,11 +3,13 @@ const AppError = require('../../utils/AppError');
 const { generateFourDigitCode } = require('../../utils/codes');
 const { toTenant } = require('../../realtime/socket');
 const { sendPushToTenant } = require('../../utils/push');
+const { OFFLINE_PAYMENT_METHODS } = require('./orders.schema');
 
 const ORDER_SELECT = `
   SELECT o.id, o.status, o.subtotal, o.delivery_fee AS "deliveryFee", o.total,
          o.delivery_code AS "deliveryCode",
-         o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod", o.paid_at AS "paidAt",
+         o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod",
+         o.payment_timing AS "paymentTiming", o.change_for AS "changeFor", o.paid_at AS "paidAt",
          o.created_at AS "createdAt", o.accepted_at AS "acceptedAt", o.ready_at AS "readyAt",
          o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt", o.cancelled_at AS "cancelledAt",
          o.cancel_reason AS "cancelReason",
@@ -102,14 +104,46 @@ async function createOrder(clientId, data) {
     const deliveryFee = Number(restaurant.delivery_fee);
     const total = subtotal + deliveryFee;
 
+    // 'pix_app' é pago dentro do app (Mercado Pago) -- o pedido só some da
+    // fila do restaurante quando confirmado pelo webhook, como já era.
+    // As demais formas são cobradas na ENTREGA pelo entregador/restaurante,
+    // então o restaurante já pode ver e preparar o pedido na hora.
+    const isOfflinePayment = OFFLINE_PAYMENT_METHODS.includes(data.paymentMethod);
+    const paymentTiming = isOfflinePayment ? 'entrega' : 'online';
+    // payment_method só é gravado já na criação pra formas de pagamento na
+    // entrega -- pro Pix no app, quem grava é o webhook do Mercado Pago
+    // (que sabe de verdade qual método o cliente usou lá).
+    const paymentMethod = isOfflinePayment ? data.paymentMethod : null;
+
+    if (data.changeFor != null && data.changeFor < total) {
+      throw new AppError(
+        `O valor para troco (R$ ${data.changeFor.toFixed(2)}) não pode ser menor que o total do pedido (R$ ${total.toFixed(2)})`,
+        400
+      );
+    }
+
     const pickupCode = generateFourDigitCode();
     const deliveryCode = generateFourDigitCode();
 
     const orderResult = await client.query(
-      `INSERT INTO orders (tenant_id, restaurant_id, client_id, address_id, status, pickup_code, delivery_code, subtotal, delivery_fee, total)
-       VALUES ($1, $2, $3, $4, 'pendente', $5, $6, $7, $8, $9)
+      `INSERT INTO orders (tenant_id, restaurant_id, client_id, address_id, status, pickup_code, delivery_code,
+                            subtotal, delivery_fee, total, payment_timing, payment_method, change_for)
+       VALUES ($1, $2, $3, $4, 'pendente', $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING id`,
-      [restaurant.tenant_id, data.restaurantId, clientId, data.addressId || null, pickupCode, deliveryCode, subtotal, deliveryFee, total]
+      [
+        restaurant.tenant_id,
+        data.restaurantId,
+        clientId,
+        data.addressId || null,
+        pickupCode,
+        deliveryCode,
+        subtotal,
+        deliveryFee,
+        total,
+        paymentTiming,
+        paymentMethod,
+        data.paymentMethod === 'dinheiro' ? data.changeFor ?? null : null,
+      ]
     );
     const orderId = orderResult.rows[0].id;
 
@@ -132,10 +166,18 @@ async function createOrder(clientId, data) {
     await client.query('COMMIT');
     const order = await getOrderById(orderId, clientId);
 
-    // IMPORTANTE: o restaurante só é avisado do pedido depois que o
-    // pagamento for confirmado (ver payments.service.js -> notifyOrderPaid,
-    // chamado pelo webhook do Mercado Pago). Antes disso o pedido fica
-    // "pendente" com payment_status "pendente" e não aparece na fila dele.
+    // IMPORTANTE: pra pagamento 'pix_app', o restaurante só é avisado do
+    // pedido depois que o pagamento for confirmado (ver payments.service.js
+    // -> notifyOrderPaid, chamado pelo webhook do Mercado Pago). Antes disso
+    // o pedido fica "pendente" com payment_status "pendente" e não aparece
+    // na fila dele.
+    //
+    // Já pra pagamento na ENTREGA (dinheiro, cartão ou Pix cobrado pelo
+    // entregador), não existe confirmação online nenhuma pra esperar -- o
+    // restaurante precisa ver e começar a preparar o pedido na hora.
+    if (paymentTiming === 'entrega') {
+      await notifyRestaurantOfOfflineOrder(orderId, restaurant.tenant_id);
+    }
 
     return order;
   } catch (err) {
@@ -144,6 +186,49 @@ async function createOrder(clientId, data) {
   } finally {
     client.release();
   }
+}
+
+// Monta o pedido no formato que o painel do restaurante espera (mesmo
+// formato usado em payments.service.js -> notifyOrderPaid) e avisa em
+// tempo real + push -- usado só pra pedidos com pagamento na ENTREGA, que
+// não passam pelo webhook do Mercado Pago.
+async function notifyRestaurantOfOfflineOrder(orderId, tenantId) {
+  const result = await pool.query(
+    `SELECT o.id, o.tenant_id AS "tenantId", o.client_id AS "clientId", o.status, o.subtotal,
+            o.delivery_fee AS "deliveryFee", o.total, o.pickup_code AS "pickupCode", o.created_at AS "createdAt",
+            o.payment_status AS "paymentStatus", o.payment_method AS "paymentMethod", o.change_for AS "changeFor",
+            c.name AS "clientName", c.phone AS "clientPhone",
+            a.street, a.number, a.complement, a.neighborhood, a.city, a.state, a.lat, a.lng
+     FROM orders o
+     JOIN users c ON c.id = o.client_id
+     LEFT JOIN addresses a ON a.id = o.address_id
+     WHERE o.id = $1`,
+    [orderId]
+  );
+  if (result.rowCount === 0) return;
+  const order = result.rows[0];
+
+  const itemsResult = await pool.query(
+    `SELECT order_id AS "orderId", id, name_snapshot AS name, price_snapshot AS price, qty, notes,
+            addons_snapshot AS addons
+     FROM order_items WHERE order_id = $1`,
+    [orderId]
+  );
+
+  const tenantOrder = { ...order, items: itemsResult.rows };
+  toTenant(tenantId, 'order:new', tenantOrder);
+
+  const paymentLabel = {
+    dinheiro: 'em dinheiro',
+    cartao_credito: 'no cartão de crédito',
+    cartao_debito: 'no cartão de débito',
+    pix_entrega: 'no Pix',
+  }[order.paymentMethod];
+  sendPushToTenant(tenantId, {
+    title: 'Novo pedido! 🛎️',
+    body: `${order.clientName} fez um pedido para pagar na entrega${paymentLabel ? ` (${paymentLabel})` : ''}.`,
+    data: { orderId: order.id, type: 'order:new' },
+  });
 }
 
 async function listOrdersByClient(clientId, { limit = 20, offset = 0 } = {}) {

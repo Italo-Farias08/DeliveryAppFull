@@ -9,6 +9,7 @@ const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
 const MINE_SELECT = `
   SELECT o.id, o.status, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt",
          o.ready_at AS "readyAt", o.picked_up_at AS "pickedUpAt", o.delivered_at AS "deliveredAt",
+         o.payment_timing AS "paymentTiming", o.payment_method AS "paymentMethod", o.change_for AS "changeFor",
          r.name AS "restaurantName", r.image AS "restaurantImage",
          r.street AS "restaurantStreet", r.number AS "restaurantNumber",
          r.neighborhood AS "restaurantNeighborhood", r.city AS "restaurantCity",
@@ -33,6 +34,7 @@ async function setAvailability(userId, isAvailable) {
 async function listAvailable() {
   const result = await pool.query(
     `SELECT o.id, o.total, o.delivery_fee AS "deliveryFee", o.created_at AS "createdAt", o.ready_at AS "readyAt",
+            o.payment_timing AS "paymentTiming", o.payment_method AS "paymentMethod", o.change_for AS "changeFor",
             r.name AS "restaurantName", r.image AS "restaurantImage",
             r.street AS "restaurantStreet", r.number AS "restaurantNumber",
             r.neighborhood AS "restaurantNeighborhood", r.city AS "restaurantCity",
@@ -120,7 +122,8 @@ async function confirmPickup(delivererId, orderId, code) {
 // Entregador informa o código que o cliente tem, confirmando a entrega final
 async function confirmDelivery(delivererId, orderId, code) {
   const orderResult = await pool.query(
-    `SELECT id, delivery_code AS "deliveryCode", status, tenant_id AS "tenantId", client_id AS "clientId"
+    `SELECT id, delivery_code AS "deliveryCode", status, tenant_id AS "tenantId", client_id AS "clientId",
+            payment_timing AS "paymentTiming"
      FROM orders WHERE id = $1 AND deliverer_id = $2`,
     [orderId, delivererId]
   );
@@ -133,8 +136,14 @@ async function confirmDelivery(delivererId, orderId, code) {
     throw new AppError('Código de entrega incorreto', 400);
   }
 
+  // Pedido com pagamento na ENTREGA: o entregador acabou de receber (em
+  // dinheiro, cartão ou Pix) na hora da entrega, então marca como pago
+  // agora. Pedido pago pelo app (Mercado Pago) já chega aqui pago -- não
+  // mexe no payment_status dele.
   const result = await pool.query(
-    `UPDATE orders SET status = 'entregue', delivered_at = now()
+    `UPDATE orders SET status = 'entregue', delivered_at = now(),
+            payment_status = CASE WHEN payment_timing = 'entrega' THEN 'pago' ELSE payment_status END,
+            paid_at = CASE WHEN payment_timing = 'entrega' THEN now() ELSE paid_at END
      WHERE id = $1
      RETURNING id, status`,
     [orderId]

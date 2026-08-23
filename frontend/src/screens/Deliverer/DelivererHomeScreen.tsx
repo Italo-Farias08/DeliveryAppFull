@@ -229,6 +229,41 @@ function OrderValues({ total, deliveryFee }: { total: number; deliveryFee?: numb
   );
 }
 
+// ---------------------------------------------------------------------
+// Aviso pra quando o entregador precisa cobrar o pedido na hora (dinheiro,
+// cartão ou Pix) -- pedidos pagos pelo app (Pix no app / Mercado Pago) não
+// mostram nada aqui, já que o dinheiro já caiu.
+// ---------------------------------------------------------------------
+const OFFLINE_PAYMENT_LABEL: Record<string, string> = {
+  pix_entrega: 'Pix',
+  dinheiro: 'Dinheiro',
+  cartao_credito: 'Cartão de crédito',
+  cartao_debito: 'Cartão de débito',
+};
+
+function CollectOnDeliveryBadge({
+  paymentTiming,
+  paymentMethod,
+  changeFor,
+}: {
+  paymentTiming?: 'online' | 'entrega';
+  paymentMethod?: string | null;
+  changeFor?: number | null;
+}) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  if (paymentTiming !== 'entrega') return null;
+  const label = (paymentMethod && OFFLINE_PAYMENT_LABEL[paymentMethod]) || 'na entrega';
+  return (
+    <View style={styles.collectBadge}>
+      <Ionicons name="cash-outline" size={12} color={colors.star} />
+      <Text style={styles.collectBadgeText}>
+        Cobrar {label}{changeFor ? ` — troco p/ R$ ${Number(changeFor).toFixed(2)}` : ''}
+      </Text>
+    </View>
+  );
+}
+
 export default function DelivererHomeScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -640,6 +675,11 @@ export default function DelivererHomeScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardRestaurantName} numberOfLines={1}>{activeOrder.restaurantName}</Text>
                       <Text style={styles.cardOrderMeta}>Pedido #{activeOrder.id.slice(-5)}</Text>
+                      <CollectOnDeliveryBadge
+                        paymentTiming={activeOrder.paymentTiming}
+                        paymentMethod={activeOrder.paymentMethod}
+                        changeFor={activeOrder.changeFor}
+                      />
                     </View>
                     <OrderValues total={activeOrder.total} deliveryFee={activeOrder.deliveryFee} />
                   </View>
@@ -780,6 +820,11 @@ export default function DelivererHomeScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cardRestaurantName} numberOfLines={1}>{order.restaurantName}</Text>
                       <Text style={styles.cardOrderMeta}>Pedido #{order.id.slice(-5)}</Text>
+                      <CollectOnDeliveryBadge
+                        paymentTiming={order.paymentTiming}
+                        paymentMethod={order.paymentMethod}
+                        changeFor={order.changeFor}
+                      />
                     </View>
                     <OrderValues total={order.total} deliveryFee={order.deliveryFee} />
                   </View>
@@ -881,6 +926,12 @@ function createStyles(colors: ThemeColors) {
   avatarPlaceholder: { backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   cardRestaurantName: { ...typography.bodyBold, color: colors.text, fontSize: 15 },
   cardOrderMeta: { color: colors.textMuted, fontSize: 11.5, marginTop: 1 },
+  collectBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+    backgroundColor: `${colors.star}1A`, borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3, marginTop: 4,
+  },
+  collectBadgeText: { color: colors.star, fontSize: 11, fontWeight: '700' },
   valuesCol: { alignItems: 'flex-end', gap: 6 },
   totalPill: { backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   totalPillText: { color: colors.text, fontWeight: '800', fontSize: 12.5 },

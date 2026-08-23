@@ -1,9 +1,14 @@
 import { api } from './api';
 import { Order } from '../types';
 
+export type PaymentMethod = 'pix_app' | 'pix_entrega' | 'dinheiro' | 'cartao_credito' | 'cartao_debito';
+
 export interface CreateOrderPayload {
   restaurantId: string;
   addressId?: string;
+  paymentMethod: PaymentMethod;
+  // "precisa de troco para quanto?" -- só enviar quando paymentMethod for 'dinheiro'
+  changeFor?: number;
   items: { menuItemId: string; qty: number; addonIds?: string[] }[];
 }
 

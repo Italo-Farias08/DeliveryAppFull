@@ -16,7 +16,9 @@ export interface TenantOrder {
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
   paymentStatus?: 'pendente' | 'pago' | 'recusado' | 'estornado';
-  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | null;
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'pix_entrega' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | null;
+  paymentTiming?: 'online' | 'entrega';
+  changeFor?: number | null;
   // quanto desse pedido é comissão da plataforma (12% do subtotal, por padrão)
   commissionAmount?: number | null;
   clientName?: string;

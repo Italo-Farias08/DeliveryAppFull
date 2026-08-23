@@ -6,6 +6,9 @@ export interface RadarOrder {
   deliveryFee?: number;
   createdAt: string;
   readyAt?: string | null;
+  paymentTiming?: 'online' | 'entrega';
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'pix_entrega' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | null;
+  changeFor?: number | null;
   restaurantName: string;
   restaurantImage?: string | null;
   // endereço da loja — pra ir buscar o pedido
@@ -31,6 +34,9 @@ export interface MyDeliveryOrder {
   readyAt?: string | null;
   pickedUpAt?: string | null;
   deliveredAt?: string | null;
+  paymentTiming?: 'online' | 'entrega';
+  paymentMethod?: 'pix' | 'credit_card' | 'debit_card' | 'pix_entrega' | 'dinheiro' | 'cartao_credito' | 'cartao_debito' | null;
+  changeFor?: number | null;
   restaurantName: string;
   restaurantImage?: string | null;
   // endereço da loja — pra ir buscar o pedido
