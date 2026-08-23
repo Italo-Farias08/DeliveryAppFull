@@ -172,7 +172,7 @@ async function ensureRestaurantOwnedByTenant(db, restaurantId, tenantId) {
 async function listMenuItems(db, restaurantId) {
   const result = await db.query(
     `SELECT id, restaurant_id AS "restaurantId", category_id AS "categoryId",
-            name, description, price, image, is_available AS "isAvailable"
+            name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"
      FROM menu_items
      WHERE restaurant_id = $1
      ORDER BY created_at DESC`,
@@ -183,11 +183,11 @@ async function listMenuItems(db, restaurantId) {
 
 async function createMenuItem(db, tenantId, restaurantId, data) {
   const result = await db.query(
-    `INSERT INTO menu_items (tenant_id, restaurant_id, category_id, name, description, price, image, is_available)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, true))
+    `INSERT INTO menu_items (tenant_id, restaurant_id, category_id, name, description, price, promo_price, image, is_available)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, true))
      RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
-               name, description, price, image, is_available AS "isAvailable"`,
-    [tenantId, restaurantId, data.categoryId || null, data.name, data.description || null, data.price, data.image || null, data.isAvailable]
+               name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"`,
+    [tenantId, restaurantId, data.categoryId || null, data.name, data.description || null, data.price, data.promoPrice ?? null, data.image || null, data.isAvailable]
   );
   return result.rows[0];
 }
@@ -197,12 +197,12 @@ async function updateMenuItem(db, menuItemId, data) {
   // pra editar nome/preço não apagar a foto já enviada.
   const result = await db.query(
     `UPDATE menu_items
-     SET name = $1, description = $2, price = $3, image = COALESCE($4, image),
-         is_available = COALESCE($5, is_available), category_id = $6
-     WHERE id = $7
+     SET name = $1, description = $2, price = $3, promo_price = $4, image = COALESCE($5, image),
+         is_available = COALESCE($6, is_available), category_id = $7
+     WHERE id = $8
      RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
-               name, description, price, image, is_available AS "isAvailable"`,
-    [data.name, data.description || null, data.price, data.image || null, data.isAvailable, data.categoryId || null, menuItemId]
+               name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"`,
+    [data.name, data.description || null, data.price, data.promoPrice ?? null, data.image || null, data.isAvailable, data.categoryId || null, menuItemId]
   );
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
   return result.rows[0];
@@ -214,7 +214,7 @@ async function setMenuItemAvailability(db, menuItemId, isAvailable) {
   const result = await db.query(
     `UPDATE menu_items SET is_available = $1 WHERE id = $2
      RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
-               name, description, price, image, is_available AS "isAvailable"`,
+               name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"`,
     [isAvailable, menuItemId]
   );
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);
@@ -264,7 +264,7 @@ async function deleteMenuCategory(db, categoryId) {
 async function updateMenuItemImage(db, menuItemId, tenantId, imageUrl) {
   const result = await db.query(
     `UPDATE menu_items SET image = $1 WHERE id = $2 AND tenant_id = $3
-     RETURNING id, restaurant_id AS "restaurantId", name, description, price, image, is_available AS "isAvailable"`,
+     RETURNING id, restaurant_id AS "restaurantId", name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"`,
     [imageUrl, menuItemId, tenantId]
   );
   if (result.rowCount === 0) throw new AppError('Item de cardápio não encontrado nesta conta', 404);

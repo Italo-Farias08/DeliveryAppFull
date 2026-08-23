@@ -56,7 +56,17 @@ export function FoodCard({ item, onAdd }: FoodCardProps) {
         <Text style={[styles.description, soldOut && styles.textMuted]} numberOfLines={3}>
           {item.description}
         </Text>
-        <Text style={[styles.price, soldOut && styles.textMuted]}>R$ {item.price.toFixed(2)}</Text>
+        {item.promoPrice ? (
+          <View style={styles.priceRow}>
+            <Text style={styles.priceOld}>R$ {item.price.toFixed(2)}</Text>
+            <Text style={[styles.price, soldOut && styles.textMuted]}>R$ {item.promoPrice.toFixed(2)}</Text>
+            <View style={styles.promoBadge}>
+              <Text style={styles.promoBadgeText}>PROMOÇÃO</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={[styles.price, soldOut && styles.textMuted]}>R$ {item.price.toFixed(2)}</Text>
+        )}
       </View>
 
       {!soldOut && (
@@ -120,6 +130,10 @@ function createStyles(colors: ThemeColors) {
     fontWeight: '800',
     color: colors.primary,
   },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  priceOld: { fontSize: 12.5, color: colors.textMuted, textDecorationLine: 'line-through' },
+  promoBadge: { backgroundColor: colors.star, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  promoBadgeText: { fontSize: 9.5, fontWeight: '800', color: '#402D00', letterSpacing: 0.3 },
   textMuted: { color: colors.textMuted },
   addBtn: {
     position: 'absolute',

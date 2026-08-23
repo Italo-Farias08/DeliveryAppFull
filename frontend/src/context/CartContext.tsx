@@ -25,7 +25,8 @@ function buildKey(itemId: string, selectedAddons: Addon[]) {
 }
 
 function lineUnitPrice(ci: CartItem) {
-  return ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
+  const base = ci.item.promoPrice ?? ci.item.price;
+  return base + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {

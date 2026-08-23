@@ -62,6 +62,7 @@ export default function RestaurantMenuScreen() {
   const [miName, setMiName] = useState('');
   const [miDescription, setMiDescription] = useState('');
   const [miPrice, setMiPrice] = useState('');
+  const [miPromoPrice, setMiPromoPrice] = useState('');
   // Foto do item: enquanto o item ainda não existe (criação), guardamos só a
   // URI local escolhida (miPickedImage) e mandamos pro servidor depois que o
   // item for criado. Em edição, o envio já acontece na hora que a foto é
@@ -118,6 +119,8 @@ export default function RestaurantMenuScreen() {
     setMiName('');
     setMiDescription('');
     setMiPrice('');
+    setMiPromoPrice('');
+    setMiPromoPrice('');
     setMiPickedImage(null);
     setMiImagePreview(null);
     // se o dono já estava filtrando por uma categoria, o novo item já nasce nela
@@ -132,6 +135,7 @@ export default function RestaurantMenuScreen() {
     setMiName(item.name);
     setMiDescription(item.description || '');
     setMiPrice(String(item.price));
+    setMiPromoPrice(item.promoPrice != null ? String(item.promoPrice) : '');
     setMiPickedImage(null);
     setMiImagePreview(item.image || null);
     setMiCategoryId(item.categoryId || null);
@@ -210,10 +214,23 @@ export default function RestaurantMenuScreen() {
       Alert.alert('Preço inválido', 'Informe um preço válido para o item.');
       return;
     }
+    let promoPrice: number | null = null;
+    if (miPromoPrice.trim()) {
+      promoPrice = Number(miPromoPrice.replace(',', '.'));
+      if (Number.isNaN(promoPrice) || promoPrice <= 0) {
+        Alert.alert('Preço promocional inválido', 'Informe um preço promocional válido, ou deixe em branco.');
+        return;
+      }
+      if (promoPrice >= price) {
+        Alert.alert('Preço promocional inválido', 'O preço promocional precisa ser menor que o preço normal.');
+        return;
+      }
+    }
     const payload: MenuItemInput = {
       name: miName.trim(),
       description: miDescription.trim() || undefined,
       price,
+      promoPrice,
       isAvailable: true,
       categoryId: miCategoryId,
     };
@@ -412,7 +429,17 @@ export default function RestaurantMenuScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.menuItemName} numberOfLines={1}>{item.name}</Text>
                   <View style={styles.menuItemMetaRow}>
-                    <Text style={styles.menuItemPrice}>R$ {Number(item.price).toFixed(2)}</Text>
+                    {item.promoPrice ? (
+                      <>
+                        <Text style={styles.menuItemPriceOld}>R$ {Number(item.price).toFixed(2)}</Text>
+                        <Text style={styles.menuItemPrice}>R$ {Number(item.promoPrice).toFixed(2)}</Text>
+                        <View style={styles.promoTag}>
+                          <Text style={styles.promoTagText}>PROMO</Text>
+                        </View>
+                      </>
+                    ) : (
+                      <Text style={styles.menuItemPrice}>R$ {Number(item.price).toFixed(2)}</Text>
+                    )}
                     {itemCategory && (
                       <View style={styles.menuItemCategoryTag}>
                         <Text style={styles.menuItemCategoryTagText}>{itemCategory.name}</Text>
@@ -454,6 +481,17 @@ export default function RestaurantMenuScreen() {
 
               <Text style={styles.label}>Preço (R$)</Text>
               <TextInput style={styles.input} value={miPrice} onChangeText={setMiPrice} placeholder="Ex: 28.90" placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" />
+
+              <Text style={styles.label}>Preço promocional (opcional)</Text>
+              <TextInput
+                style={styles.input}
+                value={miPromoPrice}
+                onChangeText={setMiPromoPrice}
+                placeholder="Deixe em branco para não ter promoção"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.helperText}>Precisa ser menor que o preço normal. O item entra em promoção no app do cliente.</Text>
 
               {menuCategories.length > 0 && (
                 <>
@@ -623,6 +661,9 @@ function createStyles(colors: ThemeColors) {
   menuItemName: { ...typography.bodyBold, color: colors.text },
   menuItemMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   menuItemPrice: { color: colors.secondary, fontSize: 13, fontWeight: '800' },
+  menuItemPriceOld: { color: colors.textMuted, fontSize: 12, textDecorationLine: 'line-through' },
+  promoTag: { backgroundColor: colors.star, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  promoTagText: { color: '#402D00', fontSize: 9.5, fontWeight: '800' },
   menuItemCategoryTag: { backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   menuItemCategoryTagText: { color: colors.textMuted, fontSize: 10.5, fontWeight: '700' },
   menuItemActions: { flexDirection: 'row', gap: 6 },

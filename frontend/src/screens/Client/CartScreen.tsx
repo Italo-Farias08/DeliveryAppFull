@@ -324,7 +324,7 @@ export default function CartScreen() {
           </PressableScale>
         }
         renderItem={({ item: ci, index }) => {
-          const unitPrice = ci.item.price + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
+          const unitPrice = (ci.item.promoPrice ?? ci.item.price) + ci.selectedAddons.reduce((s, a) => s + a.price, 0);
           return (
             <FadeSlideIn index={index} style={styles.cartItemCard}>
               <View style={styles.row}>

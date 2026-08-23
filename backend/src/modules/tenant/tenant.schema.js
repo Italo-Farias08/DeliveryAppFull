@@ -31,15 +31,23 @@ const restaurantLocationSchema = z.object({
   lng: z.number().optional(),
 });
 
-const menuItemSchema = z.object({
-  name: z.string().min(2),
-  description: z.string().optional(),
-  price: z.number().positive(),
-  image: z.string().optional(),
-  isAvailable: z.boolean().optional(),
-  // categoria do cardápio (Pizzas, Carnes...); null tira o item de qualquer categoria
-  categoryId: z.string().uuid().nullable().optional(),
-});
+const menuItemSchema = z
+  .object({
+    name: z.string().min(2),
+    description: z.string().optional(),
+    price: z.number().positive(),
+    // Preço promocional -- opcional, precisa ser menor que o preço normal.
+    // null explícito remove a promoção do item.
+    promoPrice: z.number().positive().nullable().optional(),
+    image: z.string().optional(),
+    isAvailable: z.boolean().optional(),
+    // categoria do cardápio (Pizzas, Carnes...); null tira o item de qualquer categoria
+    categoryId: z.string().uuid().nullable().optional(),
+  })
+  .refine((data) => data.promoPrice == null || data.promoPrice < data.price, {
+    message: 'O preço promocional precisa ser menor que o preço normal',
+    path: ['promoPrice'],
+  });
 
 const menuCategorySchema = z.object({
   name: z.string().min(2),

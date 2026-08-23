@@ -36,7 +36,7 @@ async function createOrder(clientId, data) {
 
     const menuItemIds = data.items.map((i) => i.menuItemId);
     const menuItemsResult = await client.query(
-      `SELECT id, name, price, restaurant_id FROM menu_items WHERE id = ANY($1::uuid[])`,
+      `SELECT id, name, price, promo_price, restaurant_id FROM menu_items WHERE id = ANY($1::uuid[])`,
       [menuItemIds]
     );
     if (menuItemsResult.rowCount !== menuItemIds.length) {
@@ -86,11 +86,15 @@ async function createOrder(clientId, data) {
     }
 
     // Preço unitário de cada item já soma o preço dos adicionais escolhidos
-    // (ex: item R$ 20 + bacon R$ 4 + borda R$ 6 = R$ 30 por unidade).
+    // (ex: item R$ 20 + bacon R$ 4 + borda R$ 6 = R$ 30 por unidade). Se o
+    // item estiver em promoção (promo_price preenchido), usa o preço
+    // promocional -- o preço de verdade é sempre o do banco, nunca o que
+    // o app do cliente mandar, pra ninguém forjar desconto.
     function unitPrice(item) {
       const menuItem = menuItemsById[item.menuItemId];
+      const basePrice = menuItem.promo_price != null ? Number(menuItem.promo_price) : Number(menuItem.price);
       const addonsTotal = (item.addonIds || []).reduce((s, id) => s + Number(addonsById[id].price), 0);
-      return Number(menuItem.price) + addonsTotal;
+      return basePrice + addonsTotal;
     }
 
     const subtotal = data.items.reduce((sum, item) => sum + unitPrice(item) * item.qty, 0);

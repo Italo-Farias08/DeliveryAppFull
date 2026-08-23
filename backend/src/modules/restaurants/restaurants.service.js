@@ -46,7 +46,8 @@ async function listRestaurants(categoryId, lat, lng) {
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
             delivery_fee AS "deliveryFee", min_order_value AS "minOrderValue", image, banner, restaurant_open_now(id) AS "isOpen",
-            street, number, complement, neighborhood, city, state, zip, lat, lng
+            street, number, complement, neighborhood, city, state, zip, lat, lng,
+            EXISTS (SELECT 1 FROM menu_items mi WHERE mi.restaurant_id = restaurants.id AND mi.promo_price IS NOT NULL) AS "hasPromo"
             ${distanceSelect}
      FROM restaurants
      ${where}
@@ -61,7 +62,8 @@ async function getRestaurantById(id) {
     `SELECT id, tenant_id AS "tenantId", category_id AS "categoryId", name, rating, rating_count AS "ratingCount",
             delivery_time_min AS "deliveryTimeMin", delivery_time_max AS "deliveryTimeMax",
             delivery_fee AS "deliveryFee", min_order_value AS "minOrderValue", image, banner, restaurant_open_now(id) AS "isOpen",
-            street, number, complement, neighborhood, city, state, zip, lat, lng
+            street, number, complement, neighborhood, city, state, zip, lat, lng,
+            EXISTS (SELECT 1 FROM menu_items mi WHERE mi.restaurant_id = restaurants.id AND mi.promo_price IS NOT NULL) AS "hasPromo"
      FROM restaurants
      WHERE id = $1 AND is_published = true`,
     [id]
@@ -80,7 +82,7 @@ async function getRestaurantById(id) {
 
   const menuResult = await pool.query(
     `SELECT id, restaurant_id AS "restaurantId", category_id AS "categoryId",
-            name, description, price, image, is_available AS "isAvailable"
+            name, description, price, promo_price AS "promoPrice", image, is_available AS "isAvailable"
      FROM menu_items
      WHERE restaurant_id = $1
      ORDER BY name`,
@@ -129,7 +131,8 @@ async function search(query, lat, lng) {
   const result = await pool.query(
     `SELECT DISTINCT r.id, r.tenant_id AS "tenantId", r.category_id AS "categoryId", r.name, r.rating, r.rating_count AS "ratingCount",
             r.delivery_time_min AS "deliveryTimeMin", r.delivery_time_max AS "deliveryTimeMax",
-            r.delivery_fee AS "deliveryFee", r.min_order_value AS "minOrderValue", r.image, r.banner, restaurant_open_now(r.id) AS "isOpen"
+            r.delivery_fee AS "deliveryFee", r.min_order_value AS "minOrderValue", r.image, r.banner, restaurant_open_now(r.id) AS "isOpen",
+            EXISTS (SELECT 1 FROM menu_items mi2 WHERE mi2.restaurant_id = r.id AND mi2.promo_price IS NOT NULL) AS "hasPromo"
             ${distanceSelect}
      FROM restaurants r
      LEFT JOIN menu_items m ON m.restaurant_id = r.id
@@ -163,7 +166,7 @@ async function searchItems(query, lat, lng) {
 
   const result = await pool.query(
     `SELECT mi.id, mi.restaurant_id AS "restaurantId", mi.category_id AS "categoryId",
-            mi.name, mi.description, mi.price, mi.image, mi.is_available AS "isAvailable",
+            mi.name, mi.description, mi.price, mi.promo_price AS "promoPrice", mi.image, mi.is_available AS "isAvailable",
             r.name AS "restaurantName", r.image AS "restaurantImage",
             restaurant_open_now(r.id) AS "restaurantIsOpen"
      FROM menu_items mi

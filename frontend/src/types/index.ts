@@ -45,6 +45,8 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
+  // preço promocional -- menor que price, opcional. Presente = item em promoção.
+  promoPrice?: number | null;
   image: string;
   isAvailable?: boolean;
   // opcional por compatibilidade com telas/dados antigos sem adicionais
@@ -85,6 +87,9 @@ export interface Restaurant {
   // antigos ainda não tinham esse campo.
   banner?: string | null;
   isOpen: boolean;
+  // true quando o restaurante tem pelo menos um item de cardápio com
+  // preço promocional -- calculado no backend (EXISTS), não é uma coluna.
+  hasPromo?: boolean;
   // status calculado (botão manual + horário programado do dia) -- só vem
   // preenchido nas respostas do painel do restaurante, pra mostrar "Aberta
   // agora"/"Fechada" com precisão mesmo quando o botão manual está ligado

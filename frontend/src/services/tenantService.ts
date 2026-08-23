@@ -183,6 +183,8 @@ export interface MenuItemInput {
   name: string;
   description?: string;
   price: number;
+  // preço promocional -- opcional, precisa ser menor que price. null remove a promoção.
+  promoPrice?: number | null;
   image?: string;
   isAvailable?: boolean;
   categoryId?: string | null;

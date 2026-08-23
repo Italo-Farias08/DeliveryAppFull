@@ -35,6 +35,12 @@ export function RestaurantCard({ restaurant, onPress }: Props) {
             <Text style={styles.closedText}>Fechado</Text>
           </View>
         )}
+        {restaurant.hasPromo && (
+          <View style={styles.promoBadge}>
+            <Ionicons name="pricetag" size={11} color="#402D00" />
+            <Text style={styles.promoBadgeText}>Promoção</Text>
+          </View>
+        )}
       </View>
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
@@ -67,6 +73,12 @@ function createStyles(colors: ThemeColors) {
     backgroundColor: colors.overlay, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8,
   },
   closedText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  promoBadge: {
+    position: 'absolute', top: 10, right: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: colors.star, paddingVertical: 4, paddingHorizontal: 9, borderRadius: 8,
+  },
+  promoBadgeText: { color: '#402D00', fontSize: 11, fontWeight: '800' },
   info: { paddingTop: 8, paddingHorizontal: 2 },
   name: { ...typography.h2, color: colors.text },
   row: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
