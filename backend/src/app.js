@@ -45,18 +45,23 @@ app.use('/admin', express.static(path.join(__dirname, '..', 'public')));
 // /restaurante/login.html, que referencia "../img/logo.png").
 app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img')));
 
-// Portal web do restaurante (login + futuramente o painel de gestão).
+// Portal web do restaurante (login + painel de gestão completo, com as
+// mesmas funções do painel do app: pedidos, cardápio, esgotados,
+// entregadores, localização, horário, vendas e configuração).
 // Fica em pasta própria, separada do /admin acima, porque o login aqui
 // usa autenticação normal (JWT de usuário) e não a chave de admin.
 //
-// Esse arquivo é um HTML único (CSS + JS tudo dentro, sem arquivo
+// Esses arquivos são HTML único (CSS + JS tudo dentro, sem arquivo
 // separado), por isso essa rota libera script inline na política de
 // segurança (CSP) só pra ela -- o resto do site continua com a política
 // padrão do Helmet, bem mais restrita.
+// connect-src também libera o Nominatim (OpenStreetMap): é a busca de
+// endereço usada na aba "Localização" do painel, chamada direto do
+// navegador, igual ao app (ver frontend/src/services/geocodingService.ts).
 app.use('/restaurante', (req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:; connect-src 'self'"
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org"
   );
   next();
 });

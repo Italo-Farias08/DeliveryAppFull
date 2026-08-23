@@ -895,7 +895,6 @@ function atualizarBadgePendentes() {
 // ===================================================================
 
 async function iniciar() {
-  document.getElementById('nome-usuario-topo-inicial');
   try {
     const [cats, restaurantes] = await Promise.all([
       chamarApi('/api/categories'),
@@ -1024,6 +1023,1747 @@ function atualizarSecaoAtual(mostrarSpinner) {
     if (mostrarSpinner) setTimeout(() => botao.classList.remove('girando'), 400);
   });
 }
+
+// ===================================================================
+// DASHBOARD (Início)
+// ===================================================================
+
+function hojeChave(iso) {
+  return new Date(iso).toDateString();
+}
+
+function renderizarDashboard() {
+  const conteudo = document.getElementById('conteudo');
+  const hojeStr = new Date().toDateString();
+  const pedidosHoje = pedidos.filter((p) => hojeChave(p.createdAt) === hojeStr);
+  const faturamentoHoje = pedidosHoje
+    .filter((p) => p.status !== 'cancelado')
+    .reduce((soma, p) => soma + Number(p.total), 0);
+  const pendentes = pedidos.filter((p) => p.status === 'pendente').length;
+  const aberta = restaurant.isOpenNow ?? restaurant.isOpen;
+
+  conteudo.innerHTML = '';
+
+  if (!restaurant.isPublished) {
+    const banner = el(`
+      <div class="banner-publicar">
+        <div class="banner-publicar-icone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.6 21.6 0 0 1 5.06-6.06M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 8 11 8a21.6 21.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24M1 1l22 22" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="flex:1">
+          <strong>Sua loja ainda não aparece pros clientes</strong>
+          <p>${menuItems.length === 0 ? 'Adicione pelo menos um item ao cardápio pra poder publicar.' : 'Cardápio pronto! Quando quiser, publique pra começar a receber pedidos.'}</p>
+          <button id="botao-publicar-loja">${menuItems.length === 0 ? 'Ir pro cardápio' : 'Estou pronto, publicar loja'}</button>
+        </div>
+      </div>
+    `);
+    banner.querySelector('#botao-publicar-loja').addEventListener('click', async (e) => {
+      if (menuItems.length === 0) { irPara('cardapio'); return; }
+      e.target.disabled = true;
+      e.target.textContent = 'Publicando...';
+      try {
+        restaurant = await chamarApi(`/api/tenant/restaurants/${restaurant.id}/publish`, { method: 'PATCH' });
+        renderizarDashboard();
+      } catch (erro) {
+        alert('Não foi possível publicar: ' + erro.message);
+        e.target.disabled = false;
+        e.target.textContent = 'Estou pronto, publicar loja';
+      }
+    });
+    conteudo.appendChild(banner);
+  }
+
+  const hero = el(`
+    <div class="cartao-hero">
+      <div class="hero-linha-topo">
+        <div style="flex:1">
+          <div class="hero-eyebrow">Status da loja</div>
+          <div class="hero-status-linha">
+            <span class="ponto-status" style="background:${aberta ? '#3ddc97' : 'rgba(255,255,255,0.55)'}"></span>
+            <span class="hero-status-titulo">${aberta ? 'Aberta agora' : 'Fechada'}</span>
+          </div>
+          <div class="hero-status-sub">${!restaurant.isOpen ? 'Clientes não podem pedir agora' : (restaurant.isOpenNow === false ? 'Fora do horário programado de hoje' : 'Você está recebendo pedidos')}</div>
+        </div>
+        <label class="interruptor">
+          <input type="checkbox" id="toggle-loja-aberta" ${restaurant.isOpen ? 'checked' : ''} />
+          <span class="trilho-interruptor"></span>
+        </label>
+      </div>
+      <div class="hero-divisor"></div>
+      <div class="hero-stats">
+        <div class="hero-stat-item">
+          <div class="hero-stat-icone"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M6 2h9l3 3v17H6z" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="hero-stat-valor">${pedidosHoje.length}</div><div class="hero-stat-rotulo">Pedidos hoje</div></div>
+        </div>
+        <div class="hero-stat-divisor"></div>
+        <div class="hero-stat-item">
+          <div class="hero-stat-icone"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="hero-stat-valor">${formatarMoeda(faturamentoHoje)}</div><div class="hero-stat-rotulo">Faturamento hoje</div></div>
+        </div>
+      </div>
+    </div>
+  `);
+  hero.querySelector('#toggle-loja-aberta').addEventListener('change', async (e) => {
+    const valor = e.target.checked;
+    const anterior = restaurant.isOpen;
+    restaurant.isOpen = valor;
+    e.target.disabled = true;
+    try {
+      restaurant = await chamarApi(`/api/tenant/restaurants/${restaurant.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: restaurant.name,
+          categoryId: restaurant.categoryId,
+          deliveryFee: restaurant.deliveryFee,
+          minOrderValue: restaurant.minOrderValue,
+          deliveryTimeMin: restaurant.deliveryTimeMin,
+          deliveryTimeMax: restaurant.deliveryTimeMax,
+          isOpen: valor,
+        }),
+      });
+      renderizarDashboard();
+    } catch (erro) {
+      restaurant.isOpen = anterior;
+      alert('Não foi possível atualizar o status da loja: ' + erro.message);
+      renderizarDashboard();
+    }
+  });
+  conteudo.appendChild(hero);
+
+  const atalhos = [
+    { id: 'pedidos', titulo: 'Pedidos', sub: pendentes > 0 ? `${pendentes} novo${pendentes > 1 ? 's' : ''}` : 'Ver tudo', badge: pendentes,
+      icone: '<path d="M6 2h9l3 3v17H6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9h6M9 13h6M9 17h3" stroke-linecap="round"/>' },
+    { id: 'vendas', titulo: 'Vendas', sub: 'Faturamento e histórico',
+      icone: '<path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/>' },
+    { id: 'cardapio', titulo: 'Cardápio', sub: `${menuItems.length} ${menuItems.length === 1 ? 'item' : 'itens'}`,
+      icone: '<path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>' },
+    { id: 'localizacao', titulo: 'Localização', sub: restaurant.street ? 'Endereço salvo' : 'Adicionar endereço',
+      icone: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.3"/>' },
+    { id: 'horario', titulo: 'Horário', sub: 'Funcionamento por dia',
+      icone: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/>' },
+    { id: 'configuracao', titulo: 'Configuração', sub: 'Fotos e dados da loja',
+      icone: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke-linejoin="round"/>' },
+  ];
+  const grade = el('<div class="grade-atalhos"></div>');
+  atalhos.forEach((a) => {
+    const cartao = el(`
+      <button class="atalho">
+        ${a.badge ? `<span class="atalho-badge">${a.badge}</span>` : ''}
+        <div class="atalho-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">${a.icone}</svg></div>
+        <div class="atalho-titulo">${a.titulo}</div>
+        <div class="atalho-sub">${a.sub}</div>
+      </button>
+    `);
+    cartao.addEventListener('click', () => irPara(a.id));
+    grade.appendChild(cartao);
+  });
+  conteudo.appendChild(grade);
+}
+
+// ===================================================================
+// PEDIDOS
+// ===================================================================
+
+async function carregarPedidos(mostrarSpinnerBotao) {
+  const botaoAtualizar = document.getElementById('botao-atualizar');
+  if (mostrarSpinnerBotao && botaoAtualizar) botaoAtualizar.classList.add('girando');
+  try {
+    const [listaPedidos, listaEntregadores] = await Promise.all([
+      chamarApi('/api/tenant/orders'),
+      chamarApi('/api/tenant/deliverers').catch(() => entregadoresDaCasa),
+    ]);
+    pedidos = listaPedidos;
+    entregadoresDaCasa = listaEntregadores;
+    pedidosCarregados = true;
+    atualizarBadgePendentes();
+    if (secaoAtual === 'pedidos') renderizarQuadroEHistorico();
+  } catch (erro) {
+    if (secaoAtual === 'pedidos') {
+      const erroEl = document.getElementById('pedidos-estado-erro');
+      if (erroEl) {
+        erroEl.textContent = 'Não foi possível carregar os pedidos: ' + erro.message;
+        erroEl.classList.remove('oculto');
+      }
+    }
+  } finally {
+    if (mostrarSpinnerBotao && botaoAtualizar) setTimeout(() => botaoAtualizar.classList.remove('girando'), 400);
+  }
+}
+
+function formatarTempoDecorrido(dataIso) {
+  const minutos = Math.max(0, Math.round((Date.now() - new Date(dataIso).getTime()) / 60000));
+  if (minutos < 1) return 'agora';
+  if (minutos < 60) return `${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  return `${horas}h ${minutos % 60}min`;
+}
+
+function renderizarSecaoPedidos() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = `
+    <div class="abas-pagina">
+      <button class="aba-pagina ${abaPedidosAtual === 'ativos' ? 'ativa' : ''}" id="aba-ativos">Em andamento</button>
+      <button class="aba-pagina ${abaPedidosAtual === 'historico' ? 'ativa' : ''}" id="aba-historico">Histórico</button>
+    </div>
+    <div id="pedidos-estado-erro" class="estado-erro-inline oculto"></div>
+    <div class="quadro" id="quadro-kanban" style="${abaPedidosAtual === 'ativos' ? '' : 'display:none'}">
+      <div class="coluna" data-status="pendente">
+        <div class="coluna-cabecalho">Novos pedidos <span class="contagem-coluna" id="contagem-pendente">0</span></div>
+        <div class="lista-coluna" id="lista-pendente"></div>
+      </div>
+      <div class="coluna" data-status="preparando">
+        <div class="coluna-cabecalho">Em preparo <span class="contagem-coluna" id="contagem-preparando">0</span></div>
+        <div class="lista-coluna" id="lista-preparando"></div>
+      </div>
+      <div class="coluna" data-status="procurando_entregador">
+        <div class="coluna-cabecalho">Prontos <span class="contagem-coluna" id="contagem-pronto">0</span></div>
+        <div class="lista-coluna" id="lista-pronto"></div>
+      </div>
+    </div>
+    <div class="lista-historico ${abaPedidosAtual === 'historico' ? '' : 'oculto'}" id="lista-historico"></div>
+  `;
+  document.getElementById('aba-ativos').addEventListener('click', () => trocarAbaPedidos('ativos'));
+  document.getElementById('aba-historico').addEventListener('click', () => trocarAbaPedidos('historico'));
+  renderizarQuadroEHistorico();
+}
+
+function trocarAbaPedidos(nomeAba) {
+  abaPedidosAtual = nomeAba;
+  document.getElementById('aba-ativos').classList.toggle('ativa', nomeAba === 'ativos');
+  document.getElementById('aba-historico').classList.toggle('ativa', nomeAba === 'historico');
+  document.getElementById('quadro-kanban').style.display = nomeAba === 'ativos' ? 'grid' : 'none';
+  document.getElementById('lista-historico').classList.toggle('oculto', nomeAba !== 'historico');
+}
+
+function renderizarQuadroEHistorico() {
+  if (secaoAtual !== 'pedidos') return;
+  const grupos = { pendente: [], preparando: [], procurando_entregador: [] };
+  for (const pedido of pedidos) if (grupos[pedido.status]) grupos[pedido.status].push(pedido);
+
+  document.getElementById('contagem-pendente').textContent = grupos.pendente.length;
+  document.getElementById('contagem-preparando').textContent = grupos.preparando.length;
+  document.getElementById('contagem-pronto').textContent = grupos.procurando_entregador.length;
+
+  preencherColunaPedidos('lista-pendente', grupos.pendente);
+  preencherColunaPedidos('lista-preparando', grupos.preparando);
+  preencherColunaPedidos('lista-pronto', grupos.procurando_entregador);
+
+  const historico = pedidos.filter((p) => p.status === 'entregue' || p.status === 'cancelado').slice(0, 40);
+  const listaHistorico = document.getElementById('lista-historico');
+  if (historico.length === 0) {
+    listaHistorico.innerHTML = '<div class="mensagem-vazia">Nenhum pedido no histórico ainda.</div>';
+  } else {
+    listaHistorico.innerHTML = '';
+    historico.forEach((p) => listaHistorico.appendChild(montarCartaoPedido(p, true)));
+  }
+}
+
+function preencherColunaPedidos(idLista, lista) {
+  const container = document.getElementById(idLista);
+  if (lista.length === 0) {
+    container.innerHTML = '<div class="mensagem-vazia">Nenhum pedido aqui agora.</div>';
+    return;
+  }
+  container.innerHTML = '';
+  lista.forEach((p) => container.appendChild(montarCartaoPedido(p)));
+}
+
+function montarCartaoPedido(pedido, ehHistorico) {
+  const cartao = document.createElement('div');
+  cartao.className = 'cartao-pedido';
+  cartao.dataset.status = pedido.status;
+
+  const resumoItens = (pedido.items || []).map((item) => `${item.qty}x ${item.name}`).join(', ');
+  const pillHistorico = ehHistorico
+    ? `<span class="status-pill ${pedido.status}">${pedido.status === 'entregue' ? 'Entregue' : 'Cancelado'}</span>`
+    : '';
+
+  cartao.innerHTML = `
+    <div class="linha-topo-cartao" data-acao="alternar">
+      <div>
+        <div class="codigo-pedido">#${(pedido.pickupCode || pedido.id).toString().slice(-5)}</div>
+        <div class="nome-cliente">${pedido.clientName || 'Cliente'}</div>
+      </div>
+      <div class="tempo-pedido">${formatarTempoDecorrido(pedido.createdAt)}</div>
+    </div>
+    ${pillHistorico ? `<div style="margin-top:8px">${pillHistorico}</div>` : ''}
+    <div class="resumo-itens">${resumoItens || 'Sem itens'}</div>
+    <div class="rodape-cartao"><div class="total-cartao">${formatarMoeda(pedido.total)}</div></div>
+    <div class="area-acoes"></div>
+    <div class="area-detalhe"></div>
+  `;
+
+  cartao.querySelector('[data-acao="alternar"]').addEventListener('click', () => alternarDetalhePedido(pedido, cartao));
+
+  const areaAcoes = cartao.querySelector('.area-acoes');
+  if (!ehHistorico) montarBotoesAcaoPedido(pedido, cartao, areaAcoes);
+
+  if (pedidosExpandidos.has(pedido.id)) montarDetalhePedido(pedido, cartao);
+
+  return cartao;
+}
+
+function montarBotoesAcaoPedido(pedido, cartao, areaAcoes) {
+  if (pedido.status === 'pendente') {
+    const grupo = el(`
+      <div class="grupo-botoes">
+        <button class="botao-acao botao-recusar" data-acao="recusar">Recusar</button>
+        <button class="botao-acao botao-aceitar" data-acao="aceitar">Aceitar</button>
+      </div>
+    `);
+    grupo.querySelector('[data-acao="aceitar"]').addEventListener('click', (e) => { e.stopPropagation(); aceitarPedido(pedido.id, e.target); });
+    grupo.querySelector('[data-acao="recusar"]').addEventListener('click', (e) => { e.stopPropagation(); cartao.querySelector('.campo-motivo').classList.toggle('visivel'); });
+    areaAcoes.appendChild(grupo);
+
+    const campoMotivo = el(`
+      <div class="campo-motivo">
+        <textarea placeholder="Motivo da recusa (opcional)"></textarea>
+        <div class="linha-confirmar">
+          <button class="botao-acao botao-recusar" data-acao="cancelar-motivo">Voltar</button>
+          <button class="botao-acao botao-aceitar" data-acao="confirmar-recusa">Confirmar recusa</button>
+        </div>
+      </div>
+    `);
+    campoMotivo.querySelector('[data-acao="cancelar-motivo"]').addEventListener('click', (e) => { e.stopPropagation(); campoMotivo.classList.remove('visivel'); });
+    campoMotivo.querySelector('[data-acao="confirmar-recusa"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      recusarPedido(pedido.id, campoMotivo.querySelector('textarea').value.trim(), e.target);
+    });
+    areaAcoes.appendChild(campoMotivo);
+  }
+
+  if (pedido.status === 'preparando') {
+    const grupo = el(`<div class="grupo-botoes"><button class="botao-acao botao-pronto" data-acao="marcar-pronto">Marcar como pronto</button></div>`);
+    grupo.querySelector('[data-acao="marcar-pronto"]').addEventListener('click', (e) => { e.stopPropagation(); cartao.querySelector('.seletor-entregador').classList.toggle('visivel'); });
+    areaAcoes.appendChild(grupo);
+
+    const opcoesEntregadores = entregadoresDaCasa.map((d) => `<option value="${d.id}">${d.name}${d.isOnline ? ' • online' : ''}</option>`).join('');
+    const seletor = el(`
+      <div class="seletor-entregador">
+        <select>
+          <option value="">Enviar pro radar de entregadores (qualquer um pode aceitar)</option>
+          ${opcoesEntregadores}
+        </select>
+        <div class="linha-confirmar">
+          <button class="botao-acao botao-recusar" data-acao="cancelar-pronto">Voltar</button>
+          <button class="botao-acao botao-pronto" data-acao="confirmar-pronto">Confirmar</button>
+        </div>
+      </div>
+    `);
+    seletor.querySelector('[data-acao="cancelar-pronto"]').addEventListener('click', (e) => { e.stopPropagation(); seletor.classList.remove('visivel'); });
+    seletor.querySelector('[data-acao="confirmar-pronto"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      marcarPedidoPronto(pedido.id, seletor.querySelector('select').value || undefined, e.target);
+    });
+    areaAcoes.appendChild(seletor);
+  }
+
+  if (pedido.status === 'procurando_entregador') {
+    areaAcoes.appendChild(el(`
+      <div class="info-radar">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ${pedido.delivererName ? `Indo com ${pedido.delivererName}` : 'Procurando entregador...'}
+      </div>
+    `));
+  }
+}
+
+function alternarDetalhePedido(pedido, cartao) {
+  const area = cartao.querySelector('.area-detalhe');
+  if (pedidosExpandidos.has(pedido.id)) {
+    pedidosExpandidos.delete(pedido.id);
+    area.innerHTML = '';
+  } else {
+    pedidosExpandidos.add(pedido.id);
+    montarDetalhePedido(pedido, cartao);
+  }
+}
+
+function montarDetalhePedido(pedido, cartao) {
+  const area = cartao.querySelector('.area-detalhe');
+  const endereco = pedido.street
+    ? `${pedido.street}, ${pedido.number || 's/n'}${pedido.complement ? ' - ' + pedido.complement : ''} · ${pedido.neighborhood || ''}, ${pedido.city || ''}`
+    : 'Endereço não informado';
+
+  const itensHtml = (pedido.items || []).map((item) => `
+    <div class="item-detalhe"><span><span class="qtd">${item.qty}x</span>${item.name}</span><span>${formatarMoeda(item.price * item.qty)}</span></div>
+    ${item.notes ? `<div class="obs-item">"${item.notes}"</div>` : ''}
+  `).join('');
+
+  const div = el(`
+    <div class="detalhe-pedido">
+      <div class="selo-codigo-retirada">Código de retirada: ${pedido.pickupCode || '—'}</div>
+      <div class="bloco-detalhe"><strong>Itens</strong>${itensHtml || 'Sem itens.'}</div>
+      <div class="bloco-detalhe"><strong>Entrega</strong>${endereco}</div>
+      <div class="bloco-detalhe"><strong>Contato do cliente</strong>${pedido.clientPhone ? `<a href="tel:${pedido.clientPhone}">${pedido.clientPhone}</a>` : 'Não informado'}</div>
+      <div class="bloco-detalhe">
+        <div class="linha-valores"><span>Subtotal</span><span>${formatarMoeda(pedido.subtotal)}</span></div>
+        <div class="linha-valores"><span>Taxa de entrega</span><span>${formatarMoeda(pedido.deliveryFee)}</span></div>
+        <div class="linha-valores total-final"><span>Total</span><span>${formatarMoeda(pedido.total)}</span></div>
+      </div>
+      <div class="bloco-detalhe chat-pedido">
+        <strong>Conversa com o cliente</strong>
+        <div class="lista-mensagens" id="mensagens-${pedido.id}"></div>
+        <div class="linha-envio-chat">
+          <input type="text" placeholder="Escreva uma mensagem..." id="campo-msg-${pedido.id}" />
+          <button class="botao-enviar-chat" data-acao="enviar-msg">Enviar</button>
+        </div>
+      </div>
+    </div>
+  `);
+
+  div.querySelector('[data-acao="enviar-msg"]').addEventListener('click', (e) => { e.stopPropagation(); enviarMensagemPedido(pedido.id); });
+  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('click', (e) => e.stopPropagation());
+  div.querySelector(`#campo-msg-${pedido.id}`).addEventListener('keydown', (e) => { if (e.key === 'Enter') enviarMensagemPedido(pedido.id); });
+
+  area.innerHTML = '';
+  area.appendChild(div);
+  carregarMensagensPedido(pedido.id);
+}
+
+async function aceitarPedido(id, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/accept`, { method: 'PATCH' });
+    await carregarPedidos(false);
+  } catch (erro) { alert('Não foi possível aceitar: ' + erro.message); botao.disabled = false; }
+}
+async function recusarPedido(id, motivo, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ reason: motivo || undefined }) });
+    await carregarPedidos(false);
+  } catch (erro) { alert('Não foi possível recusar: ' + erro.message); botao.disabled = false; }
+}
+async function marcarPedidoPronto(id, delivererId, botao) {
+  botao.disabled = true;
+  try {
+    await chamarApi(`/api/tenant/orders/${id}/ready`, { method: 'PATCH', body: JSON.stringify({ delivererId: delivererId || undefined }) });
+    await carregarPedidos(false);
+  } catch (erro) { alert('Não foi possível marcar como pronto: ' + erro.message); botao.disabled = false; }
+}
+
+async function carregarMensagensPedido(pedidoId) {
+  const container = document.getElementById(`mensagens-${pedidoId}`);
+  if (!container) return;
+  container.innerHTML = '<div class="mensagem-vazia">Carregando conversa...</div>';
+  try {
+    mensagensPorPedido[pedidoId] = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`);
+    renderizarMensagensPedido(pedidoId);
+  } catch (erro) {
+    container.innerHTML = '<div class="mensagem-vazia">Não foi possível carregar a conversa.</div>';
+  }
+}
+function renderizarMensagensPedido(pedidoId) {
+  const container = document.getElementById(`mensagens-${pedidoId}`);
+  if (!container) return;
+  const mensagens = mensagensPorPedido[pedidoId] || [];
+  if (mensagens.length === 0) { container.innerHTML = '<div class="mensagem-vazia">Nenhuma mensagem ainda.</div>'; return; }
+  container.innerHTML = mensagens.map((m) => `<div class="bolha-mensagem ${m.senderRole === 'restaurant' ? 'minha' : 'outra'}">${m.message}</div>`).join('');
+  container.scrollTop = container.scrollHeight;
+}
+async function enviarMensagemPedido(pedidoId) {
+  const campo = document.getElementById(`campo-msg-${pedidoId}`);
+  const texto = campo.value.trim();
+  if (!texto) return;
+  campo.value = '';
+  try {
+    const salva = await chamarApi(`/api/tenant/orders/${pedidoId}/messages`, { method: 'POST', body: JSON.stringify({ message: texto }) });
+    mensagensPorPedido[pedidoId] = [...(mensagensPorPedido[pedidoId] || []), salva];
+    renderizarMensagensPedido(pedidoId);
+  } catch (erro) { alert('Não foi possível enviar: ' + erro.message); campo.value = texto; }
+}
+
+// ===================================================================
+// CARDÁPIO
+// ===================================================================
+
+let categoriaCardapioAtiva = null;
+let itemEmEdicao = null;
+let adicionaisDoItem = [];
+let adicionalEmEdicaoId = null;
+let imagemEscolhidaNovoItem = null; // { file, previewUrl } -- item novo, envia só depois de criar
+
+function renderizarCardapio() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = `
+    <div class="barra-acao-secao">
+      <div style="font-size:12.5px; color:var(--texto-suave); max-width:520px; line-height:1.5;">
+        Crie categorias como Pizzas, Carnes ou Hambúrgueres — elas ajudam a organizar seus itens.
+      </div>
+      <button class="botao-primario" id="botao-novo-item">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="white" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+        Novo item
+      </button>
+    </div>
+
+    <div class="grupo-pills" id="pills-categorias-cardapio"></div>
+
+    <div class="linha-nova-categoria">
+      <input class="campo-texto" id="campo-nova-categoria" placeholder="Nova categoria, ex: Pizzas" />
+      <button class="botao-quadrado" id="botao-add-categoria">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div id="lista-itens-cardapio"></div>
+  `;
+
+  document.getElementById('botao-novo-item').addEventListener('click', () => abrirModalItem(null));
+  document.getElementById('botao-add-categoria').addEventListener('click', criarCategoriaCardapio);
+  document.getElementById('campo-nova-categoria').addEventListener('keydown', (e) => { if (e.key === 'Enter') criarCategoriaCardapio(); });
+
+  renderizarPillsCategorias();
+  renderizarListaItensCardapio();
+}
+
+function renderizarPillsCategorias() {
+  const container = document.getElementById('pills-categorias-cardapio');
+  container.innerHTML = '';
+  const pillTodos = el(`<button type="button" class="pilula ${!categoriaCardapioAtiva ? 'ativa' : ''}">Todos</button>`);
+  pillTodos.addEventListener('click', () => { categoriaCardapioAtiva = null; renderizarPillsCategorias(); renderizarListaItensCardapio(); });
+  container.appendChild(pillTodos);
+
+  menuCategorias.forEach((cat) => {
+    const pill = el(`
+      <button type="button" class="pilula ${categoriaCardapioAtiva === cat.id ? 'ativa' : ''}">
+        ${cat.name}
+        <span class="fechar-pilula"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/></svg></span>
+      </button>
+    `);
+    pill.querySelector('.fechar-pilula').addEventListener('click', (e) => { e.stopPropagation(); removerCategoriaCardapio(cat); });
+    pill.addEventListener('click', () => { categoriaCardapioAtiva = cat.id; renderizarPillsCategorias(); renderizarListaItensCardapio(); });
+    container.appendChild(pill);
+  });
+}
+
+async function criarCategoriaCardapio() {
+  const campo = document.getElementById('campo-nova-categoria');
+  const nome = campo.value.trim();
+  if (!nome) return;
+  const botao = document.getElementById('botao-add-categoria');
+  botao.disabled = true;
+  try {
+    const criada = await chamarApi(`/api/tenant/restaurants/${restaurant.id}/menu-categories`, {
+      method: 'POST',
+      body: JSON.stringify({ name: nome, sortOrder: menuCategorias.length }),
+    });
+    menuCategorias.push(criada);
+    campo.value = '';
+    renderizarPillsCategorias();
+  } catch (erro) {
+    alert('Erro ao criar categoria: ' + erro.message);
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+async function removerCategoriaCardapio(categoria) {
+  if (!confirm(`Remover "${categoria.name}"? Os itens dela continuam no cardápio, só ficam sem categoria.`)) return;
+  try {
+    await chamarApi(`/api/tenant/menu-categories/${categoria.id}`, { method: 'DELETE' });
+    menuCategorias = menuCategorias.filter((c) => c.id !== categoria.id);
+    menuItems = menuItems.map((m) => (m.categoryId === categoria.id ? { ...m, categoryId: null } : m));
+    if (categoriaCardapioAtiva === categoria.id) categoriaCardapioAtiva = null;
+    renderizarPillsCategorias();
+    renderizarListaItensCardapio();
+  } catch (erro) {
+    alert('Não foi possível remover a categoria: ' + erro.message);
+  }
+}
+
+function renderizarListaItensCardapio() {
+  const container = document.getElementById('lista-itens-cardapio');
+  const filtrados = categoriaCardapioAtiva ? menuItems.filter((i) => i.categoryId === categoriaCardapioAtiva) : menuItems;
+
+  if (filtrados.length === 0) {
+    container.innerHTML = `
+      <div class="caixa-vazia">
+        <div class="icone-vazio"><svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="1.8"><path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <strong>Nenhum item cadastrado</strong>
+        <span>${categoriaCardapioAtiva ? 'Nenhum item nesta categoria ainda' : 'Adicione o primeiro item do seu cardápio'}</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+  filtrados.forEach((item) => {
+    const categoria = menuCategorias.find((c) => c.id === item.categoryId);
+    const linha = el(`
+      <div class="linha-item-cardapio">
+        ${item.image
+          ? `<img class="miniatura" src="${item.image}" />`
+          : `<div class="miniatura miniatura-vazia"><svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="1.8"><path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`}
+        <div class="info-item-cardapio">
+          <div class="nome-item-cardapio">${item.name}</div>
+          <div class="meta-item-cardapio">
+            <span class="preco-item-cardapio">${formatarMoeda(item.price)}</span>
+            ${categoria ? `<span class="tag-categoria-item">${categoria.name}</span>` : ''}
+          </div>
+        </div>
+        <div class="acoes-item-cardapio">
+          <button class="botao-icone-pequeno editar" data-acao="editar" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="botao-icone-pequeno perigo" data-acao="remover" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+      </div>
+    `);
+    linha.querySelector('[data-acao="editar"]').addEventListener('click', () => abrirModalItem(item));
+    linha.querySelector('[data-acao="remover"]').addEventListener('click', () => removerItemCardapio(item));
+    container.appendChild(linha);
+  });
+}
+
+async function removerItemCardapio(item) {
+  if (!confirm(`Remover "${item.name}" do cardápio?`)) return;
+  try {
+    await chamarApi(`/api/tenant/menu-items/${item.id}`, { method: 'DELETE' });
+    menuItems = menuItems.filter((m) => m.id !== item.id);
+    renderizarListaItensCardapio();
+  } catch (erro) {
+    alert('Não foi possível remover o item: ' + erro.message);
+  }
+}
+
+// ---- modal de item ----
+
+function abrirModalItem(item) {
+  itemEmEdicao = item;
+  adicionaisDoItem = [];
+  adicionalEmEdicaoId = null;
+  imagemEscolhidaNovoItem = null;
+
+  document.getElementById('titulo-modal-item').textContent = item ? 'Editar item' : 'Novo item do cardápio';
+  document.getElementById('mi-nome').value = item?.name || '';
+  document.getElementById('mi-descricao').value = item?.description || '';
+  document.getElementById('mi-preco').value = item ? String(item.price) : '';
+  document.getElementById('mi-erro').classList.add('oculto');
+
+  const previewImg = document.getElementById('mi-preview-imagem');
+  const placeholder = document.getElementById('mi-placeholder-imagem');
+  if (item?.image) {
+    previewImg.src = item.image; previewImg.classList.remove('oculto'); placeholder.classList.add('oculto');
+    document.getElementById('mi-texto-imagem').textContent = 'Trocar foto';
+  } else {
+    previewImg.classList.add('oculto'); placeholder.classList.remove('oculto');
+    document.getElementById('mi-texto-imagem').textContent = 'Escolher foto do item';
+  }
+  document.getElementById('mi-arquivo-imagem').value = '';
+
+  const categoriaInicial = item ? (item.categoryId || '') : (categoriaCardapioAtiva || '');
+  const blocoCategorias = document.getElementById('mi-bloco-categorias');
+  const containerCats = document.getElementById('mi-categorias');
+  containerCats.innerHTML = '';
+  if (menuCategorias.length === 0) {
+    blocoCategorias.classList.add('oculto');
+  } else {
+    blocoCategorias.classList.remove('oculto');
+    const semCategoria = el(`<button type="button" class="pilula ${!categoriaInicial ? 'ativa' : ''}" data-id="">Sem categoria</button>`);
+    containerCats.appendChild(semCategoria);
+    menuCategorias.forEach((cat) => {
+      const pill = el(`<button type="button" class="pilula ${categoriaInicial === cat.id ? 'ativa' : ''}" data-id="${cat.id}">${cat.name}</button>`);
+      containerCats.appendChild(pill);
+    });
+    // um único listener delegado no container, sem acumular a cada abertura do modal
+    containerCats.onclick = (e) => {
+      const pill = e.target.closest('.pilula');
+      if (!pill) return;
+      containerCats.querySelectorAll('.pilula').forEach((p) => p.classList.remove('ativa'));
+      pill.classList.add('ativa');
+    };
+  }
+
+  const blocoAdicionais = document.getElementById('mi-bloco-adicionais');
+  if (item) {
+    blocoAdicionais.classList.remove('oculto');
+    document.getElementById('mi-lista-adicionais').innerHTML = '<div class="mensagem-vazia">Carregando...</div>';
+    chamarApi(`/api/tenant/menu-items/${item.id}/addons`)
+      .then((lista) => { adicionaisDoItem = lista; renderizarListaAdicionais(); })
+      .catch(() => { adicionaisDoItem = []; renderizarListaAdicionais(); });
+  } else {
+    blocoAdicionais.classList.add('oculto');
+  }
+  resetarFormAdicional();
+
+  document.getElementById('modal-item').classList.remove('oculto');
+}
+
+function fecharModalItem() {
+  document.getElementById('modal-item').classList.add('oculto');
+  itemEmEdicao = null;
+}
+
+document.getElementById('fechar-modal-item').addEventListener('click', fecharModalItem);
+document.getElementById('mi-cancelar').addEventListener('click', fecharModalItem);
+
+document.getElementById('mi-seletor-imagem').addEventListener('click', () => document.getElementById('mi-arquivo-imagem').click());
+document.getElementById('mi-arquivo-imagem').addEventListener('change', async (e) => {
+  const arquivo = e.target.files[0];
+  if (!arquivo) return;
+  const previewImg = document.getElementById('mi-preview-imagem');
+  const placeholder = document.getElementById('mi-placeholder-imagem');
+  const url = URL.createObjectURL(arquivo);
+  previewImg.src = url; previewImg.classList.remove('oculto'); placeholder.classList.add('oculto');
+
+  if (itemEmEdicao) {
+    // item já existe: manda a foto na hora
+    const spinner = document.getElementById('mi-spinner-imagem');
+    spinner.classList.remove('oculto');
+    try {
+      const form = new FormData();
+      form.append('image', arquivo);
+      const atualizado = await chamarApiUpload(`/api/tenant/menu-items/${itemEmEdicao.id}/image`, form);
+      menuItems = menuItems.map((m) => (m.id === atualizado.id ? atualizado : m));
+      itemEmEdicao = atualizado;
+      document.getElementById('mi-texto-imagem').textContent = 'Trocar foto';
+    } catch (erro) {
+      alert('Não foi possível enviar a foto: ' + erro.message);
+    } finally {
+      spinner.classList.add('oculto');
+    }
+  } else {
+    // item novo: guarda o arquivo, envia só depois de criar
+    imagemEscolhidaNovoItem = arquivo;
+    document.getElementById('mi-texto-imagem').textContent = 'Trocar foto';
+  }
+});
+
+document.getElementById('form-item-cardapio').addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const erroEl = document.getElementById('mi-erro');
+  erroEl.classList.add('oculto');
+
+  const nome = document.getElementById('mi-nome').value.trim();
+  const preco = numeroDecimal(document.getElementById('mi-preco').value);
+  if (!nome) { erroEl.textContent = 'O item precisa de um nome.'; erroEl.classList.remove('oculto'); return; }
+  if (Number.isNaN(preco) || preco <= 0) { erroEl.textContent = 'Informe um preço válido para o item.'; erroEl.classList.remove('oculto'); return; }
+
+  const pillAtiva = document.querySelector('#mi-categorias .pilula.ativa');
+  const categoriaEscolhida = pillAtiva ? (pillAtiva.dataset.id || null) : null;
+  const payload = {
+    name: nome,
+    description: document.getElementById('mi-descricao').value.trim() || undefined,
+    price: preco,
+    isAvailable: true,
+    categoryId: categoriaEscolhida || null,
+  };
+
+  const botaoSalvar = document.getElementById('mi-salvar');
+  botaoSalvar.disabled = true;
+  const textoOriginal = botaoSalvar.textContent;
+  botaoSalvar.innerHTML = '<span class="spinner"></span>';
+  try {
+    if (itemEmEdicao) {
+      const atualizado = await chamarApi(`/api/tenant/menu-items/${itemEmEdicao.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      menuItems = menuItems.map((m) => (m.id === atualizado.id ? atualizado : m));
+    } else {
+      let criado = await chamarApi(`/api/tenant/restaurants/${restaurant.id}/menu-items`, { method: 'POST', body: JSON.stringify(payload) });
+      if (imagemEscolhidaNovoItem) {
+        try {
+          const form = new FormData();
+          form.append('image', imagemEscolhidaNovoItem);
+          criado = await chamarApiUpload(`/api/tenant/menu-items/${criado.id}/image`, form);
+        } catch (e) {
+          alert('O item foi salvo, mas a foto não pôde ser enviada. Edite o item para tentar de novo.');
+        }
+      }
+      menuItems = [criado, ...menuItems];
+    }
+    fecharModalItem();
+    renderizarListaItensCardapio();
+  } catch (erro) {
+    erroEl.textContent = erro.message;
+    erroEl.classList.remove('oculto');
+  } finally {
+    botaoSalvar.disabled = false;
+    botaoSalvar.textContent = textoOriginal;
+  }
+});
+
+// ---- adicionais ----
+
+function resetarFormAdicional() {
+  document.getElementById('mi-nome-adicional').value = '';
+  document.getElementById('mi-preco-adicional').value = '';
+  adicionalEmEdicaoId = null;
+  document.getElementById('mi-cancelar-adicional').classList.add('oculto');
+  document.getElementById('mi-salvar-adicional').textContent = 'Adicionar';
+}
+
+function renderizarListaAdicionais() {
+  const container = document.getElementById('mi-lista-adicionais');
+  container.innerHTML = '';
+  if (adicionaisDoItem.length === 0) {
+    container.innerHTML = '<div class="mensagem-vazia" style="margin-bottom:8px;">Nenhum adicional ainda. Ex: bacon extra, borda recheada.</div>';
+    return;
+  }
+  adicionaisDoItem.forEach((ad) => {
+    const linha = el(`
+      <div class="linha-adicional">
+        <div class="nome-adicional" data-acao="editar">${ad.name}<span class="preco-adicional">+ ${formatarMoeda(ad.price)}</span></div>
+        <button type="button" class="botao-icone-pequeno perigo" data-acao="remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    `);
+    linha.querySelector('[data-acao="editar"]').addEventListener('click', () => {
+      adicionalEmEdicaoId = ad.id;
+      document.getElementById('mi-nome-adicional').value = ad.name;
+      document.getElementById('mi-preco-adicional').value = String(ad.price);
+      document.getElementById('mi-cancelar-adicional').classList.remove('oculto');
+      document.getElementById('mi-salvar-adicional').textContent = 'Salvar adicional';
+    });
+    linha.querySelector('[data-acao="remover"]').addEventListener('click', async () => {
+      if (!confirm(`Remover "${ad.name}"?`)) return;
+      try {
+        await chamarApi(`/api/tenant/addons/${ad.id}`, { method: 'DELETE' });
+        adicionaisDoItem = adicionaisDoItem.filter((a) => a.id !== ad.id);
+        if (adicionalEmEdicaoId === ad.id) resetarFormAdicional();
+        renderizarListaAdicionais();
+      } catch { alert('Não foi possível remover o adicional.'); }
+    });
+    container.appendChild(linha);
+  });
+}
+
+document.getElementById('mi-cancelar-adicional').addEventListener('click', resetarFormAdicional);
+document.getElementById('mi-salvar-adicional').addEventListener('click', async () => {
+  if (!itemEmEdicao) return;
+  const nome = document.getElementById('mi-nome-adicional').value.trim();
+  if (!nome) { alert('O adicional precisa de um nome.'); return; }
+  const preco = numeroDecimal(document.getElementById('mi-preco-adicional').value);
+  if (Number.isNaN(preco) || preco < 0) { alert('Informe um preço válido (pode ser 0).'); return; }
+
+  const botao = document.getElementById('mi-salvar-adicional');
+  botao.disabled = true;
+  try {
+    if (adicionalEmEdicaoId) {
+      const atualizado = await chamarApi(`/api/tenant/addons/${adicionalEmEdicaoId}`, { method: 'PUT', body: JSON.stringify({ name: nome, price: preco }) });
+      adicionaisDoItem = adicionaisDoItem.map((a) => (a.id === atualizado.id ? atualizado : a));
+    } else {
+      const criado = await chamarApi(`/api/tenant/menu-items/${itemEmEdicao.id}/addons`, { method: 'POST', body: JSON.stringify({ name: nome, price: preco }) });
+      adicionaisDoItem = [...adicionaisDoItem, criado];
+    }
+    resetarFormAdicional();
+    renderizarListaAdicionais();
+  } catch (erro) {
+    alert('Erro ao salvar adicional: ' + erro.message);
+  } finally {
+    botao.disabled = false;
+  }
+});
+
+// ===================================================================
+// ESGOTADOS
+// ===================================================================
+
+function renderizarEsgotados() {
+  const conteudo = document.getElementById('conteudo');
+  const esgotados = menuItems.filter((i) => !i.isAvailable).length;
+
+  conteudo.innerHTML = `
+    <div class="cartao-resumo-esgotados">
+      <div class="icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6" stroke-linecap="round"/></svg></div>
+      <div>
+        <strong style="display:block; font-size:14.5px;">${esgotados === 0 ? 'Nada esgotado agora' : `${esgotados} ${esgotados === 1 ? 'item esgotado' : 'itens esgotados'}`}</strong>
+        <span style="color:var(--texto-suave); font-size:12.5px;">Itens esgotados somem do cardápio que o cliente vê</span>
+      </div>
+    </div>
+    <div id="esgotados-grupos"></div>
+  `;
+
+  const container = document.getElementById('esgotados-grupos');
+  if (menuItems.length === 0) {
+    container.innerHTML = '<div class="caixa-vazia"><strong>Você ainda não tem itens no cardápio.</strong></div>';
+    return;
+  }
+
+  const porCategoria = new Map();
+  for (const item of menuItems) {
+    const chave = item.categoryId || 'none';
+    if (!porCategoria.has(chave)) porCategoria.set(chave, []);
+    porCategoria.get(chave).push(item);
+  }
+  const secoes = menuCategorias.map((c) => ({ id: c.id, name: c.name, items: porCategoria.get(c.id) || [] })).filter((s) => s.items.length > 0);
+  const semCategoria = porCategoria.get('none') || [];
+  if (semCategoria.length > 0) secoes.push({ id: 'none', name: 'Outros', items: semCategoria });
+
+  secoes.forEach((secao) => {
+    const bloco = el(`<div><div class="titulo-secao-esgotados">${secao.name}</div><div class="secao-esgotados-itens"></div></div>`);
+    const listaEl = bloco.querySelector('.secao-esgotados-itens');
+    secao.items.forEach((item) => {
+      const linha = el(`
+        <div class="linha-esgotado">
+          ${item.image ? `<img class="miniatura" style="width:44px;height:44px;" src="${item.image}" />` : `<div class="miniatura miniatura-vazia" style="width:44px;height:44px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a8580" stroke-width="1.8"><path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`}
+          <div style="flex:1">
+            <div class="nome-esgotavel ${!item.isAvailable ? 'riscado' : ''}" style="font-weight:700; font-size:13.5px;">${item.name}</div>
+            <div style="color:var(--texto-suave); font-size:12px; margin-top:2px;">${formatarMoeda(item.price)}</div>
+          </div>
+          <label class="interruptor perigo">
+            <input type="checkbox" ${!item.isAvailable ? 'checked' : ''} />
+            <span class="trilho-interruptor"></span>
+          </label>
+        </div>
+      `);
+      linha.querySelector('input').addEventListener('change', async (e) => {
+        const marcarEsgotado = e.target.checked;
+        const disponivelNovo = !marcarEsgotado;
+        e.target.disabled = true;
+        try {
+          const atualizado = await chamarApi(`/api/tenant/menu-items/${item.id}/availability`, { method: 'PATCH', body: JSON.stringify({ isAvailable: disponivelNovo }) });
+          menuItems = menuItems.map((m) => (m.id === atualizado.id ? atualizado : m));
+          renderizarEsgotados();
+        } catch (erro) {
+          e.target.checked = !marcarEsgotado;
+          e.target.disabled = false;
+          alert('Não foi possível atualizar esse item agora: ' + erro.message);
+        }
+      });
+      listaEl.appendChild(linha);
+    });
+    container.appendChild(bloco);
+  });
+}
+
+// ===================================================================
+// MEUS ENTREGADORES
+// ===================================================================
+
+function renderizarEntregadores() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = `
+    <div class="banner-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 8h4l4 9M10 8 8 13h7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Um entregador da casa recebe os pedidos direto de você, sem passar pelo radar de entregadores autônomos. Na hora de marcar um pedido como pronto, você escolhe entre enviar pro radar ou usar um entregador daqui da lista.</span>
+    </div>
+    <div class="titulo-secao-esgotados" style="margin-top:0;">Código de convite</div>
+    <div class="cartao-codigo" id="cartao-codigo-convite"><div class="spinner escuro" style="margin:0 auto;"></div></div>
+    <div class="titulo-secao-esgotados">Entregadores vinculados</div>
+    <div id="lista-entregadores-vinculados"></div>
+  `;
+
+  chamarApi('/api/tenant/deliverer-invite-code')
+    .then(({ code }) => {
+      const cartao = document.getElementById('cartao-codigo-convite');
+      cartao.innerHTML = `
+        <div class="texto-codigo">${code}</div>
+        <div class="dica-codigo">Peça pro seu entregador se cadastrar no app como "Entregador" e colar esse código no cadastro — ele já fica vinculado à sua loja automaticamente.</div>
+        <div class="acoes-codigo">
+          <button class="botao-contorno" id="botao-copiar-codigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round" stroke-linejoin="round"/></svg>Copiar</button>
+          <button class="botao-contorno" id="botao-compartilhar-codigo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" stroke-linecap="round"/></svg>Compartilhar</button>
+        </div>
+      `;
+      document.getElementById('botao-copiar-codigo').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(code);
+          alert('Código copiado — agora é só mandar pro seu entregador.');
+        } catch { alert('Não foi possível copiar automaticamente. Código: ' + code); }
+      });
+      document.getElementById('botao-compartilhar-codigo').addEventListener('click', async () => {
+        const texto = `Pra ser meu entregador no app, se cadastre como entregador e use o código: ${code}`;
+        if (navigator.share) {
+          try { await navigator.share({ text: texto }); } catch {}
+        } else {
+          try { await navigator.clipboard.writeText(texto); alert('Mensagem copiada pra área de transferência.'); }
+          catch { alert(texto); }
+        }
+      });
+    })
+    .catch(() => { document.getElementById('cartao-codigo-convite').innerHTML = '<div class="estado-erro-inline">Não foi possível carregar o código de convite.</div>'; });
+
+  renderizarListaEntregadores();
+}
+
+function renderizarListaEntregadores() {
+  const container = document.getElementById('lista-entregadores-vinculados');
+  if (entregadoresDaCasa.length === 0) {
+    container.innerHTML = `
+      <div class="caixa-vazia">
+        <div class="icone-vazio"><svg viewBox="0 0 24 24" fill="none" stroke="#8a8580" stroke-width="1.8"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17 10 8h4l4 9M10 8 8 13h7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <strong>Nenhum entregador vinculado ainda.</strong>
+        <span>Compartilhe o código acima com quem entrega por você.</span>
+      </div>
+    `;
+    return;
+  }
+  container.innerHTML = '';
+  entregadoresDaCasa.forEach((d) => {
+    const cor = !d.isOnline ? 'var(--texto-suave)' : d.isAvailable ? 'var(--verde)' : 'var(--dourado)';
+    const rotulo = !d.isOnline ? 'Offline' : d.isAvailable ? 'Disponível agora' : 'Online · indisponível';
+    const linha = el(`
+      <div class="cartao-entregador">
+        <div class="ponto-entregador" style="background:${cor}"></div>
+        <div style="flex:1">
+          <div class="nome-entregador">${d.name}</div>
+          <div class="sub-entregador">${rotulo}${d.vehicleType ? ' · ' + d.vehicleType : ''}${d.phone ? ' · ' + d.phone : ''}</div>
+        </div>
+        <button class="botao-icone-pequeno perigo" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12" stroke-linecap="round"/></svg></button>
+      </div>
+    `);
+    linha.querySelector('button').addEventListener('click', async () => {
+      if (!confirm(`${d.name} deixa de ser um entregador da sua loja e volta a ser autônomo. Continuar?`)) return;
+      try {
+        await chamarApi(`/api/tenant/deliverers/${d.id}`, { method: 'DELETE' });
+        entregadoresDaCasa = entregadoresDaCasa.filter((x) => x.id !== d.id);
+        renderizarListaEntregadores();
+      } catch { alert('Não foi possível remover esse entregador.'); }
+    });
+    container.appendChild(linha);
+  });
+}
+
+// ===================================================================
+// HORÁRIO DE FUNCIONAMENTO
+// ===================================================================
+
+const NOMES_DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+function diasPadrao() {
+  return Array.from({ length: 7 }, (_, dayOfWeek) => ({ dayOfWeek, closed: dayOfWeek === 0, openTime: '08:00', closeTime: '18:00' }));
+}
+
+async function renderizarHorario() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = '<div class="estado-global">Carregando horário...</div>';
+
+  let dias = diasPadrao();
+  try {
+    const salvos = await chamarApi(`/api/tenant/restaurants/${restaurant.id}/hours`);
+    if (salvos.length === 7) dias = [...salvos].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  } catch { /* mantém os padrões sugeridos */ }
+
+  conteudo.innerHTML = `
+    <div class="banner-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>O botão "Aberta/Fechada" do início continua funcionando como uma chave geral. Com essa agenda preenchida, sua loja só aparece como aberta pros clientes dentro do horário de cada dia.</span>
+    </div>
+    <div id="lista-dias-horario"></div>
+    <button class="botao-primario" id="botao-salvar-horario" style="width:100%; margin-top:6px;">Salvar horário</button>
+    <div id="horario-erro" class="estado-erro-inline oculto"></div>
+    <div id="horario-ok" class="estado-ok-inline oculto"></div>
+  `;
+
+  const container = document.getElementById('lista-dias-horario');
+
+  function montarCartaoDia(dia) {
+    const cartao = el(`
+      <div class="cartao-dia" data-dia="${dia.dayOfWeek}">
+        <div class="linha-cabecalho-dia">
+          <div class="nome-dia">${NOMES_DIAS[dia.dayOfWeek]}</div>
+          <div class="direita-cabecalho-dia">
+            <span class="rotulo-toggle-dia">${dia.closed ? 'Fechado' : 'Aberto'}</span>
+            <label class="interruptor">
+              <input type="checkbox" ${!dia.closed ? 'checked' : ''} />
+              <span class="trilho-interruptor"></span>
+            </label>
+          </div>
+        </div>
+        <div class="linha-horarios ${dia.closed ? 'oculto' : ''}">
+          <div class="grupo-horario"><span class="rotulo-horario">Abre</span><input type="time" class="campo-horario" value="${dia.openTime || '08:00'}" /></div>
+          <div class="grupo-horario"><span class="rotulo-horario">Fecha</span><input type="time" class="campo-horario" value="${dia.closeTime || '18:00'}" /></div>
+          <button type="button" class="botao-aplicar-todos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke-linecap="round" stroke-linejoin="round"/></svg>Aplicar a todos</button>
+        </div>
+      </div>
+    `);
+    const toggle = cartao.querySelector('.interruptor input');
+    const linhaHorarios = cartao.querySelector('.linha-horarios');
+    const rotuloToggle = cartao.querySelector('.rotulo-toggle-dia');
+    const [campoAbre, campoFecha] = cartao.querySelectorAll('.campo-horario');
+
+    toggle.addEventListener('change', () => {
+      dia.closed = !toggle.checked;
+      rotuloToggle.textContent = dia.closed ? 'Fechado' : 'Aberto';
+      linhaHorarios.classList.toggle('oculto', dia.closed);
+    });
+    campoAbre.addEventListener('input', () => { dia.openTime = campoAbre.value; });
+    campoFecha.addEventListener('input', () => { dia.closeTime = campoFecha.value; });
+    cartao.querySelector('.botao-aplicar-todos').addEventListener('click', () => {
+      dias.forEach((d) => { d.closed = dia.closed; d.openTime = dia.openTime; d.closeTime = dia.closeTime; });
+      container.innerHTML = '';
+      dias.forEach((d) => container.appendChild(montarCartaoDia(d)));
+    });
+    return cartao;
+  }
+
+  dias.forEach((d) => container.appendChild(montarCartaoDia(d)));
+
+  document.getElementById('botao-salvar-horario').addEventListener('click', async () => {
+    const erroEl = document.getElementById('horario-erro');
+    const okEl = document.getElementById('horario-ok');
+    erroEl.classList.add('oculto'); okEl.classList.add('oculto');
+
+    for (const dia of dias) {
+      if (!dia.closed) {
+        if (!dia.openTime || !dia.closeTime) { erroEl.textContent = `Confira o horário de ${NOMES_DIAS[dia.dayOfWeek]}.`; erroEl.classList.remove('oculto'); return; }
+        if (dia.openTime >= dia.closeTime) { erroEl.textContent = `Em ${NOMES_DIAS[dia.dayOfWeek]}, o fechamento precisa ser depois da abertura.`; erroEl.classList.remove('oculto'); return; }
+      }
+    }
+
+    const botao = document.getElementById('botao-salvar-horario');
+    botao.disabled = true;
+    botao.innerHTML = '<span class="spinner"></span>';
+    try {
+      await chamarApi(`/api/tenant/restaurants/${restaurant.id}/hours`, { method: 'PUT', body: JSON.stringify({ days: dias }) });
+      okEl.textContent = 'Horário de funcionamento salvo.';
+      okEl.classList.remove('oculto');
+    } catch (erro) {
+      erroEl.textContent = erro.message;
+      erroEl.classList.remove('oculto');
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Salvar horário';
+    }
+  });
+}
+
+// ===================================================================
+// LOCALIZAÇÃO
+// ===================================================================
+
+const VIES_REGIAO = { lat: -8.1219, lng: -35.2939, raioGraus: 1.2, dicaCidade: 'Vitória de Santo Antão, PE' };
+let debounceLocalizacao = null;
+let abortLocalizacao = null;
+
+function montarParametrosBusca(query, usarDicaCidade) {
+  let q = query;
+  if (usarDicaCidade) {
+    const palavraCidade = VIES_REGIAO.dicaCidade.split(',')[0].trim().toLowerCase();
+    if (!q.toLowerCase().includes(palavraCidade)) q = `${q}, ${VIES_REGIAO.dicaCidade}`;
+  }
+  const params = new URLSearchParams({ q, format: 'json', addressdetails: '1', limit: '10', countrycodes: 'br', dedupe: '0' });
+  const r = VIES_REGIAO.raioGraus;
+  params.set('viewbox', `${VIES_REGIAO.lng - r},${VIES_REGIAO.lat + r},${VIES_REGIAO.lng + r},${VIES_REGIAO.lat - r}`);
+  params.set('bounded', '0');
+  return params;
+}
+
+async function buscarEnderecoNominatim(query, signal) {
+  async function rodar(params) {
+    const resposta = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      signal,
+      headers: { 'Accept-Language': 'pt-BR' },
+    });
+    if (!resposta.ok) throw new Error('Falha na busca de endereço');
+    const dados = await resposta.json();
+    return dados.map((item) => {
+      const a = item.address || {};
+      return {
+        id: String(item.place_id),
+        displayName: item.display_name,
+        street: a.road || a.pedestrian || a.neighbourhood || '',
+        number: a.house_number || '',
+        neighborhood: a.suburb || a.neighbourhood || a.quarter || '',
+        city: a.city || a.town || a.village || a.municipality || '',
+        state: a.state || '',
+        zip: a.postcode || '',
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon),
+      };
+    });
+  }
+  let resultados = await rodar(montarParametrosBusca(query, true));
+  if (resultados.length === 0) resultados = await rodar(montarParametrosBusca(query, false));
+  return resultados;
+}
+
+function renderizarLocalizacao() {
+  const conteudo = document.getElementById('conteudo');
+  const temEnderecoSalvo = !!restaurant.street;
+
+  conteudo.innerHTML = `
+    <div class="banner-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+      <span>Esse é o endereço de onde os pedidos saem — usado para calcular distância e para o cliente ver no perfil da loja.</span>
+    </div>
+    <div id="localizacao-visualizacao" class="${temEnderecoSalvo ? '' : 'oculto'}">
+      <div class="cartao-endereco-salvo">
+        <div class="icone-endereco-salvo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.3"/></svg></div>
+        <div style="flex:1">
+          <div class="linha1-endereco">${restaurant.street || ''}, ${restaurant.number || 's/n'}</div>
+          <div class="linha2-endereco">${[restaurant.neighborhood, restaurant.city, restaurant.state].filter(Boolean).join(' · ')}</div>
+        </div>
+        <button class="botao-icone-pequeno editar" id="botao-editar-endereco" title="Editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+    </div>
+    <div id="localizacao-form" class="cartao ${temEnderecoSalvo ? 'oculto' : ''}">
+      <label class="rotulo-campo">Buscar endereço</label>
+      <div class="caixa-busca">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg>
+        <input type="text" id="loc-campo-busca" placeholder="Rua, bairro, cidade..." autocomplete="off" />
+      </div>
+      <div id="loc-sugestoes" class="caixa-sugestoes oculto"></div>
+      <div id="loc-busca-status" style="font-size:12px; color:var(--texto-suave); margin-top:6px;"></div>
+
+      <button type="button" class="botao-localizacao-atual" id="botao-localizacao-atual">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/></svg>
+        Usar minha localização atual
+      </button>
+
+      <div id="loc-confirmado" class="confirmado-endereco oculto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Endereço selecionado — confira e complete abaixo
+      </div>
+
+      <div id="loc-campos-endereco" class="oculto">
+        <label class="rotulo-campo">Rua</label>
+        <input class="campo-texto" id="loc-rua" placeholder="Nome da rua" />
+        <div class="linha-campos">
+          <div><label class="rotulo-campo">Número</label><input class="campo-texto" id="loc-numero" placeholder="123" /></div>
+          <div><label class="rotulo-campo">Complemento</label><input class="campo-texto" id="loc-complemento" placeholder="Loja, sala..." /></div>
+        </div>
+        <label class="rotulo-campo">Bairro</label>
+        <input class="campo-texto" id="loc-bairro" placeholder="Bairro" />
+        <div class="linha-campos">
+          <div style="flex:2"><label class="rotulo-campo">Cidade</label><input class="campo-texto" id="loc-cidade" placeholder="Cidade" /></div>
+          <div><label class="rotulo-campo">Estado</label><input class="campo-texto" id="loc-estado" placeholder="UF" maxlength="2" style="text-transform:uppercase;" /></div>
+        </div>
+        <label class="rotulo-campo">CEP</label>
+        <input class="campo-texto" id="loc-cep" placeholder="00000-000" />
+      </div>
+
+      <div id="loc-erro" class="estado-erro-inline oculto"></div>
+
+      <div class="linha-botoes">
+        ${temEnderecoSalvo ? '<button type="button" class="botao-secundario" id="loc-cancelar">Cancelar</button>' : ''}
+        <button type="button" class="botao-primario" id="loc-salvar" style="flex:2;" disabled>Salvar localização</button>
+      </div>
+    </div>
+  `;
+
+  let coordsAtuais = restaurant.lat != null && restaurant.lng != null ? { lat: restaurant.lat, lng: restaurant.lng } : null;
+  let enderecoSelecionado = false;
+
+  function preencherCampos(dados) {
+    document.getElementById('loc-rua').value = dados.street || '';
+    document.getElementById('loc-numero').value = dados.number || '';
+    document.getElementById('loc-bairro').value = dados.neighborhood || '';
+    document.getElementById('loc-cidade').value = dados.city || '';
+    document.getElementById('loc-estado').value = dados.state || '';
+    document.getElementById('loc-cep').value = dados.zip || '';
+  }
+
+  function marcarSelecionado() {
+    enderecoSelecionado = true;
+    document.getElementById('loc-confirmado').classList.remove('oculto');
+    document.getElementById('loc-campos-endereco').classList.remove('oculto');
+    document.getElementById('loc-sugestoes').classList.add('oculto');
+    document.getElementById('loc-salvar').disabled = false;
+  }
+
+  if (temEnderecoSalvo) {
+    preencherCampos(restaurant);
+    document.getElementById('botao-editar-endereco').addEventListener('click', () => {
+      document.getElementById('localizacao-visualizacao').classList.add('oculto');
+      document.getElementById('localizacao-form').classList.remove('oculto');
+      marcarSelecionado();
+    });
+    document.getElementById('loc-cancelar').addEventListener('click', () => {
+      document.getElementById('localizacao-visualizacao').classList.remove('oculto');
+      document.getElementById('localizacao-form').classList.add('oculto');
+    });
+  }
+
+  const campoBusca = document.getElementById('loc-campo-busca');
+  const caixaSugestoes = document.getElementById('loc-sugestoes');
+  const statusBusca = document.getElementById('loc-busca-status');
+
+  campoBusca.addEventListener('input', () => {
+    enderecoSelecionado = false;
+    document.getElementById('loc-confirmado').classList.add('oculto');
+    document.getElementById('loc-salvar').disabled = true;
+    if (debounceLocalizacao) clearTimeout(debounceLocalizacao);
+    if (abortLocalizacao) abortLocalizacao.abort();
+
+    const texto = campoBusca.value.trim();
+    if (texto.length < 3) { caixaSugestoes.classList.add('oculto'); statusBusca.textContent = ''; return; }
+
+    statusBusca.textContent = 'Buscando...';
+    debounceLocalizacao = setTimeout(async () => {
+      abortLocalizacao = new AbortController();
+      try {
+        const resultados = await buscarEnderecoNominatim(texto, abortLocalizacao.signal);
+        statusBusca.textContent = resultados.length === 0 ? 'Nenhum resultado encontrado.' : '';
+        if (resultados.length === 0) { caixaSugestoes.classList.add('oculto'); return; }
+        caixaSugestoes.innerHTML = '';
+        resultados.forEach((s) => {
+          const linha = el(`
+            <div class="linha-sugestao">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+              <div>
+                <div class="sugestao-principal">${[s.street, s.number].filter(Boolean).join(', ') || s.displayName.split(',')[0]}</div>
+                <div class="sugestao-secundaria">${[s.neighborhood, s.city].filter(Boolean).join(' · ')}</div>
+              </div>
+            </div>
+          `);
+          linha.addEventListener('click', () => {
+            preencherCampos(s);
+            coordsAtuais = { lat: s.lat, lng: s.lng };
+            campoBusca.value = s.displayName;
+            marcarSelecionado();
+          });
+          caixaSugestoes.appendChild(linha);
+        });
+        caixaSugestoes.classList.remove('oculto');
+      } catch (erro) {
+        if (erro.name !== 'AbortError') statusBusca.textContent = 'Não foi possível buscar. Tente de novo.';
+      }
+    }, 500);
+  });
+
+  document.getElementById('botao-localizacao-atual').addEventListener('click', async () => {
+    const botao = document.getElementById('botao-localizacao-atual');
+    if (!navigator.geolocation) { alert('Seu navegador não suporta localização automática.'); return; }
+    botao.disabled = true;
+    botao.innerHTML = '<span class="spinner escuro"></span> Localizando...';
+    navigator.geolocation.getCurrentPosition(
+      async (posicao) => {
+        const { latitude, longitude } = posicao.coords;
+        coordsAtuais = { lat: latitude, lng: longitude };
+        try {
+          const resposta = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`, { headers: { 'Accept-Language': 'pt-BR' } });
+          const dados = await resposta.json();
+          const a = dados.address || {};
+          const info = {
+            street: a.road || a.pedestrian || '',
+            number: a.house_number || '',
+            neighborhood: a.suburb || a.neighbourhood || '',
+            city: a.city || a.town || a.village || '',
+            state: a.state || '',
+            zip: a.postcode || '',
+          };
+          preencherCampos(info);
+          campoBusca.value = info.street || '';
+        } catch { /* deixa os campos em branco pro dono preencher na mão */ }
+        marcarSelecionado();
+        botao.disabled = false;
+        botao.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/></svg>Usar minha localização atual';
+      },
+      () => {
+        alert('Não foi possível obter sua localização. Verifique a permissão do navegador.');
+        botao.disabled = false;
+        botao.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/></svg>Usar minha localização atual';
+      },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  });
+
+  document.getElementById('loc-salvar').addEventListener('click', async () => {
+    const erroEl = document.getElementById('loc-erro');
+    erroEl.classList.add('oculto');
+    const payload = {
+      street: document.getElementById('loc-rua').value.trim(),
+      number: document.getElementById('loc-numero').value.trim() || undefined,
+      complement: document.getElementById('loc-complemento').value.trim() || undefined,
+      neighborhood: document.getElementById('loc-bairro').value.trim() || undefined,
+      city: document.getElementById('loc-cidade').value.trim(),
+      state: document.getElementById('loc-estado').value.trim(),
+      zip: document.getElementById('loc-cep').value.trim() || undefined,
+      lat: coordsAtuais?.lat,
+      lng: coordsAtuais?.lng,
+    };
+    if (!payload.street || payload.street.length < 2) { erroEl.textContent = 'Informe a rua.'; erroEl.classList.remove('oculto'); return; }
+    if (!payload.city || payload.city.length < 2) { erroEl.textContent = 'Informe a cidade.'; erroEl.classList.remove('oculto'); return; }
+    if (!payload.state || payload.state.length < 2) { erroEl.textContent = 'Informe o estado (UF).'; erroEl.classList.remove('oculto'); return; }
+
+    const botaoSalvar = document.getElementById('loc-salvar');
+    botaoSalvar.disabled = true;
+    botaoSalvar.innerHTML = '<span class="spinner"></span>';
+    try {
+      restaurant = await chamarApi(`/api/tenant/restaurants/${restaurant.id}/location`, { method: 'PUT', body: JSON.stringify(payload) });
+      renderizarLocalizacao();
+    } catch (erro) {
+      erroEl.textContent = erro.message;
+      erroEl.classList.remove('oculto');
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar localização';
+    }
+  });
+}
+
+// ===================================================================
+// VENDAS
+// ===================================================================
+
+let periodoVendasAtual = 'week';
+const ROTULOS_DIA_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+const ROTULOS_MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+function ehVendaConcluida(pedido) { return pedido.status === 'entregue'; }
+
+function montarBaldes(periodo) {
+  const concluidos = pedidos.filter(ehVendaConcluida);
+  const agora = new Date();
+
+  if (periodo === 'week') {
+    const baldes = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(agora); d.setDate(agora.getDate() - i);
+      baldes.push({ key: d.toDateString(), label: ROTULOS_DIA_SEMANA[d.getDay()], fullLabel: d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }), revenue: 0, ordersCount: 0 });
+    }
+    concluidos.forEach((p) => {
+      const b = baldes.find((x) => x.key === new Date(p.createdAt).toDateString());
+      if (b) { b.revenue += Number(p.total); b.ordersCount += 1; }
+    });
+    return baldes;
+  }
+
+  if (periodo === 'month') {
+    const ano = agora.getFullYear(), mes = agora.getMonth();
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    const qtdSemanas = Math.ceil(ultimoDia / 7);
+    const baldes = Array.from({ length: qtdSemanas }, (_, i) => ({ key: `w${i}`, label: `S${i + 1}`, fullLabel: `Semana ${i + 1} (dia ${i * 7 + 1}–${Math.min(ultimoDia, i * 7 + 7)})`, revenue: 0, ordersCount: 0 }));
+    concluidos.forEach((p) => {
+      const d = new Date(p.createdAt);
+      if (d.getFullYear() !== ano || d.getMonth() !== mes) return;
+      const idx = Math.floor((d.getDate() - 1) / 7);
+      baldes[idx].revenue += Number(p.total); baldes[idx].ordersCount += 1;
+    });
+    return baldes;
+  }
+
+  const baldes = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    baldes.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: ROTULOS_MES[d.getMonth()], fullLabel: `${ROTULOS_MES[d.getMonth()]}/${d.getFullYear()}`, revenue: 0, ordersCount: 0 });
+  }
+  concluidos.forEach((p) => {
+    const d = new Date(p.createdAt);
+    const b = baldes.find((x) => x.key === `${d.getFullYear()}-${d.getMonth()}`);
+    if (b) { b.revenue += Number(p.total); b.ordersCount += 1; }
+  });
+  return baldes;
+}
+
+function inicioPeriodo(periodo, agora) {
+  if (periodo === 'week') { const d = new Date(agora); d.setDate(agora.getDate() - 6); d.setHours(0, 0, 0, 0); return d; }
+  if (periodo === 'month') return new Date(agora.getFullYear(), agora.getMonth(), 1);
+  return new Date(agora.getFullYear(), agora.getMonth() - 5, 1);
+}
+
+function formatarCompacto(v) { return v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : v.toFixed(0); }
+
+async function renderizarVendas() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = `
+    <div class="abas-periodo">
+      <button class="aba-periodo" data-periodo="week">Semana</button>
+      <button class="aba-periodo" data-periodo="month">Mês</button>
+      <button class="aba-periodo" data-periodo="all">Últimos 6 meses</button>
+    </div>
+    <div id="vendas-conteudo-dinamico"></div>
+  `;
+  conteudo.querySelectorAll('.aba-periodo').forEach((btn) => {
+    btn.classList.toggle('ativa', btn.dataset.periodo === periodoVendasAtual);
+    btn.addEventListener('click', () => { periodoVendasAtual = btn.dataset.periodo; renderizarVendas(); });
+  });
+
+  const area = document.getElementById('vendas-conteudo-dinamico');
+  const baldes = montarBaldes(periodoVendasAtual);
+  const inicio = inicioPeriodo(periodoVendasAtual, new Date());
+  const noPeriodo = pedidos.filter((p) => ehVendaConcluida(p) && new Date(p.createdAt) >= inicio);
+  const faturamento = noPeriodo.reduce((s, p) => s + Number(p.total), 0);
+  const ticketMedio = noPeriodo.length > 0 ? faturamento / noPeriodo.length : 0;
+
+  const mapaItens = new Map();
+  noPeriodo.forEach((p) => (p.items || []).forEach((it) => {
+    const e = mapaItens.get(it.name) || { name: it.name, qty: 0, revenue: 0 };
+    e.qty += it.qty; e.revenue += it.qty * Number(it.price);
+    mapaItens.set(it.name, e);
+  }));
+  const topItens = Array.from(mapaItens.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const baldesInvertidos = [...baldes].reverse();
+  const maxRevenue = Math.max(1, ...baldes.map((b) => b.revenue));
+
+  area.innerHTML = `
+    <div class="linha-stats-vendas">
+      <div class="cartao-stat-venda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="valor-stat-venda">${formatarMoeda(faturamento)}</div><div class="rotulo-stat-venda">Faturamento</div></div>
+      <div class="cartao-stat-venda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l3 3v17H6z" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="valor-stat-venda">${noPeriodo.length}</div><div class="rotulo-stat-venda">Pedidos entregues</div></div>
+      <div class="cartao-stat-venda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 12a2 2 0 0 1-.6 1.4l-6.6 6.6a2 2 0 0 1-2.8 0L3 12.4V4a1 1 0 0 1 1-1h8.4L20.6 11z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><div class="valor-stat-venda">${formatarMoeda(ticketMedio)}</div><div class="rotulo-stat-venda">Ticket médio</div></div>
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">Faturamento por período</div>
+      <div class="grafico-barras">
+        ${baldes.map((b) => `
+          <div class="coluna-grafico">
+            <div class="valor-barra">${b.revenue > 0 ? formatarCompacto(b.revenue) : ''}</div>
+            <div class="trilho-barra"><div class="barra ${b.revenue > 0 ? 'com-valor' : ''}" style="height:${b.revenue > 0 ? Math.max(6, (b.revenue / maxRevenue) * 120) : 3}px"></div></div>
+            <div class="rotulo-barra">${b.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">Registro detalhado</div>
+      ${baldesInvertidos.every((b) => b.ordersCount === 0)
+        ? '<div style="color:var(--texto-suave); font-size:13px; font-style:italic;">Nenhuma venda concluída nesse período ainda.</div>'
+        : baldesInvertidos.map((b) => `
+          <div class="linha-historico-vendas">
+            <div style="flex:1"><div class="rotulo-historico">${b.fullLabel}</div><div class="sub-historico">${b.ordersCount} ${b.ordersCount === 1 ? 'pedido' : 'pedidos'}</div></div>
+            <div class="valor-historico">${formatarMoeda(b.revenue)}</div>
+          </div>
+        `).join('')}
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">Mais vendidos no período</div>
+      ${topItens.length === 0
+        ? '<div style="color:var(--texto-suave); font-size:13px; font-style:italic;">Sem itens vendidos nesse período ainda.</div>'
+        : topItens.map((it, idx) => `
+          <div class="linha-historico-vendas">
+            <div class="circulo-rank">${idx + 1}</div>
+            <div style="flex:1"><div class="rotulo-historico">${it.name}</div><div class="sub-historico">${it.qty} vendidos</div></div>
+            <div class="valor-historico">${formatarMoeda(it.revenue)}</div>
+          </div>
+        `).join('')}
+    </div>
+
+    <div id="vendas-comissao"></div>
+
+    <div class="banner-info" style="background:var(--creme); margin-top:16px; margin-bottom:0;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--texto-suave)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="color:var(--texto-suave);">Esses números são de faturamento (o que entrou em vendas). Pra calcular lucro de verdade seria preciso cadastrar o custo de cada item.</span>
+    </div>
+  `;
+
+  chamarApi('/api/tenant/billing').then((billing) => {
+    const container = document.getElementById('vendas-comissao');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="cartao">
+        <div class="titulo-cartao">Valor a receber</div>
+        <div style="font-family:var(--fonte-titulo); font-size:22px; font-weight:800; color:#b5760a;">${formatarMoeda(billing.pending.netAmount)}</div>
+        <div class="sub-historico">${billing.pending.ordersCount} ${billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'} ainda não fechados nesta semana</div>
+        <p style="font-size:11.5px; color:var(--texto-suave); line-height:1.6; margin-top:10px;">Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o valor líquido, com a comissão da plataforma já descontada.</p>
+        ${billing.settlements.slice(0, 4).map((s) => `
+          <div class="linha-historico-vendas">
+            <div style="flex:1">
+              <div class="rotulo-historico">${new Date(s.periodStart).toLocaleDateString('pt-BR')} – ${new Date(s.periodEnd).toLocaleDateString('pt-BR')}</div>
+              <div class="sub-historico">${s.status === 'pago' ? 'Recebido' : 'Aguardando repasse'} · ${s.ordersCount} pedidos</div>
+            </div>
+            <div class="valor-historico" style="${s.status === 'pendente' ? 'color:#b5760a;' : ''}">${formatarMoeda(s.netAmount)}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).catch(() => {});
+}
+
+// ===================================================================
+// CONFIGURAÇÃO
+// ===================================================================
+
+function renderizarConfiguracao() {
+  const conteudo = document.getElementById('conteudo');
+  const categoriaNome = categoriasLoja.find((c) => c.id === restaurant.categoryId)?.name;
+
+  conteudo.innerHTML = `
+    <div class="cartao">
+      <div class="cabecalho-cartao-config">
+        <div class="cabecalho-cartao-config-esq">
+          <div class="icone-secao-config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="titulo-cartao" style="margin:0;">Fotos da loja</div>
+        </div>
+      </div>
+      <div class="linha-fotos">
+        <div class="seletor-logo" id="seletor-logo">
+          ${restaurant.image ? `<img class="img-logo" src="${restaurant.image}" />` : `<div class="img-logo placeholder-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`}
+          <div class="selo-editar-foto" id="spinner-logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <div class="legenda-foto">Logo</div>
+        </div>
+        <div class="seletor-banner" id="seletor-banner">
+          ${restaurant.banner ? `<img class="img-banner" src="${restaurant.banner}" />` : `<div class="img-banner placeholder-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Banner da loja</span></div>`}
+          <div class="selo-editar-foto" id="spinner-banner"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <div class="legenda-foto">Banner</div>
+        </div>
+        <input type="file" id="arquivo-logo" accept="image/*" class="oculto" />
+        <input type="file" id="arquivo-banner" accept="image/*" class="oculto" />
+      </div>
+      <p style="font-size:11.5px; color:var(--texto-suave); margin-top:12px; line-height:1.6;">A logo aparece nos cards da sua loja. O banner é a foto de capa que o cliente vê ao abrir seu restaurante.</p>
+    </div>
+
+    <div class="cartao">
+      <div class="cabecalho-cartao-config">
+        <div class="cabecalho-cartao-config-esq">
+          <div class="icone-secao-config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13M9 21v-6h6v6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="titulo-cartao" style="margin:0;">Dados do restaurante</div>
+        </div>
+        <button class="botao-icone-pequeno editar" id="botao-editar-dados"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+
+      <div id="dados-visualizacao">
+        <div class="linha-dados"><span class="rotulo-dados">Nome</span><span class="valor-dados">${restaurant.name}</span></div>
+        <div class="linha-dados"><span class="rotulo-dados">Categoria</span><span class="valor-dados">${categoriaNome || '—'}</span></div>
+        <div class="linha-dados"><span class="rotulo-dados">Taxa de entrega</span><span class="valor-dados">${formatarMoeda(restaurant.deliveryFee)}</span></div>
+        <div class="linha-dados"><span class="rotulo-dados">Pedido mínimo</span><span class="valor-dados">${Number(restaurant.minOrderValue || 0) > 0 ? formatarMoeda(restaurant.minOrderValue) : 'Sem mínimo'}</span></div>
+        <div class="linha-dados"><span class="rotulo-dados">Tempo de entrega</span><span class="valor-dados">${restaurant.deliveryTimeMin}–${restaurant.deliveryTimeMax} min</span></div>
+      </div>
+
+      <form id="dados-form" class="oculto">
+        <label class="rotulo-campo">Nome</label>
+        <input class="campo-texto" id="cfg-nome" value="${restaurant.name}" required />
+        <label class="rotulo-campo">Categoria</label>
+        <div class="grupo-pills" id="cfg-categorias"></div>
+        <label class="rotulo-campo">Taxa de entrega (R$)</label>
+        <input class="campo-texto" id="cfg-taxa" value="${restaurant.deliveryFee}" inputmode="decimal" required />
+        <label class="rotulo-campo">Pedido mínimo (R$)</label>
+        <input class="campo-texto" id="cfg-min-pedido" value="${restaurant.minOrderValue || 0}" inputmode="decimal" />
+        <div class="linha-campos">
+          <div><label class="rotulo-campo">Tempo mín. (min)</label><input class="campo-texto" id="cfg-tempo-min" value="${restaurant.deliveryTimeMin}" inputmode="numeric" required /></div>
+          <div><label class="rotulo-campo">Tempo máx. (min)</label><input class="campo-texto" id="cfg-tempo-max" value="${restaurant.deliveryTimeMax}" inputmode="numeric" required /></div>
+        </div>
+        <div id="dados-erro" class="estado-erro-inline oculto"></div>
+        <div class="linha-botoes">
+          <button type="button" class="botao-secundario" id="dados-cancelar">Cancelar</button>
+          <button type="submit" class="botao-primario" id="dados-salvar" style="flex:2;">Salvar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="cartao">
+      <div class="cabecalho-cartao-config">
+        <div class="cabecalho-cartao-config-esq">
+          <div class="icone-secao-config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg></div>
+          <div class="titulo-cartao" style="margin:0;">Conta</div>
+        </div>
+      </div>
+      <div id="conta-info">
+        <div class="linha-dados"><span class="rotulo-dados">Nome</span><span class="valor-dados">${usuario.name || ''}</span></div>
+        <div class="linha-dados"><span class="rotulo-dados">E-mail</span><span class="valor-dados">${usuario.email || ''}</span></div>
+      </div>
+
+      <button class="linha-sair-conta" id="botao-sair-config">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sair da conta
+      </button>
+      <button class="linha-excluir-conta" id="botao-abrir-excluir">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Excluir conta do restaurante
+      </button>
+    </div>
+  `;
+
+  chamarApi('/api/users/me').then((info) => {
+    const container = document.getElementById('conta-info');
+    if (!container) return;
+    container.innerHTML = `
+      <div class="linha-dados"><span class="rotulo-dados">Nome</span><span class="valor-dados">${info.name}</span></div>
+      <div class="linha-dados"><span class="rotulo-dados">E-mail</span><span class="valor-dados">${info.email}</span></div>
+    `;
+  }).catch(() => {});
+
+  // ---- upload de fotos ----
+  document.getElementById('seletor-logo').addEventListener('click', () => document.getElementById('arquivo-logo').click());
+  document.getElementById('seletor-banner').addEventListener('click', () => document.getElementById('arquivo-banner').click());
+  document.getElementById('arquivo-logo').addEventListener('change', (e) => enviarFotoRestaurante(e, 'logo'));
+  document.getElementById('arquivo-banner').addEventListener('change', (e) => enviarFotoRestaurante(e, 'banner'));
+
+  // ---- editar dados ----
+  const containerCatsCfg = document.getElementById('cfg-categorias');
+  categoriasLoja.forEach((c) => {
+    const pill = el(`<button type="button" class="pilula ${restaurant.categoryId === c.id ? 'ativa' : ''}" data-id="${c.id}">${c.name}</button>`);
+    containerCatsCfg.appendChild(pill);
+  });
+  containerCatsCfg.onclick = (e) => {
+    const pill = e.target.closest('.pilula');
+    if (!pill) return;
+    containerCatsCfg.querySelectorAll('.pilula').forEach((p) => p.classList.remove('ativa'));
+    pill.classList.add('ativa');
+  };
+
+  document.getElementById('botao-editar-dados').addEventListener('click', () => {
+    document.getElementById('dados-visualizacao').classList.add('oculto');
+    document.getElementById('dados-form').classList.remove('oculto');
+  });
+  document.getElementById('dados-cancelar').addEventListener('click', () => {
+    document.getElementById('dados-visualizacao').classList.remove('oculto');
+    document.getElementById('dados-form').classList.add('oculto');
+  });
+  document.getElementById('dados-form').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const erroEl = document.getElementById('dados-erro');
+    erroEl.classList.add('oculto');
+
+    const nome = document.getElementById('cfg-nome').value.trim();
+    const pillAtiva = containerCatsCfg.querySelector('.pilula.ativa');
+    const categoriaId = pillAtiva ? pillAtiva.dataset.id : null;
+    const taxa = numeroDecimal(document.getElementById('cfg-taxa').value);
+    const minPedido = numeroDecimal(document.getElementById('cfg-min-pedido').value || '0');
+    const tempoMin = parseInt(document.getElementById('cfg-tempo-min').value, 10);
+    const tempoMax = parseInt(document.getElementById('cfg-tempo-max').value, 10);
+
+    if (!nome || !categoriaId) { erroEl.textContent = 'Nome e categoria são obrigatórios.'; erroEl.classList.remove('oculto'); return; }
+    if (Number.isNaN(taxa) || taxa < 0) { erroEl.textContent = 'Informe uma taxa de entrega válida.'; erroEl.classList.remove('oculto'); return; }
+    if (Number.isNaN(minPedido) || minPedido < 0) { erroEl.textContent = 'Informe um valor mínimo de pedido válido (ou 0).'; erroEl.classList.remove('oculto'); return; }
+    if (!tempoMin || !tempoMax || tempoMin <= 0 || tempoMax <= 0) { erroEl.textContent = 'Informe o tempo mínimo e máximo de entrega.'; erroEl.classList.remove('oculto'); return; }
+
+    const botao = document.getElementById('dados-salvar');
+    botao.disabled = true;
+    botao.innerHTML = '<span class="spinner"></span>';
+    try {
+      restaurant = await chamarApi(`/api/tenant/restaurants/${restaurant.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: nome, categoryId: categoriaId, deliveryFee: taxa, minOrderValue: minPedido, deliveryTimeMin: tempoMin, deliveryTimeMax: tempoMax, isOpen: restaurant.isOpen }),
+      });
+      renderizarConfiguracao();
+    } catch (erro) {
+      erroEl.textContent = erro.message;
+      erroEl.classList.remove('oculto');
+      botao.disabled = false;
+      botao.textContent = 'Salvar';
+    }
+  });
+
+  document.getElementById('botao-sair-config').addEventListener('click', sair);
+  document.getElementById('botao-abrir-excluir').addEventListener('click', () => document.getElementById('modal-excluir-conta').classList.remove('oculto'));
+}
+
+async function enviarFotoRestaurante(evento, tipo) {
+  const arquivo = evento.target.files[0];
+  if (!arquivo) return;
+  const selo = document.getElementById(`spinner-${tipo}`);
+  const conteudoOriginalSelo = selo.innerHTML;
+  selo.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;"></span>';
+  try {
+    const form = new FormData();
+    form.append(tipo, arquivo);
+    restaurant = await chamarApiUpload(`/api/tenant/restaurants/${restaurant.id}/${tipo}`, form);
+    if (tipo === 'logo') document.getElementById('imagem-logo').src = restaurant.image;
+    renderizarConfiguracao();
+  } catch (erro) {
+    alert(`Não foi possível enviar ${tipo === 'logo' ? 'a logo' : 'o banner'}: ` + erro.message);
+    selo.innerHTML = conteudoOriginalSelo;
+  }
+}
+
+// ---- modal excluir conta ----
+document.getElementById('fechar-modal-excluir').addEventListener('click', () => document.getElementById('modal-excluir-conta').classList.add('oculto'));
+document.getElementById('excluir-cancelar').addEventListener('click', () => document.getElementById('modal-excluir-conta').classList.add('oculto'));
+document.getElementById('form-excluir-conta').addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const erroEl = document.getElementById('excluir-erro');
+  erroEl.classList.add('oculto');
+  const senha = document.getElementById('excluir-senha').value;
+  const botao = document.getElementById('excluir-confirmar');
+  botao.disabled = true;
+  botao.innerHTML = '<span class="spinner"></span>';
+  try {
+    const resposta = await fetch('/api/users/me', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ password: senha }),
+    });
+    if (!resposta.ok) {
+      const dados = await resposta.json().catch(() => ({}));
+      throw new Error(dados.error || `Erro ${resposta.status}`);
+    }
+    sair();
+  } catch (erro) {
+    erroEl.textContent = erro.message;
+    erroEl.classList.remove('oculto');
+    botao.disabled = false;
+    botao.textContent = 'Excluir conta';
+  }
+});
 
 iniciar();
 </script>
