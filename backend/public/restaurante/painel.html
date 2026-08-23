@@ -360,8 +360,6 @@
 
   .detalhe-pedido { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--borda); }
   .selo-codigo-retirada { display: inline-block; background: var(--creme); border-radius: 8px; padding: 5px 10px; font-size: 11.5px; font-weight: 800; margin-bottom: 12px; }
-  .selo-pagamento { display: inline-flex; align-items: center; gap: 4px; background: var(--dourado-claro); color: #a37000; border-radius: 8px; padding: 4px 9px; font-size: 11px; font-weight: 800; margin-top: 6px; }
-.metodo-pagamento-cartao { font-size: 11.5px; font-weight: 700; color: var(--texto-suave); margin-top: 6px; }
   .bloco-detalhe { font-size: 12.5px; margin-bottom: 12px; line-height: 1.6; }
   .bloco-detalhe strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-suave); margin-bottom: 4px; }
   .bloco-detalhe a { color: var(--vermelho); font-weight: 700; text-decoration: none; }
@@ -789,23 +787,6 @@ async function chamarApiUpload(caminho, formData) {
 
 function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-const ROTULOS_PAGAMENTO = {
-  pix: 'Pix (pago no app)',
-  credit_card: 'Cartão de crédito (pago no app)',
-  debit_card: 'Cartão de débito (pago no app)',
-  pix_entrega: 'Pix na entrega',
-  dinheiro: 'Dinheiro na entrega',
-  cartao_credito: 'Cartão de crédito na entrega',
-  cartao_debito: 'Cartão de débito na entrega',
-};
-function rotuloPagamento(pedido) {
-  if (!pedido.paymentMethod) return '';
-  return ROTULOS_PAGAMENTO[pedido.paymentMethod] || pedido.paymentMethod;
-}
-function seloTrocoHtml(pedido) {
-  if (pedido.paymentMethod !== 'dinheiro' || !pedido.changeFor) return '';
-  return `<span class="selo-pagamento">💵 Troco para ${formatarMoeda(pedido.changeFor)}</span>`;
 }
 function numeroDecimal(texto) {
   return Number(String(texto ?? '').trim().replace(',', '.'));
@@ -1306,10 +1287,10 @@ function montarCartaoPedido(pedido, ehHistorico) {
       <div class="tempo-pedido">${formatarTempoDecorrido(pedido.createdAt)}</div>
     </div>
     ${pillHistorico ? `<div style="margin-top:8px">${pillHistorico}</div>` : ''}
-   <div class="resumo-itens">${resumoItens || 'Sem itens'}</div>
-${rotuloPagamento(pedido) ? `<div class="metodo-pagamento-cartao">${rotuloPagamento(pedido)}</div>` : ''}
-${seloTrocoHtml(pedido)}
-<div class="rodape-cartao">
+    <div class="resumo-itens">${resumoItens || 'Sem itens'}</div>
+    <div class="rodape-cartao"><div class="total-cartao">${formatarMoeda(pedido.total)}</div></div>
+    <div class="area-acoes"></div>
+    <div class="area-detalhe"></div>
   `;
 
   cartao.querySelector('[data-acao="alternar"]').addEventListener('click', () => alternarDetalhePedido(pedido, cartao));
@@ -1429,7 +1410,6 @@ function montarDetalhePedido(pedido, cartao) {
         </div>
       </div>
     </div>
-    <div class="bloco-detalhe"><strong>Forma de pagamento</strong>${rotuloPagamento(pedido) || 'Não informado'}${seloTrocoHtml(pedido) ? `<div style="margin-top:6px">${seloTrocoHtml(pedido)}</div>` : ''}</div>
   `);
 
   div.querySelector('[data-acao="enviar-msg"]').addEventListener('click', (e) => { e.stopPropagation(); enviarMensagemPedido(pedido.id); });
