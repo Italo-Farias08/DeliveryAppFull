@@ -282,49 +282,67 @@ export default function RestaurantSalesScreen() {
           )}
         </View>
 
-        {billing && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Valor a receber</Text>
-            <View style={styles.commissionRow}>
-              <View>
-                <Text style={styles.commissionValue}>{formatMoney(billing.pending.netAmount)}</Text>
-                <Text style={styles.historySub}>
-                  {billing.pending.ordersCount} {billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'}{' '}
-                  ainda não fechados nesta semana
-                </Text>
+        {billing && (() => {
+          // netAmount positivo = a plataforma ainda vai te repassar esse
+          // valor (pedidos pagos pelo app). Negativo = você que deve à
+          // plataforma (comissão de pedidos pagos na entrega -- dinheiro,
+          // cartão ou Pix que caiu direto na sua mão, sem passar pela
+          // plataforma).
+          const pendingOwesPlatform = billing.pending.netAmount < 0;
+          return (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>{pendingOwesPlatform ? 'Você deve à plataforma' : 'Valor a receber'}</Text>
+              <View style={styles.commissionRow}>
+                <View>
+                  <Text style={[styles.commissionValue, pendingOwesPlatform && { color: '#C0392B' }]}>
+                    {formatMoney(Math.abs(billing.pending.netAmount))}
+                  </Text>
+                  <Text style={styles.historySub}>
+                    {billing.pending.ordersCount} {billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'}{' '}
+                    ainda não fechados nesta semana
+                  </Text>
+                </View>
               </View>
+              <Text style={[styles.infoText, { marginTop: 10 }]}>
+                {pendingOwesPlatform
+                  ? 'Você teve mais pedidos pagos na entrega (dinheiro/cartão/Pix) do que pagos pelo app nesta semana -- a comissão desses pedidos ainda não foi descontada em lugar nenhum, então você que repassa esse valor pra plataforma no fechamento.'
+                  : 'Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o valor líquido, com a comissão da plataforma já descontada.'}
+              </Text>
+              {billing.settlements.length > 0 && (
+                <View style={{ marginTop: 4 }}>
+                  {billing.settlements.slice(0, 4).map((s) => {
+                    const owesPlatform = s.netAmount < 0;
+                    return (
+                      <View key={s.id} style={styles.historyRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.historyLabel}>
+                            {new Date(s.periodStart).toLocaleDateString('pt-BR')} –{' '}
+                            {new Date(s.periodEnd).toLocaleDateString('pt-BR')}
+                          </Text>
+                          <Text style={styles.historySub}>
+                            {owesPlatform
+                              ? s.status === 'pago' ? 'Pago à plataforma' : 'Você deve à plataforma'
+                              : s.status === 'pago' ? 'Recebido' : 'Aguardando repasse'}{' '}
+                            · {s.ordersCount} pedidos
+                          </Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.historyValue,
+                            owesPlatform ? { color: '#C0392B' } : s.status === 'pendente' && { color: '#B5760A' },
+                          ]}
+                        >
+                          {owesPlatform ? '-' : ''}
+                          {formatMoney(Math.abs(s.netAmount))}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
-            <Text style={[styles.infoText, { marginTop: 10 }]}>
-              Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o
-              valor líquido, com a comissão da plataforma já descontada.
-            </Text>
-            {billing.settlements.length > 0 && (
-              <View style={{ marginTop: 4 }}>
-                {billing.settlements.slice(0, 4).map((s) => (
-                  <View key={s.id} style={styles.historyRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.historyLabel}>
-                        {new Date(s.periodStart).toLocaleDateString('pt-BR')} –{' '}
-                        {new Date(s.periodEnd).toLocaleDateString('pt-BR')}
-                      </Text>
-                      <Text style={styles.historySub}>
-                        {s.status === 'pago' ? 'Recebido' : 'Aguardando repasse'} · {s.ordersCount} pedidos
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.historyValue,
-                        s.status === 'pendente' && { color: '#B5760A' },
-                      ]}
-                    >
-                      {formatMoney(s.netAmount)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
+          );
+        })()}
 
         <View style={styles.infoBanner}>
           <Ionicons name="information-circle-outline" size={16} color={colors.textMuted} />

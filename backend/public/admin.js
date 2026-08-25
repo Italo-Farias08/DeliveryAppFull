@@ -28,6 +28,18 @@ async function load() {
     const tbody = document.getElementById('tbody');
     tbody.innerHTML = '';
     for (const s of settlements) {
+      // netAmount positivo = VOCÊ deve repassar esse valor pro restaurante
+      // (veio de pedido pago online, pelo app). netAmount negativo = é o
+      // RESTAURANTE que te deve esse valor (pedido pago na entrega em
+      // dinheiro/cartão/Pix -- o dinheiro foi direto pra ele, você só tem a
+      // comissão a receber de volta).
+      const netAmount = Number(s.netAmount);
+      const isTenantOwesPlatform = netAmount < 0;
+      const netLabel = isTenantOwesPlatform
+        ? `Restaurante te deve ${fmtMoney(Math.abs(netAmount))}`
+        : `Você repassa ${fmtMoney(netAmount)}`;
+      const actionLabel = isTenantOwesPlatform ? 'Marquei que o restaurante me pagou' : 'Marquei o repasse como feito';
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${s.tenantName}</td>
@@ -36,13 +48,13 @@ async function load() {
         <td>${fmtMoney(s.grossAmount)}</td>
         <td>${s.commissionRate}%</td>
         <td>${fmtMoney(s.commissionAmount)}</td>
-        <td><strong>${fmtMoney(s.netAmount)}</strong></td>
-        <td class="${s.status}">${s.status === 'pago' ? 'Repassado' : 'Pendente'}</td>
+        <td><strong class="${isTenantOwesPlatform ? 'deve-plataforma' : ''}">${netLabel}</strong></td>
+        <td class="${s.status}">${s.status === 'pago' ? 'Quitado' : 'Pendente'}</td>
         <td></td>
       `;
       if (s.status === 'pendente') {
         const btn = document.createElement('button');
-        btn.textContent = 'Marquei o repasse como feito';
+        btn.textContent = actionLabel;
         btn.addEventListener('click', () => markPaid(s.id));
         tr.lastElementChild.appendChild(btn);
       }

@@ -2,6 +2,7 @@ const { pool } = require('../../config/db');
 const AppError = require('../../utils/AppError');
 const { toClient, toTenant, toDeliverers } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
+const { COMMISSION_RATE, calculateCommission } = require('../../utils/commission');
 
 // Endereço da loja (pra ir buscar o pedido) vem separado do endereço do
 // cliente (pra ir entregar), com prefixo "restaurant" — os dois podem
@@ -123,7 +124,7 @@ async function confirmPickup(delivererId, orderId, code) {
 async function confirmDelivery(delivererId, orderId, code) {
   const orderResult = await pool.query(
     `SELECT id, delivery_code AS "deliveryCode", status, tenant_id AS "tenantId", client_id AS "clientId",
-            payment_timing AS "paymentTiming"
+            payment_timing AS "paymentTiming", subtotal
      FROM orders WHERE id = $1 AND deliverer_id = $2`,
     [orderId, delivererId]
   );
@@ -136,17 +137,28 @@ async function confirmDelivery(delivererId, orderId, code) {
     throw new AppError('Código de entrega incorreto', 400);
   }
 
-  // Pedido com pagamento na ENTREGA: o entregador acabou de receber (em
-  // dinheiro, cartão ou Pix) na hora da entrega, então marca como pago
-  // agora. Pedido pago pelo app (Mercado Pago) já chega aqui pago -- não
-  // mexe no payment_status dele.
+  // Pedido com pagamento na ENTREGA: o entregador/restaurante acabou de
+  // receber (em dinheiro, cartão ou Pix) na hora da entrega, então marca
+  // como pago agora -- e já trava a comissão devida à plataforma sobre esse
+  // pedido, do mesmo jeito que o webhook do Mercado Pago faz pro pagamento
+  // online (ver payments.service.js). A diferença é o SENTIDO do dinheiro:
+  // aqui é o restaurante que vai dever essa comissão à plataforma no acerto
+  // semanal, já que o valor não passou pela conta da plataforma (ver
+  // comentário em getPendingCommission, em payments.service.js).
+  // Pedido pago pelo app (Mercado Pago) já chega aqui pago, com comissão já
+  // travada -- não mexe em nada dele.
+  const isOfflinePayment = order.paymentTiming === 'entrega';
+  const commissionAmount = isOfflinePayment ? calculateCommission(order.subtotal) : null;
+
   const result = await pool.query(
     `UPDATE orders SET status = 'entregue', delivered_at = now(),
             payment_status = CASE WHEN payment_timing = 'entrega' THEN 'pago' ELSE payment_status END,
-            paid_at = CASE WHEN payment_timing = 'entrega' THEN now() ELSE paid_at END
+            paid_at = CASE WHEN payment_timing = 'entrega' THEN now() ELSE paid_at END,
+            commission_rate = CASE WHEN payment_timing = 'entrega' THEN $2 ELSE commission_rate END,
+            commission_amount = CASE WHEN payment_timing = 'entrega' THEN $3 ELSE commission_amount END
      WHERE id = $1
      RETURNING id, status`,
-    [orderId]
+    [orderId, COMMISSION_RATE, commissionAmount]
   );
   toTenant(order.tenantId, 'order:status', { id: order.id, status: result.rows[0].status });
   toClient(order.clientId, 'order:status', { id: order.id, status: result.rows[0].status });

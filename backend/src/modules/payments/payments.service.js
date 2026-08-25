@@ -4,12 +4,7 @@ const { mpClient } = require('../../config/mercadopago');
 const AppError = require('../../utils/AppError');
 const { toClient, toTenant } = require('../../realtime/socket');
 const { sendPushToUser, sendPushToTenant } = require('../../utils/push');
-
-// Percentual que a plataforma retém de cada pedido pago (comissão do
-// restaurante). Calculado em cima do SUBTOTAL (valor dos itens/comida),
-// sem contar a taxa de entrega — que normalmente não é receita do
-// restaurante. Pode ajustar via COMMISSION_RATE no .env.
-const COMMISSION_RATE = Number(process.env.COMMISSION_RATE || 12);
+const { COMMISSION_RATE, calculateCommission } = require('../../utils/commission');
 
 // URL pública do backend (sem a barra final), usada pro Mercado Pago saber
 // pra onde mandar a notificação de pagamento (webhook) e pra onde devolver
@@ -201,13 +196,13 @@ async function processPaymentNotification(mpPaymentId) {
     const paymentMethod = paymentMethodMap[info.payment_type_id] || info.payment_type_id;
 
     if (info.status === 'approved') {
-      const commissionAmount = Number(order.subtotal) * (COMMISSION_RATE / 100);
+      const commissionAmount = calculateCommission(order.subtotal);
       await client.query(
         `UPDATE orders
          SET payment_status = 'pago', payment_method = $1, mp_payment_id = $2, paid_at = now(),
              commission_rate = $3, commission_amount = $4
          WHERE id = $5`,
-        [paymentMethod, String(info.id), COMMISSION_RATE, commissionAmount.toFixed(2), orderId]
+        [paymentMethod, String(info.id), COMMISSION_RATE, commissionAmount, orderId]
       );
     } else if (info.status === 'rejected') {
       await client.query(
@@ -297,22 +292,31 @@ async function orderClientId(orderId) {
 
 // --- Comissão / acertos semanais ---
 //
-// O pagamento do cliente (Pix/cartão) cai inteiro na conta Mercado Pago DA
-// PLATAFORMA (é o token da plataforma que cria a cobrança). Ou seja, quem
-// deve dinheiro pra quem toda semana é a PLATAFORMA PRO RESTAURANTE: o
-// valor líquido (subtotal dos pedidos - comissão da plataforma), chamado
-// aqui de "netAmount". A plataforma faz esse repasse por fora (Pix/TED)
-// pra chave do restaurante e marca o acerto como pago.
+// Pedido pago ONLINE (Pix no app / Mercado Pago): o dinheiro do cliente cai
+// inteiro na conta Mercado Pago DA PLATAFORMA. Quem deve dinheiro pra quem
+// nesse caso é a PLATAFORMA PRO RESTAURANTE -- o valor líquido (subtotal
+// dos pedidos - comissão), a plataforma repassa por fora (Pix/TED).
+//
+// Pedido pago NA ENTREGA (dinheiro, cartão ou Pix cobrado pelo entregador):
+// o dinheiro vai direto pro restaurante/entregador, a plataforma nunca
+// chega a ficar com ele. Nesse caso é o RESTAURANTE que deve a comissão
+// PRA PLATAFORMA -- o caminho inverso do de cima.
+//
+// Um único "netAmount" por tenant junta as duas coisas: soma o que a
+// plataforma arrecadou de verdade (só pedidos online) e subtrai TODA a
+// comissão devida (online + entrega). Se o resultado for positivo, a
+// plataforma ainda deve repassar esse valor pro restaurante; se for
+// negativo, é o restaurante que deve esse valor à plataforma.
 
-// Quanto a plataforma deve repassar AGORA pro tenant (pedidos já pagos,
-// ainda não incluídos em nenhum acerto semanal). Usado tanto na tela do
-// restaurante quanto no fechamento semanal.
+// Quanto falta acertar AGORA com o tenant (pedidos já pagos -- online ou na
+// entrega --, ainda não incluídos em nenhum acerto semanal).
 async function getPendingCommission(tenantId) {
   const result = await pool.query(
     `SELECT COUNT(*)::int AS "ordersCount",
-            COALESCE(SUM(subtotal), 0) AS "grossAmount",
+            COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'online'), 0) AS "grossAmount",
             COALESCE(SUM(commission_amount), 0) AS "commissionAmount",
-            COALESCE(SUM(subtotal - commission_amount), 0) AS "netAmount"
+            COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'online'), 0)
+              - COALESCE(SUM(commission_amount), 0) AS "netAmount"
      FROM orders
      WHERE tenant_id = $1 AND payment_status = 'pago' AND settlement_id IS NULL`,
     [tenantId]
@@ -341,7 +345,7 @@ async function generateSettlementForTenant(tenantId, periodStart, periodEnd) {
   try {
     await client.query('BEGIN');
     const pendingResult = await client.query(
-      `SELECT id, subtotal, commission_amount FROM orders
+      `SELECT id, subtotal, commission_amount, payment_timing AS "paymentTiming" FROM orders
        WHERE tenant_id = $1 AND payment_status = 'pago' AND settlement_id IS NULL
          AND paid_at >= $2 AND paid_at < $3
        FOR UPDATE`,
@@ -352,7 +356,14 @@ async function generateSettlementForTenant(tenantId, periodStart, periodEnd) {
       return null;
     }
     const orders = pendingResult.rows;
-    const grossAmount = orders.reduce((s, o) => s + Number(o.subtotal), 0);
+    // grossAmount só soma o que a plataforma arrecadou DE VERDADE (pedidos
+    // pagos online) -- pedido pago na entrega nunca passou pela conta da
+    // plataforma, então não entra aqui (ver comentário acima da função
+    // getPendingCommission). commissionAmount soma a comissão de TODOS os
+    // pedidos do período, dos dois tipos.
+    const grossAmount = orders
+      .filter((o) => o.paymentTiming === 'online')
+      .reduce((s, o) => s + Number(o.subtotal), 0);
     const commissionAmount = orders.reduce((s, o) => s + Number(o.commission_amount || 0), 0);
 
     const settlementResult = await client.query(

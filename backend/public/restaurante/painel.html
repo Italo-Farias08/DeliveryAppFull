@@ -2574,21 +2574,35 @@ async function renderizarVendas() {
   chamarApi('/api/tenant/billing').then((billing) => {
     const container = document.getElementById('vendas-comissao');
     if (!container) return;
+    // netAmount positivo = a plataforma ainda vai te repassar esse valor
+    // (pedidos pagos pelo app). netAmount negativo = você que deve esse
+    // valor à plataforma (comissão de pedidos pagos na entrega -- dinheiro,
+    // cartão ou Pix que você ou o entregador recebeu direto do cliente).
+    const pendingNet = Number(billing.pending.netAmount);
+    const pendingOwesPlatform = pendingNet < 0;
     container.innerHTML = `
       <div class="cartao">
-        <div class="titulo-cartao">Valor a receber</div>
-        <div style="font-family:var(--fonte-titulo); font-size:22px; font-weight:800; color:#b5760a;">${formatarMoeda(billing.pending.netAmount)}</div>
+        <div class="titulo-cartao">${pendingOwesPlatform ? 'Você deve à plataforma' : 'Valor a receber'}</div>
+        <div style="font-family:var(--fonte-titulo); font-size:22px; font-weight:800; color:${pendingOwesPlatform ? '#c0392b' : '#b5760a'};">${formatarMoeda(Math.abs(pendingNet))}</div>
         <div class="sub-historico">${billing.pending.ordersCount} ${billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'} ainda não fechados nesta semana</div>
-        <p style="font-size:11.5px; color:var(--texto-suave); line-height:1.6; margin-top:10px;">Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o valor líquido, com a comissão da plataforma já descontada.</p>
-        ${billing.settlements.slice(0, 4).map((s) => `
+        <p style="font-size:11.5px; color:var(--texto-suave); line-height:1.6; margin-top:10px;">
+          ${pendingOwesPlatform
+            ? 'Você teve mais pedidos pagos na entrega (dinheiro/cartão/Pix) do que pagos pelo app nesta semana -- a comissão desses pedidos ainda não foi descontada em lugar nenhum, então você que repassa esse valor pra plataforma no fechamento.'
+            : 'Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o valor líquido, com a comissão da plataforma já descontada.'}
+        </p>
+        ${billing.settlements.slice(0, 4).map((s) => {
+          const net = Number(s.netAmount);
+          const owesPlatform = net < 0;
+          return `
           <div class="linha-historico-vendas">
             <div style="flex:1">
               <div class="rotulo-historico">${new Date(s.periodStart).toLocaleDateString('pt-BR')} – ${new Date(s.periodEnd).toLocaleDateString('pt-BR')}</div>
-              <div class="sub-historico">${s.status === 'pago' ? 'Recebido' : 'Aguardando repasse'} · ${s.ordersCount} pedidos</div>
+              <div class="sub-historico">${owesPlatform ? (s.status === 'pago' ? 'Pago à plataforma' : 'Você deve à plataforma') : (s.status === 'pago' ? 'Recebido' : 'Aguardando repasse')} · ${s.ordersCount} pedidos</div>
             </div>
-            <div class="valor-historico" style="${s.status === 'pendente' ? 'color:#b5760a;' : ''}">${formatarMoeda(s.netAmount)}</div>
+            <div class="valor-historico" style="${owesPlatform ? 'color:#c0392b;' : s.status === 'pendente' ? 'color:#b5760a;' : ''}">${owesPlatform ? '-' : ''}${formatarMoeda(Math.abs(net))}</div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     `;
   }).catch(() => {});
