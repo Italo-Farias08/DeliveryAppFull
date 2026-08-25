@@ -7,6 +7,7 @@ import {
   Easing,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -19,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { requestLoginCode, verifyLoginCode } from '../../services/authService';
+import { TERMS_URL } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -400,6 +402,16 @@ export default function LoginScreen({ navigation }: any) {
               <Text style={styles.footerLink}>Cadastre-se</Text>
             </TouchableOpacity>
           </Animated.View>
+
+          <Animated.View style={{ opacity: footerFade, marginTop: 14 }}>
+            <Text style={styles.termsText}>
+              Ao entrar, você concorda com nossos{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(TERMS_URL)}>
+                Termos de Uso
+              </Text>
+              .
+            </Text>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -488,5 +500,7 @@ function createStyles(colors: ThemeColors) {
   footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8 },
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  termsText: { color: colors.textMuted, fontSize: 12, textAlign: 'center', lineHeight: 17 },
+  termsLink: { color: colors.primary, fontWeight: '700' },
 });
 };

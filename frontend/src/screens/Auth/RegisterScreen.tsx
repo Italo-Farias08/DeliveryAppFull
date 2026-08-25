@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,6 +17,7 @@ import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import { register, RegisterPayload } from '../../services/authService';
+import { TERMS_URL } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -86,6 +88,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [inviteCode, setInviteCode] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   function validate(): string | null {
     if (!name.trim() || !email.trim() || !password.trim()) {
@@ -117,6 +120,10 @@ export default function RegisterScreen({ navigation }: any) {
       if (plateDigits.length !== 7) {
         return 'Digite uma placa válida (ex: ABC1234).';
       }
+    }
+
+    if (!acceptedTerms) {
+      return 'Você precisa aceitar os Termos de Uso para continuar.';
     }
 
     return null;
@@ -341,6 +348,22 @@ export default function RegisterScreen({ navigation }: any) {
             </PressableScale>
           </View>
 
+          <PressableScale
+            onPress={() => setAcceptedTerms((v) => !v)}
+            style={styles.termsRow}
+            scaleTo={0.99}
+          >
+            <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+              {acceptedTerms && <Ionicons name="checkmark" size={13} color={colors.white} />}
+            </View>
+            <Text style={styles.termsText}>
+              Li e aceito os{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(TERMS_URL)}>
+                Termos de Uso
+              </Text>
+            </Text>
+          </PressableScale>
+
           <PressableScale onPress={handleRegister} disabled={loading} style={styles.registerButton} scaleTo={0.97}>
             {loading ? (
               <ActivityIndicator color={colors.white} />
@@ -423,6 +446,21 @@ function createStyles(colors: ThemeColors) {
     ...coloredShadow(colors.primary, 0.32),
   },
   registerButtonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 6, marginBottom: 4 },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  termsText: { flex: 1, color: colors.textMuted, fontSize: 12.5, lineHeight: 17 },
+  termsLink: { color: colors.primary, fontWeight: '700' },
   footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { color: colors.textMuted, fontSize: 14 },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: '700' },

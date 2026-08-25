@@ -52,6 +52,19 @@ app.use('/admin', express.static(path.join(__dirname, '..', 'public')));
 // /restaurante/login.html, que referencia "../img/logo.png").
 app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img')));
 
+// Termos de Uso — página pública, sem autenticação, linkada tanto do login
+// web (/restaurante/login.html) quanto aberta pelo app mobile (Linking, ver
+// TERMS_URL em frontend/src/services/api.ts). Fonte única do texto, os dois
+// lugares só apontam pra cá em vez de duplicar o conteúdo.
+app.use('/legal', (req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:"
+  );
+  next();
+});
+app.use('/legal', express.static(path.join(__dirname, '..', 'public', 'legal')));
+
 // Portal web do restaurante (login + painel de gestão completo, com as
 // mesmas funções do painel do app: pedidos, cardápio, esgotados,
 // entregadores, localização, horário, vendas e configuração).

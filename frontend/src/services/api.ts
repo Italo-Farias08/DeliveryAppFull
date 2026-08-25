@@ -3,6 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3333/api';
 
+// Raiz do site (sem o "/api" do final) — usada pra abrir páginas HTML do
+// backend, como os Termos de Uso, no navegador do celular. Mesma lógica de
+// services/socket.ts.
+export const SITE_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
+export const TERMS_URL = `${SITE_ROOT}/legal/termos.html`;
+
 // DEBUG TEMPORÁRIO — remova depois de resolver o problema de conexão.
 // Isso mostra no terminal do Expo (e no console do celular) qual URL
 // o app está de fato usando, pra confirmarmos se o .env foi carregado.

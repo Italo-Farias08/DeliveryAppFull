@@ -348,6 +348,28 @@
 
   .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
+  .linha-termos {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+  }
+  .linha-termos input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    accent-color: var(--vermelho);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .linha-termos a { color: var(--vermelho); font-weight: 700; text-decoration: none; }
+  .linha-termos a:hover { text-decoration: underline; }
+
   .etapa-sucesso { align-items: flex-start; justify-content: center; }
   .marca-sucesso {
     width: 50px; height: 50px; border-radius: 10px; background: var(--verde);
@@ -443,6 +465,10 @@
 
           <p class="rodape-etapa">
             Ainda não tem conta? <button type="button" class="link-inline" id="botao-ir-cadastro">Cadastre seu restaurante</button>
+          </p>
+
+          <p class="rodape-etapa" style="margin-top: 10px; padding-top: 0; border-top: none;">
+            Ao entrar, você concorda com os <a class="link-inline" href="/legal/termos.html" target="_blank" rel="noopener" style="text-decoration:none;">Termos de Uso</a>.
           </p>
         </form>
 
@@ -541,6 +567,11 @@
             </label>
           </div>
 
+          <label class="linha-termos" for="campo-aceite-termos">
+            <input type="checkbox" id="campo-aceite-termos" required />
+            <span>Li e aceito os <a href="/legal/termos.html" target="_blank" rel="noopener">Termos de Uso</a>.</span>
+          </label>
+
           <button type="submit" class="botao-principal" id="botao-cadastrar">
             <span class="spinner"></span>
             <span class="texto-botao">Criar conta</span>
@@ -606,6 +637,7 @@ const campoSenhaCadastro = document.getElementById('campo-senha-cadastro');
 const campoConfirmarSenha = document.getElementById('campo-confirmar-senha');
 const botaoCadastrar = document.getElementById('botao-cadastrar');
 const mensagemCadastro = document.getElementById('mensagem-cadastro');
+const campoAceiteTermos = document.getElementById('campo-aceite-termos');
 
 let emailEmUso = '';
 let senhaEmUso = '';
@@ -853,6 +885,7 @@ function validarCadastro(dados) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email)) return 'Digite um e-mail válido.';
   if (dados.password.length < 6) return 'A senha precisa ter pelo menos 6 caracteres.';
   if (dados.password !== dados.confirmarSenha) return 'As senhas digitadas não são iguais.';
+  if (!campoAceiteTermos.checked) return 'Você precisa aceitar os Termos de Uso para continuar.';
   return null;
 }
 
