@@ -45,7 +45,8 @@ async function load() {
         <td>${s.tenantName}</td>
         <td>${fmtDate(s.periodStart)} – ${fmtDate(s.periodEnd)}</td>
         <td>${s.ordersCount}</td>
-        <td>${fmtMoney(s.grossAmount)}</td>
+        <td>${fmtMoney(s.onlineGrossAmount)} <span style="color:#999; font-size:11px;">(${s.onlineOrdersCount || 0})</span></td>
+        <td>${fmtMoney(s.offlineGrossAmount)} <span style="color:#999; font-size:11px;">(${s.offlineOrdersCount || 0})</span></td>
         <td>${s.commissionRate}%</td>
         <td>${fmtMoney(s.commissionAmount)}</td>
         <td><strong class="${isTenantOwesPlatform ? 'deve-plataforma' : ''}">${netLabel}</strong></td>

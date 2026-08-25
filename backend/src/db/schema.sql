@@ -166,7 +166,10 @@ CREATE TABLE orders (
   delivery_fee NUMERIC(10,2) NOT NULL,
   total NUMERIC(10,2) NOT NULL,
   payment_status TEXT NOT NULL DEFAULT 'pendente' CHECK (payment_status IN ('pendente', 'pago', 'recusado', 'estornado')),
-  payment_method TEXT, -- pix | credit_card | debit_card
+  payment_timing TEXT NOT NULL DEFAULT 'online' CHECK (payment_timing IN ('online', 'entrega')),
+  -- pix (pago no app, Mercado Pago) | pix_entrega | dinheiro | cartao_credito | cartao_debito (pagos na entrega)
+  payment_method TEXT,
+  change_for NUMERIC(10,2), -- troco (só quando payment_method = 'dinheiro')
   mp_preference_id TEXT,
   mp_payment_id TEXT,
   paid_at TIMESTAMPTZ,
@@ -201,6 +204,15 @@ CREATE TABLE settlements (
   gross_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
   commission_rate NUMERIC(5,2) NOT NULL,
   commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  -- Pix dentro do app (caiu na conta da plataforma; ela repassa o líquido)
+  online_orders_count INTEGER NOT NULL DEFAULT 0,
+  online_gross_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  online_commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  -- Pago na entrega: dinheiro/cartão/Pix por fora (caiu direto com o
+  -- restaurante; ele deve a comissão de volta pra plataforma)
+  offline_orders_count INTEGER NOT NULL DEFAULT 0,
+  offline_gross_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  offline_commission_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente', 'pago')),
   paid_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()

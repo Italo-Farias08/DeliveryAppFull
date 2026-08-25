@@ -824,6 +824,8 @@ const ITENS_NAV = [
     icone: '<path d="M6 2h9l3 3v17H6z" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 9h6M9 13h6M9 17h3" stroke-linecap="round"/>' },
   { id: 'vendas', rotulo: 'Vendas', titulo: 'Vendas', sub: 'Registro de faturamento.',
     icone: '<path d="M4 20V10M12 20V4M20 20v-7" stroke-linecap="round"/>' },
+  { id: 'pagamentos', rotulo: 'Pagamentos', titulo: 'Pagamentos à plataforma', sub: 'O que cai pra você, o que cai pra plataforma, e o saldo entre vocês.',
+    icone: '<path d="M7 7h13l-4-4M17 17H4l4 4" stroke-linecap="round" stroke-linejoin="round"/>' },
   { id: 'cardapio', rotulo: 'Cardápio', titulo: 'Cardápio', sub: '',
     icone: '<path d="M4 3v7a3 3 0 0 0 3 3v8M4 3v4M7 3v4M4 7h3M14 3c-2 2-2 5-2 7a2 2 0 0 0 2 2v9M14 3v18" stroke-linecap="round" stroke-linejoin="round"/>' },
   { id: 'esgotados', rotulo: 'Esgotados', titulo: 'Esgotados', sub: 'Marque o que acabou no seu cardápio.',
@@ -872,6 +874,7 @@ function irPara(secaoId) {
     dashboard: renderizarDashboard,
     pedidos: renderizarSecaoPedidos,
     vendas: renderizarVendas,
+    pagamentos: renderizarPagamentos,
     cardapio: renderizarCardapio,
     esgotados: renderizarEsgotados,
     localizacao: renderizarLocalizacao,
@@ -2493,45 +2496,130 @@ async function renderizarVendas() {
         `).join('')}
     </div>
 
-    <div id="vendas-comissao"></div>
-
     <div class="banner-info" style="background:var(--creme); margin-top:16px; margin-bottom:0;">
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--texto-suave)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span style="color:var(--texto-suave);">Esses números são de faturamento (o que entrou em vendas). Pra calcular lucro de verdade seria preciso cadastrar o custo de cada item.</span>
+      <span style="color:var(--texto-suave);">Esses números são de faturamento (o que entrou em vendas). Pra calcular lucro de verdade seria preciso cadastrar o custo de cada item. Pra ver quanto disso é seu e quanto é da plataforma, veja a aba <strong>Pagamentos</strong>.</span>
     </div>
   `;
+}
 
-  chamarApi('/api/tenant/billing').then((billing) => {
-    const container = document.getElementById('vendas-comissao');
-    if (!container) return;
-    const pendingNet = Number(billing.pending.netAmount);
-    const pendingOwesPlatform = pendingNet < 0;
-    container.innerHTML = `
-      <div class="cartao">
-        <div class="titulo-cartao">${pendingOwesPlatform ? 'Você deve à plataforma' : 'Valor a receber'}</div>
-        <div style="font-family:var(--fonte-titulo); font-size:22px; font-weight:800; color:${pendingOwesPlatform ? '#c0392b' : '#b5760a'};">${formatarMoeda(Math.abs(pendingNet))}</div>
-        <div class="sub-historico">${billing.pending.ordersCount} ${billing.pending.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'} ainda não fechados nesta semana</div>
-        <p style="font-size:11.5px; color:var(--texto-suave); line-height:1.6; margin-top:10px;">
-          ${pendingOwesPlatform
-            ? 'Você teve mais pedidos pagos na entrega (dinheiro/cartão/Pix) do que pagos pelo app nesta semana -- a comissão desses pedidos ainda não foi descontada em lugar nenhum, então você que repassa esse valor pra plataforma no fechamento.'
-            : 'Toda semana esse valor é fechado e a plataforma faz o repasse (Pix/transferência) pra você. Já é o valor líquido, com a comissão da plataforma já descontada.'}
-        </p>
-        ${billing.settlements.slice(0, 4).map((s) => {
-          const net = Number(s.netAmount);
-          const owesPlatform = net < 0;
+// --- Pagamentos à plataforma -------------------------------------------
+// Separa bem os dois fluxos de dinheiro:
+//  · Pix DENTRO DO APP  -> cai na conta da plataforma; ela repassa pra você
+//    (por fora, Pix/TED) o valor líquido, já com a comissão descontada.
+//  · Pagamento POR FORA (dinheiro, cartão na maquininha, Pix na entrega)
+//    -> cai direto com você; no fechamento, você repassa a comissão pra
+//    plataforma.
+// O saldo da semana junta as duas pontas num único número: se for positivo,
+// a plataforma te deve; se for negativo, você deve a ela.
+
+const ROTULOS_METODO_POR_FORA = {
+  dinheiro: 'Dinheiro',
+  cartao_credito: 'Cartão de crédito',
+  cartao_debito: 'Cartão de débito',
+  pix_entrega: 'Pix por fora',
+};
+
+async function renderizarPagamentos() {
+  const conteudo = document.getElementById('conteudo');
+  conteudo.innerHTML = `
+    <div class="banner-info" style="margin-bottom:16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--verde)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Pix pago <strong>dentro do app</strong> cai na conta da plataforma, que repassa pra você. Pagamento <strong>por fora</strong> (dinheiro, cartão, Pix na entrega) cai direto com você, e você repassa a comissão da plataforma no fechamento.</span>
+    </div>
+    <div id="pagamentos-conteudo"><div class="spinner escuro" style="margin:50px auto;"></div></div>
+  `;
+  try {
+    const billing = await chamarApi('/api/tenant/billing');
+    renderizarConteudoPagamentos(billing);
+  } catch (err) {
+    document.getElementById('pagamentos-conteudo').innerHTML = `
+      <div class="cartao"><div style="color:var(--vermelho); font-size:13px;">Não foi possível carregar os pagamentos agora. ${err.message || ''}</div></div>
+    `;
+  }
+}
+
+function renderizarConteudoPagamentos(billing) {
+  const area = document.getElementById('pagamentos-conteudo');
+  const pend = billing.pending;
+  const net = Number(pend.netAmount);
+  const plataformaDeve = net >= 0;
+
+  const onlineGross = Number(pend.online.grossAmount);
+  const onlineComissao = Number(pend.online.commissionAmount);
+  const onlineLiquido = Number(pend.online.netToRestaurant);
+
+  const offlineGross = Number(pend.offline.grossAmount);
+  const offlineComissao = Number(pend.offline.commissionAmount);
+  const metodosPorFora = pend.offline.byMethod || [];
+
+  area.innerHTML = `
+    <div class="cartao" style="text-align:center; background:${plataformaDeve ? 'var(--verde-claro)' : 'var(--vermelho-claro)'}; border:none;">
+      <div class="sub-historico" style="font-size:12px;">${plataformaDeve ? 'Saldo em aberto · a plataforma te repassa' : 'Saldo em aberto · você deve à plataforma'}</div>
+      <div style="font-family:var(--fonte-titulo); font-size:32px; font-weight:800; color:${plataformaDeve ? 'var(--verde)' : 'var(--vermelho)'}; margin-top:6px;">${formatarMoeda(Math.abs(net))}</div>
+      <div class="sub-historico" style="margin-top:8px;">${pend.ordersCount} ${pend.ordersCount === 1 ? 'pedido pago' : 'pedidos pagos'} ainda não fechados nesta semana</div>
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">📱 Pix dentro do app</div>
+      <p style="font-size:12px; color:var(--texto-suave); line-height:1.6; margin:-6px 0 14px;">Caiu direto na conta da plataforma. Ela repassa pra você (Pix/transferência), por fora do app, já com a comissão descontada.</p>
+      <div class="linha-historico-vendas">
+        <div style="flex:1"><div class="rotulo-historico">Recebido no app</div><div class="sub-historico">${pend.online.count} ${pend.online.count === 1 ? 'pedido' : 'pedidos'}</div></div>
+        <div class="valor-historico" style="color:var(--texto);">${formatarMoeda(onlineGross)}</div>
+      </div>
+      <div class="linha-historico-vendas">
+        <div style="flex:1"><div class="rotulo-historico">Comissão da plataforma (${pend.commissionRate}%)</div></div>
+        <div class="valor-historico" style="color:var(--texto-suave);">- ${formatarMoeda(onlineComissao)}</div>
+      </div>
+      <div class="linha-historico-vendas">
+        <div style="flex:1"><div class="rotulo-historico">Você recebe no repasse</div></div>
+        <div class="valor-historico" style="color:var(--verde);">${formatarMoeda(onlineLiquido)}</div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">💵 Pagamentos por fora</div>
+      <p style="font-size:12px; color:var(--texto-suave); line-height:1.6; margin:-6px 0 14px;">Dinheiro, cartão na maquininha ou Pix cobrado na entrega -- esse valor já ficou com você. No fechamento, você repassa a comissão pra plataforma.</p>
+      ${metodosPorFora.length === 0
+        ? '<div style="color:var(--texto-suave); font-size:13px; font-style:italic;">Nenhum pagamento por fora ainda nesta semana.</div>'
+        : metodosPorFora.map((m) => `
+          <div class="linha-historico-vendas">
+            <div style="flex:1"><div class="rotulo-historico">${ROTULOS_METODO_POR_FORA[m.method] || m.method || 'Outro'}</div><div class="sub-historico">${m.count} ${m.count === 1 ? 'pedido' : 'pedidos'}</div></div>
+            <div class="valor-historico" style="color:var(--texto);">${formatarMoeda(m.amount)}</div>
+          </div>
+        `).join('')}
+      <div class="linha-historico-vendas">
+        <div style="flex:1"><div class="rotulo-historico">Total recebido por fora</div></div>
+        <div class="valor-historico" style="color:var(--texto);">${formatarMoeda(offlineGross)}</div>
+      </div>
+      <div class="linha-historico-vendas">
+        <div style="flex:1"><div class="rotulo-historico">Comissão que você deve à plataforma (${pend.commissionRate}%)</div></div>
+        <div class="valor-historico" style="color:var(--vermelho);">${formatarMoeda(offlineComissao)}</div>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <div class="titulo-cartao">Histórico de fechamentos</div>
+      ${billing.settlements.length === 0
+        ? '<div style="color:var(--texto-suave); font-size:13px; font-style:italic;">Nenhum fechamento ainda. O primeiro acontece no fim desta semana.</div>'
+        : billing.settlements.map((s) => {
+          const sNet = Number(s.netAmount);
+          const sPlataformaDeve = sNet >= 0;
+          const statusTexto = s.status === 'pago'
+            ? (sPlataformaDeve ? 'Repassado' : 'Pago à plataforma')
+            : (sPlataformaDeve ? 'Repasse pendente' : 'Pagamento pendente');
           return `
           <div class="linha-historico-vendas">
             <div style="flex:1">
               <div class="rotulo-historico">${new Date(s.periodStart).toLocaleDateString('pt-BR')} – ${new Date(s.periodEnd).toLocaleDateString('pt-BR')}</div>
-              <div class="sub-historico">${owesPlatform ? (s.status === 'pago' ? 'Pago à plataforma' : 'Você deve à plataforma') : (s.status === 'pago' ? 'Recebido' : 'Aguardando repasse')} · ${s.ordersCount} pedidos</div>
+              <div class="sub-historico">App: ${formatarMoeda(s.onlineGrossAmount)} · Por fora: ${formatarMoeda(s.offlineGrossAmount)} · ${statusTexto}</div>
             </div>
-            <div class="valor-historico" style="${owesPlatform ? 'color:#c0392b;' : s.status === 'pendente' ? 'color:#b5760a;' : ''}">${owesPlatform ? '-' : ''}${formatarMoeda(Math.abs(net))}</div>
+            <div class="valor-historico" style="color:${sPlataformaDeve ? 'var(--verde)' : 'var(--vermelho)'};">${sPlataformaDeve ? '+' : '-'}${formatarMoeda(Math.abs(sNet))}</div>
           </div>
         `;
         }).join('')}
-      </div>
-    `;
-  }).catch(() => {});
+    </div>
+  `;
 }
 
 function renderizarConfiguracao() {

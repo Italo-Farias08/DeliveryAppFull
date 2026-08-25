@@ -309,19 +309,64 @@ async function orderClientId(orderId) {
 // negativo, é o restaurante que deve esse valor à plataforma.
 
 // Quanto falta acertar AGORA com o tenant (pedidos já pagos -- online ou na
-// entrega --, ainda não incluídos em nenhum acerto semanal).
-async function getPendingCommission(tenantId) {
-  const result = await pool.query(
-    `SELECT COUNT(*)::int AS "ordersCount",
-            COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'online'), 0) AS "grossAmount",
-            COALESCE(SUM(commission_amount), 0) AS "commissionAmount",
-            COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'online'), 0)
-              - COALESCE(SUM(commission_amount), 0) AS "netAmount"
+// entrega --, ainda não incluídos em nenhum acerto semanal). Retorna os
+// dois lados SEPARADOS (online / entrega, essa última já quebrada por
+// método de pagamento), além do netAmount combinado -- é o que alimenta a
+// seção "Pagamentos à plataforma" no painel do restaurante.
+async function getPendingBreakdown(tenantId) {
+  const totaisResult = await pool.query(
+    `SELECT
+        COUNT(*) FILTER (WHERE payment_timing = 'online')::int AS "onlineCount",
+        COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'online'), 0) AS "onlineGrossAmount",
+        COALESCE(SUM(commission_amount) FILTER (WHERE payment_timing = 'online'), 0) AS "onlineCommissionAmount",
+        COUNT(*) FILTER (WHERE payment_timing = 'entrega')::int AS "offlineCount",
+        COALESCE(SUM(subtotal) FILTER (WHERE payment_timing = 'entrega'), 0) AS "offlineGrossAmount",
+        COALESCE(SUM(commission_amount) FILTER (WHERE payment_timing = 'entrega'), 0) AS "offlineCommissionAmount"
      FROM orders
      WHERE tenant_id = $1 AND payment_status = 'pago' AND settlement_id IS NULL`,
     [tenantId]
   );
-  return result.rows[0];
+  const t = totaisResult.rows[0];
+
+  // Por fora quebrado por método (dinheiro, cartão crédito/débito, Pix na
+  // entrega) -- é o detalhe que deixa "bem separado" pro restaurante ver de
+  // onde veio cada valor, não só o total por fora.
+  const porMetodoResult = await pool.query(
+    `SELECT payment_method AS "method", COUNT(*)::int AS "count", COALESCE(SUM(subtotal), 0) AS "amount"
+     FROM orders
+     WHERE tenant_id = $1 AND payment_status = 'pago' AND settlement_id IS NULL AND payment_timing = 'entrega'
+     GROUP BY payment_method
+     ORDER BY amount DESC`,
+    [tenantId]
+  );
+
+  const onlineNetToRestaurant = Number(t.onlineGrossAmount) - Number(t.onlineCommissionAmount);
+  const netAmount = onlineNetToRestaurant - Number(t.offlineCommissionAmount);
+
+  return {
+    ordersCount: t.onlineCount + t.offlineCount,
+    commissionRate: COMMISSION_RATE,
+    // "online": Pix pago dentro do app -- caiu na conta da plataforma, ela
+    // ainda deve repassar o líquido (netToRestaurant) pro restaurante.
+    online: {
+      count: t.onlineCount,
+      grossAmount: t.onlineGrossAmount,
+      commissionAmount: t.onlineCommissionAmount,
+      netToRestaurant: onlineNetToRestaurant.toFixed(2),
+    },
+    // "offline": pago na entrega (dinheiro/cartão/Pix por fora) -- já caiu
+    // com o restaurante, ele deve a comissão (commissionAmount) de volta.
+    offline: {
+      count: t.offlineCount,
+      grossAmount: t.offlineGrossAmount,
+      commissionAmount: t.offlineCommissionAmount,
+      byMethod: porMetodoResult.rows,
+    },
+    // netAmount >= 0: a plataforma ainda deve repassar esse valor pro
+    // restaurante. netAmount < 0: é o restaurante que deve esse valor.
+    netAmount: netAmount.toFixed(2),
+    platformOwesRestaurant: netAmount >= 0,
+  };
 }
 
 async function listSettlementsByTenant(tenantId) {
@@ -329,6 +374,10 @@ async function listSettlementsByTenant(tenantId) {
     `SELECT id, period_start AS "periodStart", period_end AS "periodEnd", orders_count AS "ordersCount",
             gross_amount AS "grossAmount", commission_rate AS "commissionRate",
             commission_amount AS "commissionAmount", (gross_amount - commission_amount) AS "netAmount",
+            online_orders_count AS "onlineOrdersCount", online_gross_amount AS "onlineGrossAmount",
+            online_commission_amount AS "onlineCommissionAmount",
+            offline_orders_count AS "offlineOrdersCount", offline_gross_amount AS "offlineGrossAmount",
+            offline_commission_amount AS "offlineCommissionAmount",
             status, paid_at AS "paidAt", created_at AS "createdAt"
      FROM settlements WHERE tenant_id = $1 ORDER BY period_start DESC`,
     [tenantId]
@@ -359,21 +408,39 @@ async function generateSettlementForTenant(tenantId, periodStart, periodEnd) {
     // grossAmount só soma o que a plataforma arrecadou DE VERDADE (pedidos
     // pagos online) -- pedido pago na entrega nunca passou pela conta da
     // plataforma, então não entra aqui (ver comentário acima da função
-    // getPendingCommission). commissionAmount soma a comissão de TODOS os
-    // pedidos do período, dos dois tipos.
-    const grossAmount = orders
-      .filter((o) => o.paymentTiming === 'online')
-      .reduce((s, o) => s + Number(o.subtotal), 0);
-    const commissionAmount = orders.reduce((s, o) => s + Number(o.commission_amount || 0), 0);
+    // getPendingBreakdown). commissionAmount soma a comissão de TODOS os
+    // pedidos do período, dos dois tipos. online_*/offline_* guardam os dois
+    // lados separados, pro histórico continuar "bem separado" depois de
+    // fechado (não só o número combinado).
+    const onlineOrders = orders.filter((o) => o.paymentTiming === 'online');
+    const offlineOrders = orders.filter((o) => o.paymentTiming === 'entrega');
+    const onlineGrossAmount = onlineOrders.reduce((s, o) => s + Number(o.subtotal), 0);
+    const onlineCommissionAmount = onlineOrders.reduce((s, o) => s + Number(o.commission_amount || 0), 0);
+    const offlineGrossAmount = offlineOrders.reduce((s, o) => s + Number(o.subtotal), 0);
+    const offlineCommissionAmount = offlineOrders.reduce((s, o) => s + Number(o.commission_amount || 0), 0);
+    const grossAmount = onlineGrossAmount;
+    const commissionAmount = onlineCommissionAmount + offlineCommissionAmount;
 
     const settlementResult = await client.query(
-      `INSERT INTO settlements (tenant_id, period_start, period_end, orders_count, gross_amount, commission_rate, commission_amount)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO settlements (
+         tenant_id, period_start, period_end, orders_count, gross_amount, commission_rate, commission_amount,
+         online_orders_count, online_gross_amount, online_commission_amount,
+         offline_orders_count, offline_gross_amount, offline_commission_amount
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING id, period_start AS "periodStart", period_end AS "periodEnd", orders_count AS "ordersCount",
                  gross_amount AS "grossAmount", commission_rate AS "commissionRate",
                  commission_amount AS "commissionAmount", (gross_amount - commission_amount) AS "netAmount",
+                 online_orders_count AS "onlineOrdersCount", online_gross_amount AS "onlineGrossAmount",
+                 online_commission_amount AS "onlineCommissionAmount",
+                 offline_orders_count AS "offlineOrdersCount", offline_gross_amount AS "offlineGrossAmount",
+                 offline_commission_amount AS "offlineCommissionAmount",
                  status, created_at AS "createdAt"`,
-      [tenantId, periodStart, periodEnd, orders.length, grossAmount.toFixed(2), COMMISSION_RATE, commissionAmount.toFixed(2)]
+      [
+        tenantId, periodStart, periodEnd, orders.length, grossAmount.toFixed(2), COMMISSION_RATE, commissionAmount.toFixed(2),
+        onlineOrders.length, onlineGrossAmount.toFixed(2), onlineCommissionAmount.toFixed(2),
+        offlineOrders.length, offlineGrossAmount.toFixed(2), offlineCommissionAmount.toFixed(2),
+      ]
     );
     const settlement = settlementResult.rows[0];
 
@@ -426,6 +493,10 @@ async function listAllSettlements() {
             s.period_start AS "periodStart", s.period_end AS "periodEnd", s.orders_count AS "ordersCount",
             s.gross_amount AS "grossAmount", s.commission_rate AS "commissionRate",
             s.commission_amount AS "commissionAmount", (s.gross_amount - s.commission_amount) AS "netAmount",
+            s.online_orders_count AS "onlineOrdersCount", s.online_gross_amount AS "onlineGrossAmount",
+            s.online_commission_amount AS "onlineCommissionAmount",
+            s.offline_orders_count AS "offlineOrdersCount", s.offline_gross_amount AS "offlineGrossAmount",
+            s.offline_commission_amount AS "offlineCommissionAmount",
             s.status, s.paid_at AS "paidAt", s.created_at AS "createdAt"
      FROM settlements s
      JOIN tenants t ON t.id = s.tenant_id
@@ -438,7 +509,7 @@ module.exports = {
   createPaymentForOrder,
   createPixPaymentForOrder,
   processPaymentNotification,
-  getPendingCommission,
+  getPendingBreakdown,
   listSettlementsByTenant,
   generateWeeklySettlements,
   generateSettlementForTenant,

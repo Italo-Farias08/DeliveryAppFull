@@ -144,7 +144,7 @@ async function confirmDelivery(delivererId, orderId, code) {
   // online (ver payments.service.js). A diferença é o SENTIDO do dinheiro:
   // aqui é o restaurante que vai dever essa comissão à plataforma no acerto
   // semanal, já que o valor não passou pela conta da plataforma (ver
-  // comentário em getPendingCommission, em payments.service.js).
+  // comentário em getPendingBreakdown, em payments.service.js).
   // Pedido pago pelo app (Mercado Pago) já chega aqui pago, com comissão já
   // travada -- não mexe em nada dele.
   const isOfflinePayment = order.paymentTiming === 'entrega';

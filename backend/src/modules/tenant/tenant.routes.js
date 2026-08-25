@@ -53,14 +53,16 @@ router.delete('/menu-categories/:categoryId', controller.deleteMenuCategory);
 
 router.get('/orders', controller.listOrders);
 
-// Quanto a PLATAFORMA deve repassar pra esse restaurante (netAmount =
-// valor já pago pelos clientes menos a comissão), tanto o que ainda está
-// solto (pending) quanto o histórico de acertos já fechados.
+// Pagamentos à plataforma: separa Pix pago DENTRO DO APP (caiu na conta da
+// plataforma, ela repassa o líquido pro restaurante) de pagamentos POR FORA
+// (dinheiro/cartão/Pix na entrega, caiu direto com o restaurante, que deve
+// a comissão de volta pra plataforma) -- tanto o que ainda está em aberto
+// (pending) quanto o histórico de acertos semanais já fechados.
 router.get(
   '/billing',
   asyncHandler(async (req, res) => {
     const [pending, settlements] = await Promise.all([
-      paymentsService.getPendingCommission(req.tenantId),
+      paymentsService.getPendingBreakdown(req.tenantId),
       paymentsService.listSettlementsByTenant(req.tenantId),
     ]);
     res.json({ pending, settlements });
