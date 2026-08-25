@@ -30,11 +30,17 @@ const RESTAURANT_SELECT_FIELDS = `id, category_id AS "categoryId", name, rating,
             is_published AS "isPublished",
             street, number, complement, neighborhood, city, state, zip, lat, lng`;
 
-async function listRestaurants(db) {
+async function listRestaurants(db, tenantId) {
+  // A policy de SELECT da tabela é pública (USING (true)) de propósito,
+  // pra alimentar a busca do app do cliente -- então aqui, no painel do
+  // dono, precisamos filtrar por tenant_id na mão, o RLS não faz isso
+  // por nós nesse caso.
   const result = await db.query(
     `SELECT ${RESTAURANT_SELECT_FIELDS}
      FROM restaurants
-     ORDER BY created_at DESC`
+     WHERE tenant_id = $1
+     ORDER BY created_at DESC`,
+    [tenantId]
   );
   return result.rows;
 }

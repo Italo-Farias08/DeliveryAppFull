@@ -6,7 +6,7 @@ const { saveProcessedImage } = require('../../middlewares/upload');
 const { processImage } = require('../../utils/imageProcessing');
 
 const listRestaurants = asyncHandler(async (req, res) => {
-  const restaurants = await service.listRestaurants(req.db);
+  const restaurants = await service.listRestaurants(req.db, req.tenantId);
   res.json(restaurants);
 });
 
