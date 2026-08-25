@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Portal do Restaurante — Entrar</title>
+<title>Portal do Restaurante</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -44,7 +44,6 @@
     grid-template-columns: minmax(360px, 42%) 1fr;
   }
 
-  /* ============ PAINEL ESQUERDO — MARCA ============ */
 
   .painel-marca {
     position: relative;
@@ -57,7 +56,6 @@
     padding: 52px 48px;
   }
 
-  /* varredura de luz bem sutil, contínua */
   .painel-marca::before {
     content: "";
     position: absolute;
@@ -72,7 +70,6 @@
     100% { transform: translateX(-30%); }
   }
 
-  /* círculo geométrico grande, só forma, sem ilustração */
   .forma-circulo {
     position: absolute;
     width: 620px;
@@ -91,7 +88,6 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  /* ---- marca / logo ---- */
   .marca {
     position: relative;
     z-index: 2;
@@ -132,7 +128,6 @@
     margin-top: 3px;
   }
 
-  /* ---- selo "ao vivo" — único elemento de status, sem ilustração ---- */
   .selo-tempo-real {
     position: relative;
     z-index: 2;
@@ -162,7 +157,6 @@
     100% { box-shadow: 0 0 0 0 rgba(110, 240, 194, 0); }
   }
 
-  /* ---- headline tipográfica — o elemento-assinatura da tela ---- */
   .headline-marca {
     position: relative;
     z-index: 2;
@@ -206,7 +200,6 @@
     margin-bottom: 2px;
   }
 
-  /* ============ PAINEL DIREITO — FORMULÁRIO ============ */
 
   .painel-formulario {
     display: flex;
@@ -220,15 +213,6 @@
     width: 100%;
     max-width: 380px;
   }
-
-  /*
-    As etapas ficam no fluxo normal (não usam mais position:absolute).
-    Só a etapa ativa fica visível -- a classe .oculto vira "display:none"
-    nas outras -- então o cartão sempre assume a altura de quem está
-    realmente aparecendo. Antes, com position:absolute + inset:0, o
-    conteúdo do cadastro (bem mais longo) vazava pra fora de uma altura
-    fixa e "esticava" a página inteira pra baixo.
-  */
   .etapa {
     display: flex;
     flex-direction: column;
@@ -236,12 +220,6 @@
   }
   .etapa.oculto { display: none; }
 
-  /* regra genérica -- sem isso, divs comuns (que não são .etapa) que
-     recebem a classe "oculto" via JS não ficavam escondidos de verdade,
-     por isso o bloco de código aparecia junto com o de e-mail.
-     Usa !important de propósito: garante que "oculto" sempre vence,
-     não importa a ordem das outras classes no arquivo (foi exatamente
-     isso que quebrou na correção anterior). */
   .oculto { display: none !important; }
 
   .bloco-formulario {
@@ -370,7 +348,6 @@
 
   .linha-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-  /* ---- sucesso ---- */
   .etapa-sucesso { align-items: flex-start; justify-content: center; }
   .marca-sucesso {
     width: 50px; height: 50px; border-radius: 10px; background: var(--verde);
@@ -380,7 +357,6 @@
   @keyframes aparecer-selo { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .marca-sucesso svg { width: 24px; height: 24px; }
 
-  /* ============ RESPONSIVO ============ */
   @media (max-width: 920px) {
     .tela { grid-template-columns: 1fr; }
     .painel-marca { padding: 36px 28px; min-height: 260px; }
@@ -402,7 +378,6 @@
 <body>
   <div class="tela">
 
-    <!-- ===== painel esquerdo: marca ===== -->
     <section class="painel-marca">
       <div class="forma-circulo" aria-hidden="true"></div>
 
@@ -435,16 +410,14 @@
       </div>
 
       <div class="rodape-marca">
-        <div><strong>+12mil</strong>restaurantes parceiros</div>
+        <div><strong>+12mil</strong>Sistema expansivo</div>
         <div><strong>24/7</strong>suporte disponível</div>
       </div>
     </section>
 
-    <!-- ===== painel direito: formulário ===== -->
     <section class="painel-formulario">
       <div class="cartao-login">
 
-        <!-- ETAPA 1: e-mail + senha -->
         <form id="etapa-login" class="etapa" novalidate>
           <h1>Entrar</h1>
           <p class="subtitulo">Acesse com o e-mail e a senha cadastrados.</p>
@@ -473,7 +446,6 @@
           </p>
         </form>
 
-        <!-- ETAPA 2: código de verificação -->
         <form id="etapa-codigo" class="etapa oculto" novalidate>
           <h1>Confirme seu acesso</h1>
           <p class="subtitulo">Enviamos um código de 6 dígitos para <strong id="email-mostrado"></strong>.</p>
@@ -496,7 +468,6 @@
           <p class="mensagem mensagem--erro" id="mensagem-codigo" role="alert"></p>
         </form>
 
-        <!-- ETAPA 3: esqueci minha senha -->
         <form id="etapa-esqueci" class="etapa oculto" novalidate>
           <h1>Redefinir senha</h1>
           <p class="subtitulo" id="subtitulo-esqueci">Informe seu e-mail para receber um código de redefinição.</p>
@@ -529,7 +500,6 @@
           <p class="mensagem" id="mensagem-esqueci" role="alert"></p>
         </form>
 
-        <!-- ETAPA 4: cadastro de restaurante -->
         <form id="etapa-cadastro" class="etapa oculto" novalidate>
           <h1>Cadastre seu restaurante</h1>
           <p class="subtitulo">Leva menos de um minuto. Depois de criar a conta, você já entra direto.</p>
@@ -583,7 +553,6 @@
           </p>
         </form>
 
-        <!-- ETAPA 5: sucesso -->
         <div id="etapa-sucesso" class="etapa etapa-sucesso oculto">
           <div class="marca-sucesso">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.6">
@@ -674,9 +643,6 @@ async function chamarApi(caminho, corpo) {
   return dados;
 }
 
-// ===================================================================
-// Etapa 1 — e-mail + senha
-// ===================================================================
 
 async function autenticar(evento) {
   evento.preventDefault();
@@ -709,9 +675,6 @@ async function autenticar(evento) {
   }
 }
 
-// ===================================================================
-// Etapa 2 — código de verificação
-// ===================================================================
 
 async function confirmarCodigo(evento) {
   evento.preventDefault();
@@ -755,9 +718,6 @@ function salvarSessao(token, usuario) {
   localStorage.setItem('restauranteUsuario', JSON.stringify(usuario));
 }
 
-// Pequena pausa só pra deixar a animação do "check" aparecer antes de sair
-// da página -- o painel (./painel.html) já lê restauranteToken/restauranteUsuario
-// do localStorage sozinho, então basta a sessão estar salva antes de navegar.
 function irParaPainel() {
   setTimeout(() => {
     window.location.href = './painel.html';
@@ -801,9 +761,6 @@ function voltarParaLogin() {
   trocarEtapa(etapaLogin);
 }
 
-// ===================================================================
-// Etapa 3 — esqueci minha senha
-// ===================================================================
 
 function abrirEsqueciSenha() {
   aguardandoRedefinicao = false;
@@ -873,10 +830,6 @@ async function tratarFormularioEsqueci(evento) {
   }
 }
 
-// ===================================================================
-// Etapa 4 — cadastro de restaurante
-// ===================================================================
-
 function abrirCadastro() {
   mostrarMensagem(mensagemCadastro, '', null);
   trocarEtapa(etapaCadastro);
@@ -944,10 +897,6 @@ async function cadastrar(evento) {
     alternarCarregando(botaoCadastrar, false);
   }
 }
-
-// ===================================================================
-// Ligações iniciais
-// ===================================================================
 
 etapaLogin.addEventListener('submit', autenticar);
 etapaCodigo.addEventListener('submit', confirmarCodigo);

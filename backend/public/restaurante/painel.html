@@ -41,13 +41,11 @@
   button, input, select, textarea { font-family: inherit; }
   .oculto { display: none !important; }
 
-  /* ============ TELA DE CARREGAMENTO INICIAL ============ */
   .tela-boot {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
     color: var(--texto-suave); font-weight: 600; font-size: 14px;
   }
 
-  /* ============ ONBOARDING (criar restaurante) ============ */
   .tela-onboarding {
     min-height: 100vh; display: flex; align-items: flex-start; justify-content: center;
     padding: 60px 20px;
@@ -58,10 +56,8 @@
   .onboarding-titulo { font-family: var(--fonte-titulo); font-size: 22px; font-weight: 800; margin: 4px 0 2px; }
   .onboarding-sub { color: var(--texto-suave); font-size: 13.5px; margin: 0; }
 
-  /* ============ LAYOUT GERAL ============ */
-  .layout { display: flex; min-height: 100vh; }
 
-  /* ---- barra lateral ---- */
+  .layout { display: flex; min-height: 100vh; }
   .barra-lateral {
     width: 244px; flex-shrink: 0;
     background: var(--branco);
@@ -113,7 +109,6 @@
   .item-sair:hover { background: var(--vermelho-claro); }
   .item-sair svg { width: 18px; height: 18px; }
 
-  /* ---- área principal ---- */
   .area-principal { flex: 1; min-width: 0; }
   .topo-secao {
     position: sticky; top: 0; z-index: 10;
@@ -152,7 +147,6 @@
   .estado-erro-inline { color: var(--vermelho); font-weight: 600; font-size: 13.5px; margin-top: 10px; }
   .estado-ok-inline { color: var(--verde); font-weight: 600; font-size: 13.5px; margin-top: 10px; }
 
-  /* ============ COMPONENTES REUTILIZÁVEIS ============ */
   .cartao { background: var(--branco); border-radius: 18px; padding: 20px; border: 1px solid var(--borda); }
   .cartao + .cartao { margin-top: 16px; }
   .titulo-cartao { font-family: var(--fonte-titulo); font-size: 15.5px; font-weight: 700; margin: 0 0 14px; }
@@ -234,7 +228,6 @@
   }
   .spinner.escuro { border-color: rgba(0,0,0,0.15); border-top-color: var(--texto-suave); }
 
-  /* overlay modal genérico */
   .sobreposicao-modal {
     position: fixed; inset: 0; background: rgba(28, 27, 26, 0.5);
     display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 100;
@@ -252,7 +245,6 @@
   .fechar-modal svg { width: 15px; height: 15px; }
   .divisor-modal { height: 1px; background: var(--borda); margin: 18px 0 4px; }
 
-  /* ============ DASHBOARD ============ */
   .banner-publicar {
     display: flex; gap: 12px; background: var(--dourado-claro); border: 1px solid #f5d68a;
     border-radius: 16px; padding: 16px; margin-bottom: 18px;
@@ -304,7 +296,6 @@
     display: flex; align-items: center; justify-content: center;
   }
 
-  /* ============ PEDIDOS ============ */
   .abas-pagina { display: flex; gap: 6px; margin: 4px 0 20px; border-bottom: 1px solid var(--borda); }
   .aba-pagina {
     padding: 10px 4px; margin-right: 22px; font-size: 13.5px; font-weight: 700; color: var(--texto-suave);
@@ -380,7 +371,6 @@
   .linha-envio-chat input { flex: 1; border: 1.5px solid var(--borda); border-radius: 10px; padding: 8px 11px; font-size: 12.5px; font-family: inherit; }
   .botao-enviar-chat { background: var(--vermelho); color: var(--branco); border: none; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
 
-  /* ============ CARDÁPIO ============ */
   .barra-acao-secao { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
   .linha-nova-categoria { display: flex; gap: 10px; margin: 14px 0 20px; }
   .linha-nova-categoria .campo-texto { flex: 1; }
@@ -431,7 +421,6 @@
   .linha-nova-adicional { display: flex; gap: 8px; margin-top: 4px; }
   .linha-nova-adicional input:last-child { width: 90px; flex: none; }
 
-  /* ============ ESGOTADOS ============ */
   .cartao-resumo-esgotados { display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 15px; margin-bottom: 20px; }
   .cartao-resumo-esgotados .icone { width: 40px; height: 40px; border-radius: 20px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .cartao-resumo-esgotados .icone svg { width: 19px; height: 19px; color: var(--vermelho); }
@@ -439,7 +428,6 @@
   .linha-esgotado { display: flex; align-items: center; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 13px; padding: 10px; margin-bottom: 8px; }
   .linha-esgotado .nome-esgotavel.riscado { text-decoration: line-through; color: var(--texto-suave); }
 
-  /* ============ ENTREGADORES ============ */
   .cartao-codigo { background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 22px; text-align: center; margin-bottom: 24px; }
   .texto-codigo { font-size: 30px; font-weight: 800; letter-spacing: 6px; color: var(--vermelho); font-family: var(--fonte-titulo); }
   .dica-codigo { color: var(--texto-suave); font-size: 12px; margin-top: 10px; line-height: 1.5; max-width: 380px; margin-left: auto; margin-right: auto; }
@@ -455,7 +443,6 @@
   .nome-entregador { font-weight: 700; font-size: 14px; }
   .sub-entregador { color: var(--texto-suave); font-size: 12px; margin-top: 2px; }
 
-  /* ============ HORÁRIO ============ */
   .cartao-dia { background: var(--branco); border: 1px solid var(--borda); border-radius: 15px; padding: 14px; margin-bottom: 10px; }
   .linha-cabecalho-dia { display: flex; justify-content: space-between; align-items: center; }
   .nome-dia { font-weight: 700; font-size: 13.5px; }
@@ -468,7 +455,6 @@
   .botao-aplicar-todos { margin-left: auto; display: flex; align-items: center; gap: 4px; background: none; border: none; color: var(--vermelho); font-size: 11.5px; font-weight: 700; cursor: pointer; }
   .botao-aplicar-todos svg { width: 13px; height: 13px; }
 
-  /* ============ LOCALIZAÇÃO ============ */
   .cartao-endereco-salvo { display: flex; gap: 12px; background: var(--branco); border: 1px solid var(--borda); border-radius: 16px; padding: 16px; }
   .icone-endereco-salvo { width: 38px; height: 38px; border-radius: 12px; background: var(--vermelho-claro); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .icone-endereco-salvo svg { width: 17px; height: 17px; color: var(--vermelho); }
@@ -495,7 +481,6 @@
   .confirmado-endereco { display: flex; align-items: center; gap: 6px; color: var(--verde); font-size: 12px; font-weight: 700; margin-top: 14px; }
   .confirmado-endereco svg { width: 14px; height: 14px; }
 
-  /* ============ VENDAS ============ */
   .abas-periodo { display: flex; background: var(--branco); border: 1px solid var(--borda); border-radius: 14px; padding: 4px; gap: 4px; }
   .aba-periodo { flex: 1; padding: 9px; border-radius: 10px; text-align: center; font-size: 12.5px; font-weight: 700; color: var(--texto-suave); background: none; border: none; cursor: pointer; }
   .aba-periodo.ativa { background: var(--vermelho); color: var(--branco); }
@@ -521,7 +506,6 @@
   .valor-historico { font-weight: 800; font-size: 13.5px; color: var(--vermelho); flex-shrink: 0; }
   .circulo-rank { width: 24px; height: 24px; border-radius: 12px; background: var(--vermelho-claro); color: var(--vermelho); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; flex-shrink: 0; }
 
-  /* ============ CONFIGURAÇÃO ============ */
   .linha-fotos { display: flex; gap: 16px; }
   .seletor-logo, .seletor-banner { text-align: center; cursor: pointer; position: relative; }
   .seletor-logo { flex-shrink: 0; }
@@ -568,7 +552,6 @@
 
   <div id="tela-boot" class="tela-boot">Carregando painel...</div>
 
-  <!-- ============ ONBOARDING: criar restaurante ============ -->
   <div id="tela-onboarding" class="tela-onboarding oculto">
     <div class="cartao-onboarding">
       <div class="onboarding-topo">
@@ -612,7 +595,6 @@
     </div>
   </div>
 
-  <!-- ============ APP PRINCIPAL ============ -->
   <div id="app" class="layout oculto">
     <aside class="barra-lateral">
       <div class="marca-lateral">
@@ -656,7 +638,6 @@
     </main>
   </div>
 
-  <!-- ============ MODAL: item do cardápio ============ -->
   <div id="modal-item" class="sobreposicao-modal oculto">
     <div class="cartao-modal">
       <div class="cabecalho-modal">
@@ -720,7 +701,6 @@
     </div>
   </div>
 
-  <!-- ============ MODAL: excluir conta ============ -->
   <div id="modal-excluir-conta" class="sobreposicao-modal oculto">
     <div class="cartao-modal" style="max-width:420px;">
       <div class="cabecalho-modal">
@@ -748,9 +728,6 @@
   </div>
 
 <script>
-// ===================================================================
-// Painel do Restaurante — estado global e utilidades de API
-// ===================================================================
 
 const token = localStorage.getItem('restauranteToken');
 const usuarioBruto = localStorage.getItem('restauranteUsuario');
@@ -780,8 +757,6 @@ async function chamarApi(caminho, options = {}) {
   return dados;
 }
 
-// Upload de imagem (logo, banner, foto de item) -- multipart/form-data,
-// sem setar Content-Type na mão (o navegador monta o boundary sozinho).
 async function chamarApiUpload(caminho, formData) {
   const resposta = await fetch(caminho, {
     method: 'POST',
@@ -798,9 +773,6 @@ function formatarMoeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-// Rótulo da forma de pagamento -- cobre tanto pedidos pagos no app (Pix
-// no app / Mercado Pago, gravados como 'pix'/'credit_card'/'debit_card')
-// quanto os cobrados na entrega pelo restaurante/entregador.
 const ROTULOS_PAGAMENTO = {
   pix: 'Pix (pago no app)',
   credit_card: 'Cartão de crédito (pago no app)',
@@ -828,9 +800,9 @@ function el(html) {
   return div.firstElementChild;
 }
 
-// ---- estado em memória ----
+
 let restaurant = null;
-let categoriasLoja = [];       // categorias de tipo de loja (Pizza, Japonesa...)
+let categoriasLoja = [];     
 let menuItems = [];
 let menuCategorias = [];
 let pedidos = [];
@@ -844,9 +816,6 @@ let cronometroPedidos = null;
 
 const INTERVALO_ATUALIZACAO_MS = 15000;
 
-// ===================================================================
-// Navegação lateral
-// ===================================================================
 
 const ITENS_NAV = [
   { id: 'dashboard', rotulo: 'Início', titulo: 'Início', sub: 'Painel do restaurante',
@@ -921,9 +890,6 @@ function atualizarBadgePendentes() {
   badge.classList.toggle('oculto', pendentes === 0);
 }
 
-// ===================================================================
-// Inicialização / bootstrap
-// ===================================================================
 
 async function iniciar() {
   try {
@@ -1054,10 +1020,6 @@ function atualizarSecaoAtual(mostrarSpinner) {
     if (mostrarSpinner) setTimeout(() => botao.classList.remove('girando'), 400);
   });
 }
-
-// ===================================================================
-// DASHBOARD (Início)
-// ===================================================================
 
 function hojeChave(iso) {
   return new Date(iso).toDateString();
@@ -1191,9 +1153,6 @@ function renderizarDashboard() {
   conteudo.appendChild(grade);
 }
 
-// ===================================================================
-// PEDIDOS
-// ===================================================================
 
 async function carregarPedidos(mostrarSpinnerBotao) {
   const botaoAtualizar = document.getElementById('botao-atualizar');
@@ -1508,15 +1467,11 @@ async function enviarMensagemPedido(pedidoId) {
   } catch (erro) { alert('Não foi possível enviar: ' + erro.message); campo.value = texto; }
 }
 
-// ===================================================================
-// CARDÁPIO
-// ===================================================================
-
 let categoriaCardapioAtiva = null;
 let itemEmEdicao = null;
 let adicionaisDoItem = [];
 let adicionalEmEdicaoId = null;
-let imagemEscolhidaNovoItem = null; // { file, previewUrl } -- item novo, envia só depois de criar
+let imagemEscolhidaNovoItem = null;
 
 function renderizarCardapio() {
   const conteudo = document.getElementById('conteudo');
@@ -1661,7 +1616,6 @@ async function removerItemCardapio(item) {
   }
 }
 
-// ---- modal de item ----
 
 function abrirModalItem(item) {
   itemEmEdicao = item;
@@ -1701,7 +1655,6 @@ function abrirModalItem(item) {
       const pill = el(`<button type="button" class="pilula ${categoriaInicial === cat.id ? 'ativa' : ''}" data-id="${cat.id}">${cat.name}</button>`);
       containerCats.appendChild(pill);
     });
-    // um único listener delegado no container, sem acumular a cada abertura do modal
     containerCats.onclick = (e) => {
       const pill = e.target.closest('.pilula');
       if (!pill) return;
@@ -1743,7 +1696,6 @@ document.getElementById('mi-arquivo-imagem').addEventListener('change', async (e
   previewImg.src = url; previewImg.classList.remove('oculto'); placeholder.classList.add('oculto');
 
   if (itemEmEdicao) {
-    // item já existe: manda a foto na hora
     const spinner = document.getElementById('mi-spinner-imagem');
     spinner.classList.remove('oculto');
     try {
@@ -1759,7 +1711,6 @@ document.getElementById('mi-arquivo-imagem').addEventListener('change', async (e
       spinner.classList.add('oculto');
     }
   } else {
-    // item novo: guarda o arquivo, envia só depois de criar
     imagemEscolhidaNovoItem = arquivo;
     document.getElementById('mi-texto-imagem').textContent = 'Trocar foto';
   }
@@ -1826,7 +1777,6 @@ document.getElementById('form-item-cardapio').addEventListener('submit', async (
   }
 });
 
-// ---- adicionais ----
 
 function resetarFormAdicional() {
   document.getElementById('mi-nome-adicional').value = '';
@@ -1897,10 +1847,6 @@ document.getElementById('mi-salvar-adicional').addEventListener('click', async (
   }
 });
 
-// ===================================================================
-// ESGOTADOS
-// ===================================================================
-
 function renderizarEsgotados() {
   const conteudo = document.getElementById('conteudo');
   const esgotados = menuItems.filter((i) => !i.isAvailable).length;
@@ -1968,10 +1914,6 @@ function renderizarEsgotados() {
     container.appendChild(bloco);
   });
 }
-
-// ===================================================================
-// MEUS ENTREGADORES
-// ===================================================================
 
 function renderizarEntregadores() {
   const conteudo = document.getElementById('conteudo');
@@ -2055,10 +1997,6 @@ function renderizarListaEntregadores() {
     container.appendChild(linha);
   });
 }
-
-// ===================================================================
-// HORÁRIO DE FUNCIONAMENTO
-// ===================================================================
 
 const NOMES_DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
@@ -2159,10 +2097,6 @@ async function renderizarHorario() {
     }
   });
 }
-
-// ===================================================================
-// LOCALIZAÇÃO
-// ===================================================================
 
 const VIES_REGIAO = { lat: -8.1219, lng: -35.2939, raioGraus: 1.2, dicaCidade: 'Vitória de Santo Antão, PE' };
 let debounceLocalizacao = null;
@@ -2424,10 +2358,6 @@ function renderizarLocalizacao() {
   });
 }
 
-// ===================================================================
-// VENDAS
-// ===================================================================
-
 let periodoVendasAtual = 'week';
 const ROTULOS_DIA_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 const ROTULOS_MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -2574,10 +2504,6 @@ async function renderizarVendas() {
   chamarApi('/api/tenant/billing').then((billing) => {
     const container = document.getElementById('vendas-comissao');
     if (!container) return;
-    // netAmount positivo = a plataforma ainda vai te repassar esse valor
-    // (pedidos pagos pelo app). netAmount negativo = você que deve esse
-    // valor à plataforma (comissão de pedidos pagos na entrega -- dinheiro,
-    // cartão ou Pix que você ou o entregador recebeu direto do cliente).
     const pendingNet = Number(billing.pending.netAmount);
     const pendingOwesPlatform = pendingNet < 0;
     container.innerHTML = `
@@ -2607,10 +2533,6 @@ async function renderizarVendas() {
     `;
   }).catch(() => {});
 }
-
-// ===================================================================
-// CONFIGURAÇÃO
-// ===================================================================
 
 function renderizarConfiguracao() {
   const conteudo = document.getElementById('conteudo');
@@ -2711,13 +2633,11 @@ function renderizarConfiguracao() {
     `;
   }).catch(() => {});
 
-  // ---- upload de fotos ----
   document.getElementById('seletor-logo').addEventListener('click', () => document.getElementById('arquivo-logo').click());
   document.getElementById('seletor-banner').addEventListener('click', () => document.getElementById('arquivo-banner').click());
   document.getElementById('arquivo-logo').addEventListener('change', (e) => enviarFotoRestaurante(e, 'logo'));
   document.getElementById('arquivo-banner').addEventListener('change', (e) => enviarFotoRestaurante(e, 'banner'));
 
-  // ---- editar dados ----
   const containerCatsCfg = document.getElementById('cfg-categorias');
   categoriasLoja.forEach((c) => {
     const pill = el(`<button type="button" class="pilula ${restaurant.categoryId === c.id ? 'ativa' : ''}" data-id="${c.id}">${c.name}</button>`);
@@ -2795,7 +2715,6 @@ async function enviarFotoRestaurante(evento, tipo) {
   }
 }
 
-// ---- modal excluir conta ----
 document.getElementById('fechar-modal-excluir').addEventListener('click', () => document.getElementById('modal-excluir-conta').classList.add('oculto'));
 document.getElementById('excluir-cancelar').addEventListener('click', () => document.getElementById('modal-excluir-conta').classList.add('oculto'));
 document.getElementById('form-excluir-conta').addEventListener('submit', async (evento) => {
