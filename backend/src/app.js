@@ -17,18 +17,25 @@ const delivererRoutes = require('./modules/deliverer/deliverer.routes');
 const paymentsRoutes = require('./modules/payments/payments.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const errorHandler = require('./middlewares/errorHandler');
+const { generalLimiter } = require('./middlewares/rateLimit');
 
 const app = express();
 
 // Necessário para que req.protocol reflita corretamente https quando o
 // backend está atrás de um proxy (Railway, Render, etc.) — assim as URLs
-// de imagem que geramos no upload já saem certas (https://...).
+// de imagem que geramos no upload já saem certas (https://...) E o
+// rate limit abaixo identifica o IP real do cliente, não o do proxy.
 app.set('trust proxy', 1);
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Rede de segurança geral contra bots/scraping/força bruta -- as rotas de
+// login/registro têm limites BEM mais apertados por cima deste (ver
+// auth.routes.js), este aqui é só o limite "de fundo" pra API inteira.
+app.use('/api', generalLimiter);
 
 // Arquivos enviados pelos restaurantes (logo, banner, fotos dos itens do
 // cardápio) ficam salvos em disco em backend/uploads e são servidos aqui.

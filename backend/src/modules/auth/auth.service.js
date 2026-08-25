@@ -1,15 +1,18 @@
 const { pool } = require('../../config/db');
+const crypto = require('crypto');
 const { hashPassword, comparePassword } = require('../../utils/password');
 const { signToken } = require('../../utils/jwt');
 const { sendLoginCodeEmail, sendPasswordResetEmail } = require('../../utils/email');
 const AppError = require('../../utils/AppError');
 
+// crypto.randomInt (CSPRNG) em vez de Math.random() -- este código de 6
+// dígitos autentica login/reset de senha, então precisa ser realmente
+// imprevisível, não só "parecer" aleatório.
 function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 6 dígitos
+  return String(crypto.randomInt(100000, 1000000)); // 6 dígitos
 }
 
 async function registerClientOrDeliverer({ name, email, password, role, phone, cpf, inviteCode }) {
-  console.log('DEBUG REGISTER >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (existing.rowCount > 0) {
     throw new AppError('E-mail já cadastrado', 409);
@@ -80,13 +83,11 @@ async function registerRestaurantAccount({ name, email, password, phone, cpf, bu
 }
 
 async function requestLoginCode({ email, password }) {
-  console.log('DEBUG LOGIN >>>', JSON.stringify({ email, passwordLength: password?.length }));
   const result = await pool.query(
     'SELECT id, name, email, password_hash, role, tenant_id, deleted_at FROM users WHERE email = $1',
     [email]
   );
   if (result.rowCount === 0) {
-    console.log('DEBUG LOGIN >>> e-mail não encontrado no banco');
     throw new AppError('Credenciais inválidas', 401);
   }
   const user = result.rows[0];
@@ -99,7 +100,6 @@ async function requestLoginCode({ email, password }) {
   }
   const valid = await comparePassword(password, user.password_hash);
   if (!valid) {
-    console.log('DEBUG LOGIN >>> e-mail encontrado, mas senha não bateu com o hash salvo');
     throw new AppError('Credenciais inválidas', 401);
   }
 
@@ -112,15 +112,15 @@ async function requestLoginCode({ email, password }) {
   );
 
   try {
-    try {
     await sendLoginCodeEmail(email, code);
   } catch (emailErr) {
-    console.error('DEBUG LOGIN >>> falha ao enviar e-mail do código, seguindo mesmo assim:', emailErr.message);
-    console.warn(`[email] Código de verificação para ${email}: ${code}`);
-  }
-  } catch (emailErr) {
-    console.error('DEBUG LOGIN >>> falha ao enviar e-mail do código, seguindo mesmo assim:', emailErr.message);
-    console.warn(`[email] Código de verificação para ${email}: ${code}`);
+    console.error('Falha ao enviar e-mail do código de login, seguindo mesmo assim:', emailErr.message);
+    // O código em si NUNCA vai pro log em produção (vazaria uma senha de
+    // uso único válida por 10 min) -- só aparece localmente em dev, como
+    // rede de segurança pra testar sem SMTP configurado.
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[email] (dev) Código de verificação para ${email}: ${code}`);
+    }
   }
 
   return { pending: true, email };
@@ -167,7 +167,9 @@ async function requestPasswordReset({ email }) {
       await sendPasswordResetEmail(email, code);
     } catch (emailErr) {
       console.error('[password-reset] falha ao enviar e-mail, seguindo mesmo assim:', emailErr.message);
-      console.warn(`[password-reset] Código para ${email}: ${code}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[password-reset] (dev) Código para ${email}: ${code}`);
+      }
     }
   } else {
     console.warn(`[password-reset] tentativa de reset para e-mail não cadastrado: ${email}`);
