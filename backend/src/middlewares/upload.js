@@ -38,13 +38,15 @@ function buildUploader() {
 }
 
 // Salva o buffer já processado (webp) em uploads/<subfolder>/<uuid>.webp
-// e devolve a URL pública final.
+// e devolve o caminho público final -- relativo (sem protocolo/domínio
+// fixo), pra funcionar em qualquer domínio que sirva o backend (Railway,
+// domínio próprio, etc.) sem precisar re-salvar nada se o domínio mudar.
 function saveProcessedImage(req, subfolder, buffer) {
   const dir = path.join(UPLOAD_ROOT, subfolder);
   ensureDir(dir);
   const filename = `${crypto.randomUUID()}.webp`;
   fs.writeFileSync(path.join(dir, filename), buffer);
-  return `${req.protocol}://${req.get('host')}/uploads/${subfolder}/${filename}`;
+  return `/uploads/${subfolder}/${filename}`;
 }
 
 module.exports = { buildUploader, saveProcessedImage, UPLOAD_ROOT, MAX_FILE_SIZE };

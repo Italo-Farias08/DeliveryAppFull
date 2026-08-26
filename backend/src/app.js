@@ -56,10 +56,13 @@ app.use('/img', express.static(path.join(__dirname, '..', 'public', 'img')));
 // web (/restaurante/login.html) quanto aberta pelo app mobile (Linking, ver
 // TERMS_URL em frontend/src/services/api.ts). Fonte única do texto, os dois
 // lugares só apontam pra cá em vez de duplicar o conteúdo.
+// img-src libera o domínio antigo do Railway porque itens/fotos cadastrados
+// antes da troca pro domínio próprio ainda têm URL fixa apontando pra lá
+// (uploads antigos, de antes do upload.js passar a salvar caminho relativo).
 app.use('/legal', (req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:"
+    "default-src 'self'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data: https://deliveryappfull-production.up.railway.app"
   );
   next();
 });
@@ -78,10 +81,12 @@ app.use('/legal', express.static(path.join(__dirname, '..', 'public', 'legal')))
 // connect-src também libera o Nominatim (OpenStreetMap): é a busca de
 // endereço usada na aba "Localização" do painel, chamada direto do
 // navegador, igual ao app (ver frontend/src/services/geocodingService.ts).
+// img-src libera o domínio antigo do Railway pelo mesmo motivo do /legal
+// acima: fotos de logo/banner/itens cadastradas antes da troca de domínio.
 app.use('/restaurante', (req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data:; connect-src 'self' https://nominatim.openstreetmap.org"
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https: 'unsafe-inline'; font-src 'self' https: data:; img-src 'self' data: https://deliveryappfull-production.up.railway.app; connect-src 'self' https://nominatim.openstreetmap.org"
   );
   next();
 });
