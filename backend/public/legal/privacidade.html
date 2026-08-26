@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Política de Privacidade — Vitória Delivery</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --vermelho: #e4002b;
+    --tinta: #16100e;
+    --texto: #1c1b1a;
+    --texto-suave: #6b6560;
+    --branco: #ffffff;
+    --creme: #fcfaf8;
+    --borda: #e9e4de;
+    --verde: #1f6f5c;
+
+    --fonte-titulo: "Sora", sans-serif;
+    --fonte-ui: "Manrope", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--fonte-ui);
+    color: var(--texto);
+    background: var(--creme);
+    line-height: 1.65;
+  }
+
+  .topo {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--branco);
+    border-bottom: 1px solid var(--borda);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .topo img { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; }
+  .topo-textos { line-height: 1.25; }
+  .topo-marca { font-family: var(--fonte-titulo); font-weight: 800; font-size: 15px; }
+  .topo-sub { font-size: 12px; color: var(--texto-suave); font-weight: 600; }
+
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 36px 20px 80px;
+  }
+
+  h1 {
+    font-family: var(--fonte-titulo);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  .atualizado {
+    color: var(--texto-suave);
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 30px;
+  }
+
+  section { margin-bottom: 26px; }
+  h2 {
+    font-family: var(--fonte-titulo);
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    color: var(--tinta);
+  }
+  p { margin: 0 0 10px; font-size: 14.5px; color: var(--texto); }
+  ul { margin: 0 0 10px; padding-left: 20px; }
+  li { font-size: 14.5px; margin-bottom: 6px; }
+  strong { color: var(--tinta); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid var(--borda);
+    vertical-align: top;
+  }
+  th {
+    background: #f5f1ec;
+    font-family: var(--fonte-titulo);
+    font-weight: 700;
+    color: var(--tinta);
+  }
+
+  .aviso {
+    background: #fff7e6;
+    border: 1px solid #ffe1a8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #8a5a00;
+    margin-bottom: 30px;
+  }
+  .aviso strong { color: #8a5a00; }
+
+  .rodape {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--borda);
+    font-size: 13px;
+    color: var(--texto-suave);
+  }
+  .rodape a { color: var(--vermelho); font-weight: 700; text-decoration: none; }
+  .rodape a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+  <div class="topo">
+    <img src="/img/logo.png" alt="Vitória Delivery" onerror="this.style.display='none'" />
+    <div class="topo-textos">
+      <div class="topo-marca">Vitória Delivery</div>
+      <div class="topo-sub">Política de Privacidade</div>
+    </div>
+  </div>
+
+  <main>
+    <h1>Política de Privacidade</h1>
+    <p class="atualizado">Última atualização: 26 de agosto de 2026</p>
+
+    <section>
+      <h2>1. Quem trata os seus dados</h2>
+      <p>
+        Esta Política de Privacidade explica como o <strong>Vitória Delivery</strong>, plataforma operada por
+        <strong>Desenvolvedores Freelancer</strong>, atualmente em fase de formalização como empresa, coleta, usa,
+        armazena e protege os dados pessoais de clientes, restaurantes parceiros e entregadores, em conformidade com
+        a Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018).
+      </p>
+    </section>
+
+    <section>
+      <h2>2. Quais dados coletamos</h2>
+      <p>Dependendo do seu perfil na plataforma, podemos coletar:</p>
+      <table>
+        <tr><th>Perfil</th><th>Dados coletados</th></tr>
+        <tr>
+          <td><strong>Cliente</strong></td>
+          <td>Nome, e-mail, telefone, CPF, endereços salvos (Casa/Trabalho/Outro) com localização (GPS), histórico de pedidos e favoritos.</td>
+        </tr>
+        <tr>
+          <td><strong>Restaurante parceiro</strong></td>
+          <td>Nome, e-mail, telefone, CNPJ, endereço da loja, dados bancários para repasse, cardápio, fotos e dados de vendas.</td>
+        </tr>
+        <tr>
+          <td><strong>Entregador</strong></td>
+          <td>Nome, e-mail, telefone, CPF, dados de veículo e documentos, localização em tempo real durante entregas ativas.</td>
+        </tr>
+      </table>
+      <p>
+        Também coletamos automaticamente dados técnicos como endereço IP, tipo de dispositivo e registros de uso do
+        app, para fins de segurança e melhoria do serviço.
+      </p>
+    </section>
+
+    <section>
+      <h2>3. Para que usamos seus dados</h2>
+      <ul>
+        <li>Viabilizar o cadastro, login e funcionamento das contas;</li>
+        <li>Processar pedidos, pagamentos e repasses entre clientes, restaurantes e entregadores;</li>
+        <li>Calcular rotas e localização para entrega (endereço do cliente e localização do entregador);</li>
+        <li>Enviar notificações sobre status de pedidos, promoções e avisos importantes da plataforma;</li>
+        <li>Prevenir fraudes, uso indevido e garantir a segurança da plataforma;</li>
+        <li>Cumprir obrigações legais e fiscais.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. Com quem compartilhamos os dados</h2>
+      <p>
+        Compartilhamos os dados estritamente necessários entre as partes envolvidas em um pedido — por exemplo, o
+        restaurante recebe o endereço de entrega do cliente, e o entregador recebe o endereço da loja e do cliente
+        para realizar a entrega. Também podemos compartilhar dados com:
+      </p>
+      <ul>
+        <li>Processadores de pagamento, para viabilizar cobranças via Pix/cartão;</li>
+        <li>Serviços de mapas e geolocalização (OpenStreetMap/Nominatim), para busca e exibição de endereços;</li>
+        <li>Autoridades públicas, quando exigido por lei ou ordem judicial.</li>
+      </ul>
+      <p><strong>Não vendemos dados pessoais a terceiros.</strong></p>
+    </section>
+
+    <section>
+      <h2>5. Localização (GPS)</h2>
+      <p>
+        Clientes podem salvar a localização de seus endereços para facilitar o cálculo de rota do entregador.
+        Entregadores têm sua localização em tempo real compartilhada apenas durante entregas ativas, para que o
+        cliente e o restaurante acompanhem o status do pedido. Fora desse contexto, não coletamos localização em
+        segundo plano.
+      </p>
+    </section>
+
+    <section>
+      <h2>6. Armazenamento e segurança</h2>
+      <p>
+        Os dados são armazenados em bancos de dados protegidos, com controle de acesso e criptografia de senha
+        (nunca armazenamos sua senha em texto puro). Adotamos medidas técnicas razoáveis para proteger seus dados
+        contra acesso não autorizado, perda ou alteração indevida.
+      </p>
+    </section>
+
+    <section>
+      <h2>7. Por quanto tempo guardamos seus dados</h2>
+      <p>
+        Mantemos seus dados enquanto sua conta estiver ativa e pelo prazo necessário para cumprir obrigações legais
+        (fiscais, por exemplo) ou resolver disputas. Você pode solicitar a exclusão da sua conta e dos dados
+        associados a qualquer momento, respeitados os prazos legais de guarda de determinadas informações.
+      </p>
+    </section>
+
+    <section>
+      <h2>8. Seus direitos como titular dos dados</h2>
+      <p>De acordo com a LGPD, você pode solicitar a qualquer momento:</p>
+      <ul>
+        <li>Confirmação da existência de tratamento dos seus dados;</li>
+        <li>Acesso, correção ou atualização dos seus dados;</li>
+        <li>Anonimização, bloqueio ou eliminação de dados desnecessários ou tratados em desconformidade com a lei;</li>
+        <li>Portabilidade dos dados a outro fornecedor de serviço;</li>
+        <li>Eliminação dos dados pessoais tratados com o seu consentimento;</li>
+        <li>Revogação do consentimento, quando aplicável.</li>
+      </ul>
+      <p>
+        Para exercer qualquer um desses direitos, entre em contato pelo e-mail informado na seção 10.
+      </p>
+    </section>
+
+    <section>
+      <h2>9. Alterações desta política</h2>
+      <p>
+        Podemos atualizar esta Política de Privacidade periodicamente. Mudanças relevantes serão comunicadas pelo
+        e-mail cadastrado ou por aviso dentro do app. O uso contínuo da plataforma após uma atualização representa
+        concordância com a nova versão.
+      </p>
+    </section>
+
+    <section>
+      <h2>10. Contato</h2>
+      <p>
+        Dúvidas sobre esta Política de Privacidade ou sobre o tratamento dos seus dados pessoais podem ser enviadas
+        para <strong>[italo.farias1wi@gmail.com]</strong>.
+      </p>
+    </section>
+
+    <div class="rodape">
+      <a href="/legal/termos.html">Termos de Uso</a> ·
+      <a href="/restaurante/login.html">← Voltar para o login</a>
+    </div>
+  </main>
+
+</body>
+</html>

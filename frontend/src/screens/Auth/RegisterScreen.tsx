@@ -17,7 +17,7 @@ import { FadeSlideIn } from '../../components/FadeSlideIn';
 import { PressableScale } from '../../components/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import { register, RegisterPayload } from '../../services/authService';
-import { TERMS_URL } from '../../services/api';
+import { TERMS_URL, PRIVACY_URL } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import type { ThemeColors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -360,6 +360,10 @@ export default function RegisterScreen({ navigation }: any) {
               Li e aceito os{' '}
               <Text style={styles.termsLink} onPress={() => Linking.openURL(TERMS_URL)}>
                 Termos de Uso
+              </Text>
+              {' '}e a{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL(PRIVACY_URL)}>
+                Política de Privacidade
               </Text>
             </Text>
           </PressableScale>

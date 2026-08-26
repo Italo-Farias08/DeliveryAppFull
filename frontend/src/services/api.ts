@@ -8,6 +8,7 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://loca
 // services/socket.ts.
 export const SITE_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
 export const TERMS_URL = `${SITE_ROOT}/legal/termos.html`;
+export const PRIVACY_URL = `${SITE_ROOT}/legal/privacidade.html`;
 
 // DEBUG TEMPORÁRIO — remova depois de resolver o problema de conexão.
 // Isso mostra no terminal do Expo (e no console do celular) qual URL
