@@ -87,8 +87,19 @@ app.use('/restaurante', (req, res, next) => {
 });
 app.use('/restaurante', express.static(path.join(__dirname, '..', 'public', 'restaurante')));
 
+// Navegadores sempre pedem /favicon.ico direto na raiz do domínio, então
+// precisa de rota própria -- o resto de backend/public não é servido
+// como estático (só /uploads, /admin, /img, /legal e /restaurante são).
+app.get('/favicon.ico', (req, res) =>
+  res.sendFile(path.join(__dirname, '..', 'public', 'favicon.ico'))
+);
+
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+// Acessar o domínio "pelado" (ex: vitoriadelivery.site) leva direto pro
+// login do painel do restaurante, em vez de cair no 404 padrão de rota
+// não encontrada -- só um atalho, não expõe nada que /restaurante já
+// não expusesse.
 app.get('/', (req, res) => res.redirect('/restaurante/login.html'));
 
 app.use('/api/auth', authRoutes);
