@@ -89,6 +89,8 @@ app.use('/restaurante', express.static(path.join(__dirname, '..', 'public', 'res
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+app.get('/', (req, res) => res.redirect('/restaurante/login.html'));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/favorites', favoritesRoutes);

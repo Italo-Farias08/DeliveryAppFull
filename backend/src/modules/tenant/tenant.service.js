@@ -502,9 +502,6 @@ async function listOwnDeliverers(tenantId) {
      ORDER BY u.name ASC`,
     [tenantId]
   );
-  // isOnline vem da conexão de socket em tempo real (app aberto e
-  // conectado agora), não do banco -- é o que faltava pra distinguir
-  // "marcou disponível uma vez e fechou o app" de "está online de fato".
   return result.rows.map((d) => ({ ...d, isOnline: isDelivererOnline(d.id) }));
 }
 
@@ -520,7 +517,6 @@ async function getOrCreateDelivererInviteCode(tenantId) {
   const existing = await pool.query('SELECT deliverer_invite_code AS code FROM tenants WHERE id = $1', [tenantId]);
   if (existing.rows[0]?.code) return existing.rows[0].code;
 
-  // Gera um código curto e único (6 caracteres, sem letras ambíguas tipo O/0, I/1).
   const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   for (let attempt = 0; attempt < 10; attempt++) {
     let code = '';
