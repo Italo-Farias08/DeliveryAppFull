@@ -16,7 +16,6 @@ import { shadows, coloredShadow } from '../../theme/shadows';
 const OPTIONS: { icon: keyof typeof Ionicons.glyphMap; label: string; route?: string }[] = [
   { icon: 'person-outline', label: 'Meus dados', route: 'MyData' },
   { icon: 'location-outline', label: 'Endereços', route: 'Addresses' },
-  { icon: 'card-outline', label: 'Formas de pagamento' },
   { icon: 'heart-outline', label: 'Favoritos', route: 'Favorites' },
   { icon: 'help-circle-outline', label: 'Ajuda', route: 'Help' },
 ];

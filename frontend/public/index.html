@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#FFFBF7" />
+    <meta name="description" content="Peça comida com facilidade - restaurantes, entregadores e pedidos em um só app." />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- iOS "Add to Home Screen" support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DeliveryApp" />
+
+    <!-- Android / Chrome -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html, body { height: 100%; }
+      body { overflow: hidden; overscroll-behavior: none; }
+      #root { display: flex; height: 100%; flex: 1; }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Você precisa habilitar o JavaScript para rodar este app.</noscript>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/service-worker.js').catch(function (err) {
+            console.warn('SW registration failed:', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -5,25 +5,36 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vitoriadelivery.app"
     },
     "android": {
+      "package": "com.vitoriadelivery.app",
+      "versionCode": 1,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFBF7"
       }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "lang": "pt-BR",
+      "description": "Peça comida com facilidade - restaurantes, entregadores e pedidos em um só app.",
+      "themeColor": "#FFFBF7"
     },
     "plugins": [
   "expo-font",
   [
     "expo-splash-screen",
     {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
       "backgroundColor": "#FFFBF7"
     }
   ],

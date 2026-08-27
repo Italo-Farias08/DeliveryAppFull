@@ -92,6 +92,41 @@ app.use('/restaurante', (req, res, next) => {
 });
 app.use('/restaurante', express.static(path.join(__dirname, '..', 'public', 'restaurante')));
 
+// PWA do app do cliente (build web do Expo/React Native, gerado com
+// `npx expo export -p web` no /frontend e copiado pra cá em
+// backend/public/app — ver frontend/README ou COMECE-AQUI.md para o passo a
+// passo de gerar/atualizar esse build). Fica instalável (Adicionar à Tela
+// de Início) e funciona offline via service-worker.js, que só cacheia o
+// "shell" do app; toda chamada de API continua indo pro mesmo domínio em
+// /api normalmente (relativo, sem precisar configurar URL nenhuma).
+//
+// service-worker.js não pode ficar em cache do navegador/CDN, senão quem
+// já instalou o app nunca recebe um SW novo quando o app for atualizado.
+app.use('/app/service-worker.js', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  next();
+});
+// CSP própria pra esse build (o padrão do Helmet não libera fontes/imagens
+// carregadas via data: nem a conexão do socket.io) — script-src fica sem
+// 'unsafe-inline' de propósito, já que o app não usa mais script inline
+// nenhum (ver register-sw.js).
+app.use('/app', (req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'"
+  );
+  next();
+});
+app.use('/app', express.static(path.join(__dirname, '..', 'public', 'app')));
+
+// O app usa navegação client-side (React Navigation) — qualquer rota dentro
+// de /app que não bata com um arquivo estático de verdade (ex: recarregar a
+// página em /app/pedido/123) precisa cair no index.html pra o React assumir
+// a partir dali, senão o Express devolve 404.
+app.get('/app/*', (req, res) =>
+  res.sendFile(path.join(__dirname, '..', 'public', 'app', 'index.html'))
+);
+
 // Navegadores sempre pedem /favicon.ico direto na raiz do domínio, então
 // precisa de rota própria -- o resto de backend/public não é servido
 // como estático (só /uploads, /admin, /img, /legal e /restaurante são).
